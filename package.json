@@ -1,0 +1,11 @@
+{
+  "name": "doc-engine",
+  "private": true,
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "test": "npm test -w agent-runtime",
+    "typecheck": "tsc -p packages/agent-runtime --noEmit"
+  }
+}
