@@ -1,0 +1,23 @@
+{"ts":"2026-08-25T03:02:30.588Z","tool":"query_project_status","args":{},"durationMs":263,"result":{"ok":true}}
+{"ts":"2026-08-25T03:07:34.236Z","tool":"query_project_status","args":{},"durationMs":338,"result":{"ok":true}}
+{"ts":"2026-08-25T03:08:31.069Z","tool":"query_ontology","args":{},"durationMs":70,"result":{"ok":true}}
+{"ts":"2026-08-25T03:17:52.215Z","tool":"start_product_init","args":{},"durationMs":292,"result":{"ok":true}}
+{"ts":"2026-08-25T03:17:52.538Z","tool":"query_project_status","args":{},"durationMs":329,"result":{"ok":true}}
+{"ts":"2026-08-25T03:17:52.918Z","tool":"detect_arch_gaps","args":{},"durationMs":2736,"result":{"ok":true}}
+{"ts":"2026-08-25T03:17:55.674Z","tool":"query_ontology","args":{},"durationMs":28,"result":{"ok":true}}
+{"ts":"2026-08-25T03:18:33.927Z","tool":"query_project_status","args":{},"durationMs":320,"result":{"ok":true}}
+{"ts":"2026-08-25T03:18:34.253Z","tool":"detect_arch_gaps","args":{},"durationMs":2750,"result":{"ok":true}}
+{"ts":"2026-08-25T03:18:51.893Z","tool":"query_project_status","args":{},"durationMs":337,"result":{"ok":true}}
+{"ts":"2026-08-25T03:18:52.262Z","tool":"detect_arch_gaps","args":{},"durationMs":2789,"result":{"ok":true}}
+{"ts":"2026-08-25T03:22:06.737Z","tool":"detect_arch_gaps","args":{},"durationMs":2787,"result":{"ok":true}}
+{"ts":"2026-08-25T03:22:09.531Z","tool":"start_init","args":{"full":true},"durationMs":514,"result":{"ok":true}}
+{"ts":"2026-08-25T03:38:46.242Z","tool":"register_asset","args":{"kind":"pojo","name":"AgentRuntimeSchemaSql","module":"agent-runtime","sourcePath":"docs/schema/generated/agent-runtime-migration.sql","summary":"SQLite DDL for graph agent runtime tables (7 tables)","whenToUse":"Need persistence DDL for agent runs/checkpoints/tools/hitl","howToUse":"Apply docs/schema/generated/agent-runtime-migration.sql via better-sqlite3 or migrate runner","exports":["t_agent_graph","t_agent_run","t_agent_checkpoint"],"tags":["schema","agent-runtime","sqlite"]},"durationMs":357,"result":{"ok":true}}
+{"ts":"2026-08-25T03:38:46.622Z","tool":"query_project_status","args":{},"durationMs":195,"result":{"ok":true}}
+{"ts":"2026-08-25T03:39:23.934Z","tool":"query_project_status","args":{},"durationMs":206,"result":{"ok":true}}
+{"ts":"2026-08-25T03:39:24.170Z","tool":"query_contract","args":{"name":"EntityGraph"},"durationMs":2,"result":{"ok":true}}
+{"ts":"2026-08-25T03:39:24.213Z","tool":"query_contract","args":{"name":"AgentRuntime"},"durationMs":2,"result":{"ok":true}}
+{"ts":"2026-08-25T03:39:24.261Z","tool":"query_contract","args":{"name":"compileGraph"},"durationMs":1,"result":{"ok":true}}
+{"ts":"2026-08-25T03:39:24.310Z","tool":"query_contract","args":{"name":"StateStore"},"durationMs":1,"result":{"ok":true}}
+{"ts":"2026-08-25T03:39:24.358Z","tool":"search_arch","args":{"query":"agent runtime graph checkpoint store","limit":5},"durationMs":282,"result":{"ok":true}}
+{"ts":"2026-08-25T03:39:24.683Z","tool":"query_ontology","args":{"topic":"agent"},"durationMs":215,"result":{"ok":true}}
+{"ts":"2026-08-25T03:42:06.226Z","tool":"query_project_status","args":{},"durationMs":236,"result":{"ok":true}}

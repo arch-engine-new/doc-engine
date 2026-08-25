@@ -1,0 +1,41 @@
+{
+  "embedding": {
+    "baseUrl": "https://dashscope.aliyuncs.com/compatible-mode/v1",
+    "apiKeyEnv": "DASHSCOPE_API_KEY",
+    "model": "text-embedding-v3"
+  },
+  "chunking": {
+    "baseUrl": "https://open.bigmodel.cn/api/coding/paas/v4",
+    "apiKeyEnv": "XF_MAAS_API_KEY",
+    "chatModel": "glm-5.3",
+    "maxChunkTokens": 8000,
+    "strategy": "semantic-only",
+    "summarizeBatchSize": 32,
+    "summarizeMaxRetries": 3,
+    "summarizeJsonMode": false,
+    "maxSignaturesPerCandidate": 8,
+    "summarizeMaxTokens": 2048,
+    "summarizeBatchDelayMs": 100
+  },
+  "chat": {
+    "baseUrl": "https://open.bigmodel.cn/api/coding/paas/v4",
+    "apiKeyEnv": "XF_MAAS_API_KEY",
+    "model": "glm-5.3"
+  },
+  "apiSpecGlobs": [
+    "docs/**/openapi.json",
+    "docs/**/swagger.json"
+  ],
+  "designSystemPackages": [],
+  "scanners": { "java": true, "frontend": true },
+  "java": {
+    "controllerPathPrefixes": [],
+    "extraSourceRoots": [],
+    "assetCoverage": "warn"
+  },
+  "quality": {
+    "comments": { "enabled": true },
+    "security": { "enabled": true },
+    "css": { "enabled": false }
+  }
+}

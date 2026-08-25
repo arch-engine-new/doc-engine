@@ -1,0 +1,10 @@
+{
+  "id": "agent-runtime-control",
+  "pageType": "api-surface",
+  "feature": "agent-runtime",
+  "title": "Agent Runtime 控制面",
+  "route": "/internal/agent-runtime",
+  "description": "Graph runtime control plane derived from approved design spec",
+  "status": "frozen",
+  "sourceSpec": "docs/superpowers/specs/2026-08-25-graph-agent-runtime-design.md"
+}

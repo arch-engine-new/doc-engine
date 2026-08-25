@@ -1,0 +1,77 @@
+---
+description: 闭环写侧补救（知识库同步：audit / refresh / 契约；不改业务实现）
+model: sonnet
+---
+<!-- apt-template-version: 10.6.10 -->
+
+你是 APT **闭环写侧**代理：只做知识库同步（`audit_arch_changes` → `refresh_asset` / `remove_asset`、`register_contract` 等），**禁止**改业务/实现代码。
+
+**分流（先读 `.apt/verify/latest.md`，应与 `classify-verify-failures` 一致）：**
+
+- Overall=FAIL 且含**实现类**维度 FAIL → **先** `$apt-plan-from-verify`（再 `/implement-plan`），勿指望本命令修实现。
+- Overall=PASS、仅 closeout FAIL（架构 audit / 契约登记）、或 `/feature` / `/implement-plan` 漏跑闭环 → **继续**本命令。
+
+确认只需闭环时，**必须**补跑下列步骤。
+
+## 0.0 MCP Preflight（必须，写侧闭环前）
+
+<!-- keep in sync with templates/_mcp-preflight.md -->
+
+写侧闭环之前**必须**先执行 MCP 可用性探活（全文遵循 `templates/_mcp-preflight.md`）：
+
+1. 调用 **`query_project_status`**（无参）；成功返回可解析 JSON → **PASS**（业务 blockers ≠ MCP 不可用）。
+2. 工具缺失 / 连接失败 / spawn·ABI·license 失败 → **FAIL** → 立即停止，输出 FAIL 报告 + 修复 checklist；**禁止**半套 APT 调用写侧工具。
+3. Preflight 已 PASS 后若中途出现传输/加载层 MCP 失败 → 按 `_mcp-preflight.md` §5 中断。
+
+**未再次 Preflight PASS 前，禁止** `audit_arch_changes` / `refresh_asset` / `register_contract` 等写侧操作。
+
+<!-- keep in sync with templates/_feature-closeout.md -->
+
+## 0. 架构变更同步（必须）
+
+1. 调用 **`audit_arch_changes`**（默认 `since: last-scan`）。无 `last-scan.json` 时报告需先 `start-init`。
+2. 对 **`modified`** 每一项：调用 **`refresh_asset`**（`sourcePath` 必填）。禁止仅用旧 summary 调 `register_asset` 代替。
+3. 对 **`new`** / **`unregistered`**：调用 **`refresh_asset`**（从源码入库）。
+4. 对 **`deleted`**：调用 **`remove_asset`**（`assetId` 或 `sourcePath`）。
+5. 若四类皆空：在报告中写明「无架构资产变更」。
+
+可选补救：在项目根执行 `sync-changes` 或 `sync-changes --dry-run` 预览。
+
+### 0.5 Java API 路径前缀（若本次涉及）
+
+若 audit 显示大量 API `modified` 且根因是路径前缀规则而非业务逻辑变更：
+
+1. `query_path_rules` 或 `query_arch` 诊断当前 path
+2. `update_java_path_rules` 一次写入规则并重算 API 索引
+3. `query_arch` / `search_arch` 验证 path 已正确
+4. **禁止**对每个 Controller 循环 `refresh_asset`
+
+### 0.6 OpenAPI / Swagger 增量（硬步骤）
+
+本轮变更路径若命中 `apiSpecGlobs`（含 yaml/json 等 OpenAPI/Swagger 规格）：
+
+1. **必须**跑 `sync-changes`（已含 OpenAPI reindex）或显式 `start-init --reindex-apis` / 等价 `runReindexApis`。
+2. reindex **失败** → 闭环 **FAIL**；**禁止**宣称闭环完成（规格已变却未进 DocumentModel / API 索引不可静默）。
+3. 无规格变更 → 可 SKIP，摘要写明理由。
+
+### 0.7 Java assetCoverage gate（硬步骤）
+
+本轮若触及 Java（`.java` / Java 模块）：
+
+1. **必须**跑与 `start-init` 同配置的 `java.assetCoverage` gate（推荐 `sync-changes`，其已接同源 coverage）。
+2. `assetCoverage=error` 且 `uncoveredCount>0` → 闭环 **FAIL**；列出 uncovered 路径；**禁止**宣称闭环完成。
+3. `warn` / `off` 行为与 start-init 一致；无 Java scanner / 无触及 → SKIP，摘要写明理由。
+
+## 1. TS 契约（若有对外 TS 类型）
+
+1. 检查是否新建可供外部调用的接口、类或函数。
+2. 确保 `src/contracts/` 或对应目录有严格 TS 类型定义。
+3. 每个新契约调用 **`register_contract`**（`name`, `description`, `tsFilePath`）。
+
+## 2. 闭环后自检（简要）
+
+完整验收请运行 **`/verify`**。此处仅做闭环后最小确认：
+
+- 每个 `register_contract`：确认 `.ai/INDEX.md` 已更新。
+- 每个 refresh/remove：用 **`search_arch`** 抽检 1–2 项；精读用 **`query_arch`**。
+- 输出 **闭环摘要**：audit 统计、已 refresh 的 assetId 列表、已注册契约列表；**必须**含 `openapiReindexed` / `javaCoverage`（或各自 SKIP 理由）。

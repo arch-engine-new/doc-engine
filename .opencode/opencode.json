@@ -1,0 +1,17 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "mcp": {
+    "agent-protocol-mcp": {
+      "type": "local",
+      "command": [
+        "C:\\Program Files\\nodejs\\node.exe",
+        "--max-old-space-size=8192",
+        "C:\\Users\\weilt\\.apt\\mcp-server\\dist\\index.js"
+      ],
+      "enabled": true,
+      "environment": {
+        "APT_PROJECT_ROOT": "D:\\software\\doc-engine"
+      }
+    }
+  }
+}

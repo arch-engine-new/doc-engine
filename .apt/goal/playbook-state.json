@@ -1,0 +1,105 @@
+{
+  "goalSha": "e1b340af6b0344580073ab4a433dce0a2421402bbe51a2f8a39aecbe5c893873",
+  "createdAt": "2026-08-25T03:06:14.244Z",
+  "cursor": "PB-6",
+  "risk": "high",
+  "chain": "heavy-backend",
+  "verify": {
+    "result": "none",
+    "at": null
+  },
+  "accept": {
+    "required": false,
+    "result": null,
+    "at": null
+  },
+  "steps": [
+    {
+      "id": "PB-1",
+      "action": "/auto-brainstorm",
+      "status": "done",
+      "attempts": 1,
+      "role": "pm",
+      "critical": true,
+      "notes": "spec approved by user; path=docs/superpowers/specs/2026-08-25-graph-agent-runtime-design.md",
+      "completedAt": "2026-08-25T03:17:26.266Z"
+    },
+    {
+      "id": "PB-2",
+      "action": "/apt-arch-review",
+      "status": "done",
+      "attempts": 1,
+      "role": "tl",
+      "critical": true,
+      "notes": "arch-review closed; admin blueprint skipped; see .ai/arch/arch-review.json",
+      "completedAt": "2026-08-25T03:22:39.955Z"
+    },
+    {
+      "id": "PB-3",
+      "action": "$apt-schema-design",
+      "status": "done",
+      "attempts": 1,
+      "role": "tl",
+      "critical": true,
+      "notes": "schema ready-for-review; check-schema-design PASS; docs/schema/agent-runtime-schema.md",
+      "completedAt": "2026-08-25T03:23:55.713Z"
+    },
+    {
+      "id": "PB-4",
+      "action": "$apt-schema-apply",
+      "status": "done",
+      "attempts": 1,
+      "role": "dev",
+      "critical": true,
+      "notes": "applied sql-fallback; migration + row types in docs/schema/generated/",
+      "completedAt": "2026-08-25T03:38:38.791Z"
+    },
+    {
+      "id": "PB-5",
+      "action": "/plan-from-spec",
+      "status": "done",
+      "attempts": 1,
+      "role": "tl",
+      "critical": true,
+      "notes": "plan drafted: docs/apt/plans/2026-08-25-graph-agent-runtime-plan.md",
+      "completedAt": "2026-08-25T03:40:31.373Z"
+    },
+    {
+      "id": "PB-6",
+      "action": "/implement-plan",
+      "status": "running",
+      "attempts": 1,
+      "role": "dev",
+      "critical": true,
+      "notes": "implement-plan starting after user approval"
+    },
+    {
+      "id": "PB-7",
+      "action": "/verify",
+      "status": "pending",
+      "attempts": 0,
+      "role": "qa",
+      "critical": true,
+      "notes": ""
+    },
+    {
+      "id": "PB-8",
+      "action": "/finish-feature",
+      "status": "pending",
+      "attempts": 0,
+      "role": "tl",
+      "critical": false,
+      "notes": ""
+    }
+  ],
+  "spec": {
+    "path": "docs/superpowers/specs/2026-08-25-graph-agent-runtime-design.md",
+    "status": "approved",
+    "risk": "high"
+  },
+  "plan": {
+    "path": "docs/apt/plans/2026-08-25-graph-agent-runtime-plan.md",
+    "status": "approved",
+    "approvedAt": "2026-08-25T03:41:29.781Z"
+  }
+}

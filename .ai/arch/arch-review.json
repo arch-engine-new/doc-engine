@@ -1,0 +1,209 @@
+{
+  "reviewedAt": "2026-08-25T03:22:39.955Z",
+  "project": "doc-engine",
+  "goal": "industrial graph agent runtime",
+  "mainLanguage": "typescript",
+  "projectType": "library-runtime",
+  "blueprint": {
+    "admin": "skipped",
+    "reason": "pmUi=false pure runtime; no-backend suggestion declined"
+  },
+  "productAnswersPath": ".apt/arch-review/product-arch-answers.json",
+  "dimensions": [
+    {
+      "dimension": "tracing",
+      "status": "planned",
+      "note": "spec: EventLog + OTel hooks (M5); implement in runtime obs/"
+    },
+    {
+      "dimension": "logging",
+      "status": "planned",
+      "note": "pino/structured JSON logs in runtime"
+    },
+    {
+      "dimension": "metrics",
+      "status": "planned",
+      "note": "counters success/fail/latency + OTel metrics hook"
+    },
+    {
+      "dimension": "health",
+      "status": "planned",
+      "note": "optional HTTP /healthz on control API"
+    },
+    {
+      "dimension": "alerting",
+      "status": "not-applicable",
+      "note": "ops concern outside runtime library v1"
+    },
+    {
+      "dimension": "auth",
+      "status": "planned",
+      "note": "authn hook + optional API Key middleware; no full IAM"
+    },
+    {
+      "dimension": "desensitize",
+      "status": "not-applicable",
+      "note": "no PII product surface v1"
+    },
+    {
+      "dimension": "encryption",
+      "status": "not-applicable",
+      "note": "app-level; store plain JSON checkpoint v1"
+    },
+    {
+      "dimension": "signing",
+      "status": "not-applicable",
+      "note": "not required v1"
+    },
+    {
+      "dimension": "sqli",
+      "status": "planned",
+      "note": "StateStore uses parameterized SQL (better-sqlite3 prepared)"
+    },
+    {
+      "dimension": "xss_csrf",
+      "status": "not-applicable",
+      "note": "no browser UI v1; API JSON only"
+    },
+    {
+      "dimension": "data_permission",
+      "status": "not-applicable",
+      "note": "single-tenant library v1"
+    },
+    {
+      "dimension": "secret_mgmt",
+      "status": "planned",
+      "note": "env-based secrets; no vault product"
+    },
+    {
+      "dimension": "rate_limit",
+      "status": "planned",
+      "note": "optional per-run/tool rate limit hook"
+    },
+    {
+      "dimension": "circuit_breaker",
+      "status": "not-applicable",
+      "note": "node retry policy covers v1"
+    },
+    {
+      "dimension": "retry",
+      "status": "planned",
+      "note": "core: node RetryPolicy + tool idempotency (spec AC-4)"
+    },
+    {
+      "dimension": "timeout",
+      "status": "planned",
+      "note": "node/tool timeout in executors"
+    },
+    {
+      "dimension": "dist_transaction",
+      "status": "not-applicable",
+      "note": "single-store checkpoint model"
+    },
+    {
+      "dimension": "audit",
+      "status": "planned",
+      "note": "EventLog is audit trail for runs"
+    },
+    {
+      "dimension": "cache",
+      "status": "not-applicable",
+      "note": "not core v1"
+    },
+    {
+      "dimension": "db_optimization",
+      "status": "planned",
+      "note": "indexes on runId/threadId in schema step"
+    },
+    {
+      "dimension": "api_gateway",
+      "status": "not-applicable",
+      "note": "library + minimal API"
+    },
+    {
+      "dimension": "message_queue",
+      "status": "planned",
+      "note": "queue interface reserved; in-proc worker v1"
+    },
+    {
+      "dimension": "config_center",
+      "status": "not-applicable",
+      "note": "local config v1"
+    },
+    {
+      "dimension": "service_registry",
+      "status": "not-applicable",
+      "note": "not microservice mesh"
+    },
+    {
+      "dimension": "workflow",
+      "status": "planned",
+      "note": "PRODUCT ITSELF: graph workflow engine"
+    },
+    {
+      "dimension": "microservice",
+      "status": "not-applicable",
+      "note": "monolith library package"
+    },
+    {
+      "dimension": "file_storage",
+      "status": "not-applicable",
+      "note": "no blob store v1"
+    },
+    {
+      "dimension": "search_engine",
+      "status": "not-applicable",
+      "note": "not required"
+    },
+    {
+      "dimension": "scheduler",
+      "status": "planned",
+      "note": "in-proc Scheduler; optional external queue later"
+    }
+  ],
+  "userConfirm": {
+    "skipInfrastructureClone": true,
+    "skipList": [
+      "alerting",
+      "desensitize",
+      "encryption",
+      "signing",
+      "xss_csrf",
+      "data_permission",
+      "circuit_breaker",
+      "dist_transaction",
+      "cache",
+      "api_gateway",
+      "config_center",
+      "service_registry",
+      "microservice",
+      "file_storage",
+      "search_engine"
+    ],
+    "plannedInImplement": [
+      "tracing",
+      "logging",
+      "metrics",
+      "health",
+      "auth",
+      "sqli",
+      "secret_mgmt",
+      "rate_limit",
+      "retry",
+      "timeout",
+      "audit",
+      "db_optimization",
+      "message_queue",
+      "workflow",
+      "scheduler"
+    ],
+    "note": "Greenfield TS runtime: no Java admin blueprint. Gaps closed as planned-in-spec or N/A. Schema design next."
+  },
+  "decisions": [
+    "Self-built graph runtime (spec scheme B)",
+    "StateStore interface + SQLite default",
+    "Auth: hook + optional API key only",
+    "Obs: EventLog + OTel hooks",
+    "No admin/message/iot/gis blueprints"
+  ]
+}

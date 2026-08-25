@@ -1,0 +1,78 @@
+{
+  "root": "root",
+  "nodes": {
+    "backend": {
+      "path": "backend",
+      "kind": "module",
+      "title": "Backend",
+      "summary": "Java backend modules",
+      "children": [
+        "backend/agent-runtime"
+      ],
+      "chunks": [],
+      "keywords": [
+        "backend",
+        "java"
+      ]
+    },
+    "frontend": {
+      "path": "frontend",
+      "kind": "package",
+      "title": "Frontend",
+      "summary": "Frontend packages",
+      "children": [],
+      "chunks": [],
+      "keywords": [
+        "frontend"
+      ]
+    },
+    "root": {
+      "path": "root",
+      "kind": "root",
+      "title": "Architecture",
+      "summary": "Project architecture index",
+      "children": [
+        "backend",
+        "frontend"
+      ],
+      "chunks": [],
+      "keywords": [
+        "architecture"
+      ]
+    },
+    "backend/agent-runtime": {
+      "path": "backend/agent-runtime",
+      "kind": "module",
+      "title": "agent-runtime",
+      "summary": "backend module agent-runtime",
+      "children": [
+        "backend/agent-runtime/pojo"
+      ],
+      "chunks": [],
+      "keywords": [
+        "agent-runtime"
+      ]
+    },
+    "backend/agent-runtime/pojo": {
+      "path": "backend/agent-runtime/pojo",
+      "kind": "api-doc",
+      "title": "agent-runtime Pojo",
+      "summary": "1 pojo asset(s)",
+      "children": [],
+      "chunks": [
+        "backend/agent-runtime/pojo/AgentRuntimeSchemaSql"
+      ],
+      "keywords": [
+        "agent-runtime",
+        "AgentRuntimeSchemaSql",
+        "schema",
+        "agent-runtime",
+        "sqlite"
+      ],
+      "docFile": "backend/agent-runtime/pojo.md",
+      "anchors": [
+        "AgentRuntimeSchemaSql"
+      ]
+    }
+  }
+}

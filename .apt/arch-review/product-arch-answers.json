@@ -1,0 +1,58 @@
+[
+  {
+    "concernId": "auth",
+    "answer": "hook_plus_optional_api_key",
+    "note": "控制面默认进程内免鉴权；HTTP 可选 API Key/Bearer 中间件钩子",
+    "decidedAt": "2026-08-25T03:21:58.739Z",
+    "source": "recommended+spec"
+  },
+  {
+    "concernId": "observability",
+    "answer": "eventlog_otel_hooks",
+    "note": "JSON EventLog 必达；OTel 可插拔 exporter",
+    "decidedAt": "2026-08-25T03:21:58.739Z",
+    "source": "recommended+spec"
+  },
+  {
+    "concernId": "admin_blueprint",
+    "answer": "skip",
+    "note": "纯 runtime 库+API；不 clone admin 底座",
+    "decidedAt": "2026-08-25T03:21:58.739Z",
+    "source": "recommended+no-ui"
+  },
+  {
+    "concernId": "message_notify",
+    "answer": "no",
+    "note": "不引入消息中心产品；调度预留队列接口即可",
+    "decidedAt": "2026-08-25T03:21:58.739Z",
+    "source": "recommended"
+  },
+  {
+    "concernId": "dict_catalog",
+    "answer": "not_applicable",
+    "note": "无选项/级联主数据产品面",
+    "decidedAt": "2026-08-25T03:21:58.739Z",
+    "source": "no-product-signal"
+  },
+  {
+    "concernId": "iot_platform",
+    "answer": "no",
+    "note": "无 IoT 信号",
+    "decidedAt": "2026-08-25T03:21:58.739Z",
+    "source": "no-product-signal"
+  },
+  {
+    "concernId": "gis_platform",
+    "answer": "no",
+    "note": "无 GIS 信号",
+    "decidedAt": "2026-08-25T03:21:58.739Z",
+    "source": "no-product-signal"
+  },
+  {
+    "concernId": "persistence",
+    "answer": "sqlite_default_store_interface",
+    "note": "StateStore 接口 + SQLite 默认；可换 Postgres",
+    "decidedAt": "2026-08-25T03:21:58.739Z",
+    "source": "spec"
+  }
+]

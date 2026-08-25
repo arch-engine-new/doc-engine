@@ -1,0 +1,56 @@
+# Project Agents
+
+本文件由 APT `agent-init` 维护。
+
+<!-- apt-workflow:start -->
+## APT Workflow
+
+### Preflight
+
+`/feature`、`/implement-plan`、`/plan-from-spec`、`/apt-goal`、`/verify`、`/finish-feature` 启动时先调 `query_project_status`。失败则停止。
+
+### 命令 / Skill 对照
+
+支持平台：Claude Code、Cursor、Qoder、Codex、ZCode、OpenCode、Trae、CodeBuddy。
+
+| 场景 | Claude / Cursor / Qoder / ZCode / OpenCode / Trae / CodeBuddy | Codex |
+|------|---------------------------------------------------------------|-------|
+| 功能开发 | `/feature` | `apt-feature`（ZCode / OpenCode 亦可用 `$apt-feature`） |
+| Web 从零做产品 | `/apt-create` | `apt-create`（ZCode / OpenCode 用 `$apt-create`） |
+| Web 摄入已有原型 | `/apt-ingest` | `apt-ingest`（ZCode / OpenCode 用 `$apt-ingest`） |
+| Web 开发接力 | `/apt-frontend-connect` | `apt-frontend-connect`（ZCode / OpenCode 用 `$apt-frontend-connect`） |
+| App 从零做产品 | `/apt-app-create` | `apt-app-create`（ZCode / OpenCode 用 `$apt-app-create`） |
+| App 摄入已有原型 | `/apt-app-ingest` | `apt-app-ingest`（ZCode / OpenCode 用 `$apt-app-ingest`） |
+| App 开发接力 | `/apt-app-connect` | `apt-app-connect`（ZCode / OpenCode 用 `$apt-app-connect`） |
+| Spec → 方案 | `/plan-from-spec` | `apt-plan-from-spec` |
+| 按方案实现 | `/implement-plan` | `apt-implement-plan` |
+| 验收（知识门禁） | `/verify` | `apt-verify` |
+| 运行时按 PRD 验收 | `/apt-accept` | `apt-accept`（ZCode / OpenCode 用 `$apt-accept`） |
+| 闭环补救 | `/finish-feature` | `apt-finish-feature` |
+| 设计同步 | `/design-system` | `design（baoyu，可选）` |
+| 单页设计 | `/design-page` | `design（baoyu，可选）` |
+| 自主闭环 | `/apt-goal` | `apt-goal`（ZCode / OpenCode 亦可用 `$apt-goal`） |
+| Brainstorming | `/auto-brainstorm` | `apt-auto-brainstorm` |
+| PM / UI / 架构审查 | `/apt-create` / `/apt-ingest` / `/apt-arch-review`（PRD 用 MCP `generate_prd`，非斜杠） | 同左 Skill 名 |
+| 进度 | `/current-status` | `apt-current-status` |
+
+### 依赖寻址
+
+1. `query_contract`
+2. 未命中 → `search_arch` → `query_arch`
+3. 仍无 → `report_missing` 并停止
+
+### 含 UI 时
+
+1. `query_design`（`scope: global`）
+2. `query_design`（`page` / `component`）
+3. 缺失 → `report_design_gap` 并停止
+
+### 闭环
+
+1. `audit_arch_changes`
+2. `modified` / `new` → `refresh_asset`；`deleted` → `remove_asset`
+3. 新 TS 类型 → `register_contract`
+
+终端：`start-init`、`design-sync`、`sync-changes`。
+<!-- apt-workflow:end -->

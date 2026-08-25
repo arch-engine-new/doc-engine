@@ -24,3 +24,75 @@ export type {
 } from "./graph/types.js";
 
 export { NODE_TYPES } from "./graph/types.js";
+
+/**
+ * Runtime types for execution state, channels, and run metadata.
+ */
+export type {
+  Channel,
+  ChannelMap,
+  MergeResult,
+  ExecutionContext,
+  RunMetadata,
+  RunStatus,
+  NodeExecutionRecord,
+} from "./runtime/state.js";
+
+export {
+  createInitialChannels,
+  mergeChannels,
+  getChannel,
+  hasChannel,
+  getChannelNames,
+  serializeChannels,
+  deserializeChannels,
+} from "./runtime/state.js";
+
+/**
+ * Node executors and executor registry.
+ */
+export type {
+  NodeExecutor,
+  NodeResult,
+} from "./runtime/node-executors.js";
+
+export {
+  FnExecutor,
+  BranchExecutor,
+  LLMExecutor,
+  ToolExecutor,
+  HITLExecutor,
+  SubgraphExecutor,
+  StartExecutor,
+  EndExecutor,
+  BUILTIN_EXECUTORS,
+  getExecutor,
+  NotImplementedError,
+} from "./runtime/node-executors.js";
+
+/**
+ * Scheduler: serial execution engine.
+ */
+export type {
+  SchedulerOptions,
+  SchedulerResult,
+} from "./runtime/scheduler.js";
+
+export { runGraph } from "./runtime/scheduler.js";
+
+/**
+ * RunManager: run lifecycle, metadata, cancellation.
+ */
+export type {
+  StartRunOptions,
+  StartRunResult,
+} from "./runtime/run-manager.js";
+
+export {
+  RunManager,
+  defaultRunManager,
+  startRun,
+  getRun,
+  cancelRun,
+  waitForRun,
+} from "./runtime/run-manager.js";
