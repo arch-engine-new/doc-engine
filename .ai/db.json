@@ -1,1 +1,61 @@
-{"contracts":[],"missingRequests":[]}
+{
+  "contracts": [
+    {
+      "name": "RunStatus",
+      "description": "Agent run lifecycle status: created | running | waiting_hitl | completed | failed | cancelled.",
+      "tsFilePath": "packages/agent-runtime/src/index.ts",
+      "registeredAt": "2026-08-25T10:38:31.564Z",
+      "source": "manual"
+    },
+    {
+      "name": "SchedulerResult",
+      "description": "Result of a scheduled graph run: final status, channels, node history, error, output, and HITL interrupt when waiting_hitl.",
+      "tsFilePath": "packages/agent-runtime/src/index.ts",
+      "registeredAt": "2026-08-25T10:38:32.416Z",
+      "source": "manual"
+    },
+    {
+      "name": "CompiledGraph",
+      "description": "Immutable compile output consumed by the scheduler: validated graph with precomputed adjacency, terminals, and entry node.",
+      "tsFilePath": "packages/agent-runtime/src/index.ts",
+      "registeredAt": "2026-08-25T10:38:33.359Z",
+      "source": "manual"
+    },
+    {
+      "name": "GraphDefinition",
+      "description": "Authoring-time graph definition: nodes, edges, optional graphId/entryNodeId. Input to compileGraph.",
+      "tsFilePath": "packages/agent-runtime/src/index.ts",
+      "registeredAt": "2026-08-25T10:38:34.005Z",
+      "source": "manual"
+    },
+    {
+      "name": "HitlDecision",
+      "description": "Human decision payload for HITL resume: action string, optional data, decidedAt ISO timestamp.",
+      "tsFilePath": "packages/agent-runtime/src/index.ts",
+      "registeredAt": "2026-08-25T10:38:34.785Z",
+      "source": "manual"
+    },
+    {
+      "name": "RunView",
+      "description": "Run snapshot from ControlPlane.getRun: run metadata plus ordered event trace.",
+      "tsFilePath": "packages/agent-runtime/src/index.ts",
+      "registeredAt": "2026-08-25T10:38:35.540Z",
+      "source": "manual"
+    },
+    {
+      "name": "EventRow",
+      "description": "A single trace event row: runId, seq, eventType (node_start/node_end/tool_call/checkpoint/hitl/run_started/run_completed/run_failed/run_cancelled), payload, createdAt.",
+      "tsFilePath": "packages/agent-runtime/src/index.ts",
+      "registeredAt": "2026-08-25T10:38:36.638Z",
+      "source": "manual"
+    },
+    {
+      "name": "StateStore",
+      "description": "Persistence interface for agent-runtime: runs, node executions, checkpoints, tool calls, events, HITL interrupts. Implemented by SQLiteStateStore.",
+      "tsFilePath": "packages/agent-runtime/src/index.ts",
+      "registeredAt": "2026-08-25T10:38:37.387Z",
+      "source": "manual"
+    }
+  ],
+  "missingRequests": []
+}
