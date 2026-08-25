@@ -9,6 +9,9 @@
 
 import type { GraphNode } from "../graph/types.js";
 import type { ExecutionContext } from "./state.js";
+import type { RetryPolicy } from "../graph/types.js";
+import { ToolRuntime, type ExecuteOptions } from "../tools/runtime.js";
+import { getDefaultRegistry } from "../tools/registry.js";
 
 /** Result of executing a single node. */
 export interface NodeResult {
@@ -154,14 +157,84 @@ export class LLMExecutor implements NodeExecutor {
 }
 
 /**
- * Tool node executor - NOT IMPLEMENTED.
- * Would invoke a registered tool/function with args from channels.
+ * Tool node executor.
+ * Invokes a registered tool via ToolRuntime with validation, timeout, retry, and idempotency.
+ *
+ * Configuration (node.config):
+ * - toolName: string (required) - Name of the registered tool to invoke
+ * - inputChannels: string[] (optional, default: ["input"]) - Channels to read input from
+ * - outputChannel: string (optional, default: node.id) - Channel to write output to
+ * - idempotencyKey: string (optional) - Key for idempotent execution (can be a template like "{{runId}}-{{nodeId}}")
+ * - retry: RetryPolicy (optional) - Override retry policy from node.retry
+ * - timeoutMs: number (optional) - Override timeout from node.timeoutMs
  */
 export class ToolExecutor implements NodeExecutor {
   readonly nodeType = "tool" as const;
+  private runtime: ToolRuntime;
 
-  async execute(_node: GraphNode, _context: ExecutionContext): Promise<NodeResult> {
-    throw new NotImplementedError("tool");
+  constructor(runtime?: ToolRuntime) {
+    this.runtime = runtime ?? new ToolRuntime(getDefaultRegistry());
+  }
+
+  /**
+   * Set a custom ToolRuntime (useful for testing or custom registries).
+   */
+  setRuntime(runtime: ToolRuntime): void {
+    this.runtime = runtime;
+  }
+
+  async execute(node: GraphNode, context: ExecutionContext): Promise<NodeResult> {
+    const config = node.config ?? {};
+
+    // Get tool name from config
+    const toolName = config.toolName as string | undefined;
+    if (!toolName) {
+      throw new Error(`tool node "${node.id}" requires config.toolName`);
+    }
+
+    // Resolve input channels
+    const inputChannels: string[] = (config.inputChannels as string[]) ?? ["input"];
+    const outputChannel: string = (config.outputChannel as string) ?? node.id;
+
+    // Build input object from channels
+    const input: Record<string, unknown> = {};
+    for (const ch of inputChannels) {
+      input[ch] = getChannel(context.channels, ch);
+    }
+
+    // Resolve idempotency key with template substitution
+    let idempotencyKey: string | undefined;
+    if (config.idempotencyKey) {
+      idempotencyKey = this.resolveTemplate(config.idempotencyKey as string, context, node);
+    }
+
+    // Build execution options
+    const options: ExecuteOptions = {
+      idempotencyKey,
+      timeoutMs: node.timeoutMs ?? (config.timeoutMs as number | undefined),
+      retryPolicy: node.retry ?? (config.retry as RetryPolicy | undefined),
+      runId: context.runId,
+      nodeExecutionId: context.nodeExecutionId,
+    };
+
+    // Execute tool via runtime
+    const result = await this.runtime.execute(toolName, input, options);
+
+    return {
+      updates: { [outputChannel]: result.output },
+    };
+  }
+
+  /**
+   * Resolve template variables in idempotency key.
+   * Supported: {{runId}}, {{threadId}}, {{nodeId}}, {{attempt}}
+   */
+  private resolveTemplate(template: string, context: ExecutionContext, node: GraphNode): string {
+    return template
+      .replace(/\{\{runId\}\}/g, context.runId ?? "")
+      .replace(/\{\{threadId\}\}/g, context.threadId ?? "")
+      .replace(/\{\{nodeId\}\}/g, node.id)
+      .replace(/\{\{attempt\}\}/g, String(context.attempt ?? 1));
   }
 }
 

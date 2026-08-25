@@ -107,6 +107,10 @@ export async function runGraph(
       nodeHistory: history,
     },
     abortSignal,
+    runId: runId ?? "",
+    threadId: undefined,
+    nodeExecutionId: undefined,
+    attempt: 1,
   };
 
   // Track completed nodes for fan-in (future: wait for all predecessors)
@@ -264,6 +268,8 @@ export async function executeWithRetry(
   let lastError: Error | undefined;
 
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    // Update context with current attempt
+    context.attempt = attempt;
     try {
       const result = await executor.execute(node, context);
       return result;

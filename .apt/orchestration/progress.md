@@ -12,7 +12,7 @@ updatedAt: 2026-08-25T03:41:59.223Z
 | 1 | 鑴氭墜鏋?monorepo + agent-runtime 鍖?| pending | | |
 | 2 | graph-core 绫诲瀷涓?GraphCompiler | pending | | |
 | 3 | 鍐呭瓨 State + Scheduler + RunManager | pending | | |
-| 4 | SQLite StateStore + migration | pending | | |
+| 4 | SQLite StateStore + migration | DONE | 3e685e5 | task-4-report.md |
 | 5 | Checkpoint 宕╂簝鎭㈠ | pending | | |
 | 6 | ToolRuntime + 骞傜瓑 + retry | pending | | |
 | 7 | HITL + resume API | pending | | |

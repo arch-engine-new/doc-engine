@@ -45,6 +45,14 @@ export interface ExecutionContext {
   readonly metadata: RunMetadata;
   /** Abort signal for cooperative cancellation. */
   readonly abortSignal: AbortSignal;
+  /** Unique run identifier (convenience alias for metadata.runId). */
+  readonly runId: string;
+  /** Optional thread identifier for conversation grouping. */
+  readonly threadId: string | undefined;
+  /** Current node execution database ID (set when persisted). */
+  readonly nodeExecutionId?: number;
+  /** Current attempt number for this node (1-based). */
+  attempt: number;
 }
 
 /**

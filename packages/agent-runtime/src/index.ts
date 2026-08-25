@@ -112,6 +112,34 @@ export {
 } from "./runtime/checkpoint-service.js";
 
 /**
+ * Tools: Registry and runtime with validation, timeout, retry, idempotency.
+ */
+export type {
+  ToolSchema,
+  ToolHandler,
+  RegisteredTool,
+} from "./tools/registry.js";
+
+export {
+  ToolRegistry,
+  getDefaultRegistry,
+  setDefaultRegistry,
+} from "./tools/registry.js";
+
+export type {
+  ExecuteOptions,
+  ToolExecutionResult,
+} from "./tools/runtime.js";
+
+export {
+  ToolRuntime,
+  ToolExecutionError,
+  createToolRuntime,
+  getDefaultRegistry as getDefaultToolRegistry,
+  setDefaultRegistry as setDefaultToolRegistry,
+} from "./tools/runtime.js";
+
+/**
  * Persistence: SQLite state store and migration.
  */
 export type {

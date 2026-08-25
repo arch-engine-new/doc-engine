@@ -15,6 +15,7 @@ import { CheckpointService, type ResumeResult } from "./checkpoint-service.js";
 import { BUILTIN_EXECUTORS, getExecutor, type NodeExecutor, type NodeResult, BranchExecutor } from "./node-executors.js";
 import { executeWithRetry } from "./scheduler.js";
 import { mergeChannels, getChannel, serializeChannels } from "./state.js";
+import { ToolRuntime, getDefaultRegistry } from "../tools/runtime.js";
 import { getLastTerminalOutput } from "./scheduler.js";
 
 /** In-memory run store entry. */
@@ -249,6 +250,10 @@ export class RunManager {
               nodeHistory: history,
             },
             abortSignal,
+            runId: metadata.runId,
+            threadId: metadata.threadId ?? undefined,
+            nodeExecutionId: undefined,
+            attempt: 1,
           };
           try {
             const channelValues = serializeChannels(channels);
@@ -303,6 +308,10 @@ export class RunManager {
         nodeHistory: history,
       },
       abortSignal,
+      runId: metadata.runId,
+      threadId: metadata.threadId ?? undefined,
+      nodeExecutionId: undefined,
+      attempt: 1,
     };
 
     while (ready.size > 0 && steps < maxSteps) {
