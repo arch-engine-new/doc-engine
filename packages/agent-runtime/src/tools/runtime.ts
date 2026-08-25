@@ -55,6 +55,30 @@ export interface ToolExecutionResult<Output = unknown> {
 }
 
 /**
+ * Observed tool execution result (for trace event emission via onToolCall).
+ */
+export interface ToolCallObserved {
+  /** Run identifier (may be undefined if not provided to execute). */
+  runId?: string;
+  /** Tool name. */
+  toolName: string;
+  /** Validated input arguments. */
+  request: unknown;
+  /** Output (null on failure). */
+  response: unknown | null;
+  /** Terminal status. */
+  status: "success" | "failed";
+  /** Error details (null on success). */
+  error: { message: string; code: string } | null;
+  /** Execution duration in milliseconds. */
+  durationMs: number;
+  /** Idempotency key, if any. */
+  idempotencyKey?: string;
+  /** Whether the result came from the idempotency cache. */
+  fromCache: boolean;
+}
+
+/**
  * Tool execution error with context.
  */
 export class ToolExecutionError extends Error {
@@ -265,6 +289,13 @@ export class ToolRuntime {
   private store?: StateStore;
 
   /**
+   * Optional observability hook: called once per execute() for each terminal
+   * outcome (success, failure, or idempotency cache hit). Used to emit
+   * tool_call events into a run's trace.
+   */
+  onToolCall?: (record: ToolCallObserved) => void | Promise<void>;
+
+  /**
    * Create a new ToolRuntime.
    *
    * @param registry - ToolRegistry instance (uses default if not provided)
@@ -314,12 +345,24 @@ export class ToolRuntime {
     if (idempotencyKey && this.store) {
       const cached = await this.store.getToolCallByIdempotencyKey(idempotencyKey);
       if (cached && cached.status === "success" && cached.responseJson !== null) {
-        return {
+        const fromCacheResult = {
           output: cached.responseJson as Output,
           durationMs: cached.durationMs ?? 0,
           attempts: 1,
           fromCache: true,
         };
+        await this.emitToolCall({
+          runId,
+          toolName: name,
+          request: input,
+          response: cached.responseJson as Output,
+          status: "success",
+          error: null,
+          durationMs: cached.durationMs ?? 0,
+          idempotencyKey,
+          fromCache: true,
+        });
+        return fromCacheResult;
       }
     }
 
@@ -391,6 +434,18 @@ export class ToolRuntime {
           });
         }
 
+        await this.emitToolCall({
+          runId,
+          toolName: name,
+          request: input,
+          response: output,
+          status: "success",
+          error: null,
+          durationMs,
+          idempotencyKey,
+          fromCache: false,
+        });
+
         return {
           output: output as Output,
           durationMs,
@@ -409,6 +464,18 @@ export class ToolRuntime {
             durationMs,
           });
         }
+
+        await this.emitToolCall({
+          runId,
+          toolName: name,
+          request: input,
+          response: null,
+          status: "failed",
+          error: { message: lastError.message, code: "HANDLER_ERROR" },
+          durationMs,
+          idempotencyKey,
+          fromCache: false,
+        });
 
         // Don't retry on validation errors or not found
         if (error instanceof ToolExecutionError) {
@@ -486,6 +553,19 @@ export class ToolRuntime {
    */
   private sleep(ms: number): Promise<void> {
     return new Promise((resolve) => setTimeout(resolve, ms));
+  }
+
+  /**
+   * Invoke the onToolCall observability hook if configured. Never throws:
+   * observability must not break execution.
+   */
+  private async emitToolCall(record: ToolCallObserved): Promise<void> {
+    if (!this.onToolCall) return;
+    try {
+      await this.onToolCall(record);
+    } catch {
+      // Swallow observer errors; the tool outcome stands.
+    }
   }
 }
 

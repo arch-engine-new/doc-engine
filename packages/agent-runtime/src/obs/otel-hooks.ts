@@ -88,6 +88,7 @@ const EVENT_SPAN_NAMES: Record<EventType, string> = {
   tool_call: "tool.call",
   checkpoint: "checkpoint",
   hitl: "hitl",
+  run_started: "run.started",
   run_completed: "run.completed",
   run_failed: "run.failed",
   run_cancelled: "run.cancelled",

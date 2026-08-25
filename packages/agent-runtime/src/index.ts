@@ -199,6 +199,7 @@ export type {
   RunCompletedPayload,
   RunFailedPayload,
   RunCancelledPayload,
+  RunStartedPayload,
 } from "./obs/event-log.js";
 
 export {
@@ -222,6 +223,8 @@ export type {
   RunView,
   StartRunControlOptions,
   ResumeHitlOptions,
+  ResumeHitlResult,
+  ListRunsFromStoreOptions,
 } from "./api/control.js";
 
 export {
@@ -236,59 +239,4 @@ export type {
 export {
   createHttpServer,
   createFetchHandler,
-} from "./api/http.js";
-
-/**
- * Observability: EventLog and OpenTelemetry hooks.
- */
-export type {
-  EventType,
-  EventPayload,
-  EventRow,
-  AppendEventOptions,
-} from "./obs/event-log.js";
-
-export {
-  EventLog,
-  createEventLog,
-} from "./obs/event-log.js";
-
-export type {
-  OtelSpan,
-  OtelTracer,
-} from "./obs/otel-hooks.js";
-
-export {
-  getOtelTracer,
-  isOtelAvailable,
-  OtelEventLog,
-  createOtelEventLog,
-  createRunSpan,
-  createNodeSpan,
-  createToolSpan,
-  createHitlSpan,
-} from "./obs/otel-hooks.js";
-
-/**
- * Control Plane API: in-process and HTTP.
- */
-export type {
-  CompileGraphOptions,
-  CompileGraphResult,
-  StartRunOptionsControl,
-  StartRunResultControl,
-  ResumeHitlOptions,
-  ResumeHitlResult,
-  RunView,
-  HttpServerOptions,
-} from "./api/control.js";
-
-export {
-  ControlPlane,
-  createControlPlane,
-} from "./api/control.js";
-
-export {
-  createHttpServer,
-  startHttpServer,
 } from "./api/http.js";

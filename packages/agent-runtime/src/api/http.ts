@@ -9,6 +9,19 @@
 import type { ControlPlane, CompileResult, RunView, StartRunControlOptions, ResumeHitlOptions, StartRunResult } from "./control.js";
 import type { GraphDefinition } from "../graph/types.js";
 import type { HitlDecision } from "../hitl/gateway.js";
+import type { IncomingMessage, ServerResponse } from "node:http";
+
+/** HTTP server options. */
+export interface HttpServerOptions {
+  /** Port to listen on. */
+  port: number;
+  /** Hostname to bind to (default: "0.0.0.0"). */
+  hostname?: string;
+  /** Base path prefix for all routes (e.g., "/api/v1"). */
+  basePath?: string;
+  /** Optional logger function. */
+  logger?: (message: string) => void;
+}
 
 /** HTTP server interface (minimal subset). */
 export interface HttpServer {
@@ -43,25 +56,34 @@ function createNativeServer(handler: RequestHandler): HttpServer {
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     const http = require("http");
 
-    const server = http.createServer(async (req, res) => {
+    const server = http.createServer(async (req: IncomingMessage, res: ServerResponse) => {
       const url = new URL(req.url ?? "/", `http://${req.headers.host ?? "localhost"}`);
+      const headers: Record<string, string> = {};
+      for (const key of Object.keys(req.headers)) {
+        const value = req.headers[key];
+        if (value) headers[key] = Array.isArray(value) ? value[0] : value;
+      }
+      const hasBody = req.method !== "GET" && req.method !== "HEAD";
       const request = new Request(url.toString(), {
         method: req.method,
-        headers: req.headers as HeadersInit,
-        body: req.method !== "GET" && req.method !== "HEAD" ? req : undefined,
+        headers,
+        body: hasBody ? await collectBody(req) : undefined,
       });
 
       try {
         const response = await handler(request);
-        res.writeHead(response.status, Object.fromEntries(response.headers));
+        const responseHeaders: Record<string, string> = {};
+        response.headers.forEach((value, key) => {
+          responseHeaders[key] = value;
+        });
+        res.writeHead(response.status, responseHeaders);
         if (response.body) {
           // For ReadableStream body (Node 18+)
-          if (response.body instanceof ReadableStream) {
-            for await (const chunk of response.body) {
-              res.write(Buffer.from(chunk));
-            }
-          } else {
-            res.write(await response.text());
+          const reader = response.body.getReader();
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            res.write(Buffer.from(value));
           }
         }
         res.end();
@@ -80,7 +102,7 @@ function createNativeServer(handler: RequestHandler): HttpServer {
       },
       close(): Promise<void> {
         return new Promise((resolve, reject) => {
-          server.close((err) => (err ? reject(err) : resolve()));
+          server.close((err: Error | null | undefined) => (err ? reject(err) : resolve()));
         });
       },
       address() {
@@ -104,15 +126,16 @@ function createNativeServer(handler: RequestHandler): HttpServer {
 /**
  * Create REST routes for ControlPlane.
  */
-function createRoutes(controlPlane: ControlPlane): Route[] {
+function createRoutes(controlPlane: ControlPlane, basePath: string = ""): Route[] {
+  const prefix = basePath.replace(/\/$/, "");
   return [
     // POST /graphs - Compile a graph
     {
       method: "POST",
-      path: "/graphs",
+      path: `${prefix}/graphs`,
       handler: async (req) => {
         try {
-          const def = (await req.json()) as GraphDefinition;
+          const def = (await req.json()) as { definition: GraphDefinition };
           const result: CompileResult = controlPlane.compileGraph(def);
           return jsonResponse(201, result);
         } catch (error) {
@@ -124,7 +147,7 @@ function createRoutes(controlPlane: ControlPlane): Route[] {
     // GET /graphs/:graphId - Get compiled graph
     {
       method: "GET",
-      path: "/graphs/:graphId",
+      path: `${prefix}/graphs/:graphId`,
       handler: async (req) => {
         const graphId = getPathParam(req, "graphId");
         const graph = controlPlane.getCompiledGraph(graphId);
@@ -138,7 +161,7 @@ function createRoutes(controlPlane: ControlPlane): Route[] {
     // POST /runs - Start a new run
     {
       method: "POST",
-      path: "/runs",
+      path: `${prefix}/runs`,
       handler: async (req) => {
         try {
           const options = (await req.json()) as StartRunControlOptions;
@@ -153,7 +176,7 @@ function createRoutes(controlPlane: ControlPlane): Route[] {
     // GET /runs - List runs
     {
       method: "GET",
-      path: "/runs",
+      path: `${prefix}/runs`,
       handler: async (req) => {
         const url = new URL(req.url);
         const status = url.searchParams.get("status") as any;
@@ -165,10 +188,10 @@ function createRoutes(controlPlane: ControlPlane): Route[] {
     // GET /runs/:runId - Get run view
     {
       method: "GET",
-      path: "/runs/:runId",
+      path: `${prefix}/runs/:runId`,
       handler: async (req) => {
         const runId = getPathParam(req, "runId");
-        const run = controlPlane.getRun(runId);
+        const run = await controlPlane.getRun(runId);
         if (!run) {
           return jsonResponse(404, { error: "Run not found" });
         }
@@ -179,7 +202,7 @@ function createRoutes(controlPlane: ControlPlane): Route[] {
     // POST /runs/:runId/wait - Wait for run completion
     {
       method: "POST",
-      path: "/runs/:runId/wait",
+      path: `${prefix}/runs/:runId/wait`,
       handler: async (req) => {
         const runId = getPathParam(req, "runId");
         const result = await controlPlane.waitForRun(runId);
@@ -193,10 +216,10 @@ function createRoutes(controlPlane: ControlPlane): Route[] {
     // POST /runs/:runId/cancel - Cancel a run
     {
       method: "POST",
-      path: "/runs/:runId/cancel",
+      path: `${prefix}/runs/:runId/cancel`,
       handler: async (req) => {
         const runId = getPathParam(req, "runId");
-        const cancelled = controlPlane.cancelRun(runId);
+        const cancelled = await controlPlane.cancelRun(runId);
         if (!cancelled) {
           return jsonResponse(404, { error: "Run not found or not running" });
         }
@@ -207,13 +230,13 @@ function createRoutes(controlPlane: ControlPlane): Route[] {
     // POST /runs/:runId/resume - Resume HITL
     {
       method: "POST",
-      path: "/runs/:runId/resume",
+      path: `${prefix}/runs/:runId/resume`,
       handler: async (req) => {
         try {
           const runId = getPathParam(req, "runId");
           const { token, decision } = (await req.json()) as { token: string; decision: HitlDecision };
-          const status = await controlPlane.resumeHitl({ runId, token, decision });
-          return jsonResponse(200, { status });
+          const result = await controlPlane.resumeHitl({ runId, token, decision });
+          return jsonResponse(200, result);
         } catch (error) {
           return errorResponse(error);
         }
@@ -223,7 +246,7 @@ function createRoutes(controlPlane: ControlPlane): Route[] {
     // GET /runs/:runId/trace - Get event trace
     {
       method: "GET",
-      path: "/runs/:runId/trace",
+      path: `${prefix}/runs/:runId/trace`,
       handler: async (req) => {
         const runId = getPathParam(req, "runId");
         const url = new URL(req.url);
@@ -236,7 +259,7 @@ function createRoutes(controlPlane: ControlPlane): Route[] {
     // DELETE /runs/:runId - Delete run
     {
       method: "DELETE",
-      path: "/runs/:runId",
+      path: `${prefix}/runs/:runId`,
       handler: async (req) => {
         const runId = getPathParam(req, "runId");
         const deleted = controlPlane.deleteRun(runId);
@@ -250,7 +273,7 @@ function createRoutes(controlPlane: ControlPlane): Route[] {
     // Health check
     {
       method: "GET",
-      path: "/health",
+      path: `${prefix}/health`,
       handler: async () => jsonResponse(200, { status: "ok" }),
     },
   ];
@@ -290,26 +313,25 @@ function createRouter(routes: Route[]): RequestHandler {
  * Create HTTP server for ControlPlane.
  *
  * @param controlPlane - ControlPlane instance
- * @param port - Port to listen on (optional, for native server)
- * @returns HttpServer instance
+ * @param options - Server options (port, hostname, basePath, logger)
+ * @returns HttpServer instance (already listening if port provided)
  *
  * @example
  * ```ts
  * const controlPlane = createControlPlane(store);
- * const server = createHttpServer(controlPlane, 3000);
- * await server.listen(3000);
+ * const server = createHttpServer(controlPlane, { port: 3000 });
  * console.log("Server running on http://localhost:3000");
  * ```
  */
-export function createHttpServer(controlPlane: ControlPlane, port?: number): HttpServer {
-  const routes = createRoutes(controlPlane);
+export async function createHttpServer(controlPlane: ControlPlane, options?: HttpServerOptions): Promise<HttpServer> {
+  const routes = createRoutes(controlPlane, options?.basePath);
   const handler = createRouter(routes);
   const server = createNativeServer(handler);
 
-  // If port provided, auto-start (for convenience in tests/scripts)
-  if (port !== undefined) {
-    // Note: caller should await server.listen(port) explicitly
-    // We don't auto-start to allow configuration
+  if (options?.port !== undefined) {
+    const hostname = options.hostname ?? "0.0.0.0";
+    await server.listen(options.port, hostname);
+    options.logger?.(`HTTP server listening on http://${hostname}:${options.port}${options.basePath ?? ""}`);
   }
 
   return server;
@@ -320,6 +342,7 @@ export function createHttpServer(controlPlane: ControlPlane, port?: number): Htt
  * Export this as default in Workers entry point.
  *
  * @param controlPlane - ControlPlane instance
+ * @param options - Optional base path
  * @returns Fetch handler function
  *
  * @example
@@ -332,14 +355,24 @@ export function createHttpServer(controlPlane: ControlPlane, port?: number): Htt
  * export default createFetchHandler(controlPlane);
  * ```
  */
-export function createFetchHandler(controlPlane: ControlPlane): (request: Request) => Promise<Response> {
-  const routes = createRoutes(controlPlane);
+export function createFetchHandler(controlPlane: ControlPlane, options?: { basePath?: string }): (request: Request) => Promise<Response> {
+  const routes = createRoutes(controlPlane, options?.basePath);
   return createRouter(routes);
 }
 
 /** Extract path parameter from request. */
 function getPathParam(req: Request, name: string): string {
   return (req as any).params?.[name] ?? "";
+}
+
+/** Collect the full request body as text (Node http IncomingMessage is a stream). */
+function collectBody(req: IncomingMessage): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const chunks: Buffer[] = [];
+    req.on("data", (chunk: Buffer) => chunks.push(chunk));
+    req.on("end", () => resolve(Buffer.concat(chunks).toString("utf8")));
+    req.on("error", reject);
+  });
 }
 
 /** Create JSON response. */

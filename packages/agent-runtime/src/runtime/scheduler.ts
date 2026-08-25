@@ -20,10 +20,14 @@ export interface SchedulerOptions {
   maxSteps?: number;
   /** Custom executor map (merged with built-ins). */
   executors?: Map<string, NodeExecutor>;
+  /** Called when a node starts executing (for observability). */
+  onNodeStart?: (record: NodeExecutionRecord) => Promise<void> | void;
   /** Called after each node completes (for observability). */
-  onNodeComplete?: (record: NodeExecutionRecord) => void;
+  onNodeComplete?: (record: NodeExecutionRecord) => Promise<void> | void;
   /** Called if a node fails (for observability/retry). */
-  onNodeError?: (record: NodeExecutionRecord, error: Error) => void;
+  onNodeError?: (record: NodeExecutionRecord, error: Error) => Promise<void> | void;
+  /** Called when a checkpoint is written (for observability). */
+  onCheckpoint?: (checkpoint: { runId: string; seq: number; nodeId: string | null; phase: string; metadata?: Record<string, unknown> }) => Promise<void> | void;
   /** Optional checkpoint service for crash recovery. */
   checkpointService?: CheckpointService;
   /** Run ID for checkpointing (required if checkpointService provided). */
@@ -31,7 +35,9 @@ export interface SchedulerOptions {
   // HITL gateway for human-in-the-loop interrupts.
   hitlGateway?: HitlGateway;
   /** Called when a HITL interrupt is created (run pauses). */
-  onHitlInterrupt?: (interrupt: { token: string; nodeId: string; payload: unknown }) => void;
+  onHitlInterrupt?: (interrupt: { token: string; nodeId: string; payload: unknown }) => Promise<void> | void;
+  /** Called when the run completes (completed/failed/cancelled). */
+  onRunComplete?: (result: SchedulerResult) => Promise<void> | void;
 }
 
 /** Result of a scheduler run. */
@@ -69,8 +75,10 @@ export async function runGraph(
   const {
     maxSteps = 1000,
     executors = new Map(),
+    onNodeStart,
     onNodeComplete,
     onNodeError,
+    onCheckpoint,
     checkpointService,
     runId,
     hitlGateway,
@@ -141,6 +149,15 @@ export async function runGraph(
       channels,
       metadata: { phase: "initial" },
     });
+
+    if (onCheckpoint) {
+      await onCheckpoint({
+        runId,
+        seq: seq - 1,
+        nodeId: null,
+        phase: "initial",
+      });
+    }
   }
 
   while (ready.size > 0 && steps < maxSteps) {
@@ -190,6 +207,16 @@ export async function runGraph(
           channels,
           metadata: { phase: "hitl_waiting", hitlToken: token, hitlNodeId: nodeId, completedNodes: [...completed, nodeId] },
         });
+
+        if (onCheckpoint) {
+          await onCheckpoint({
+            runId,
+            seq: seq - 1,
+            nodeId,
+            phase: "hitl_waiting",
+            metadata: { hitlToken: token, hitlNodeId: nodeId, completedNodes: [...completed, nodeId] },
+          });
+        }
       }
 
       // Notify about interrupt creation
@@ -226,6 +253,11 @@ export async function runGraph(
     };
     history.push(record);
 
+    // Call onNodeStart callback
+    if (onNodeStart) {
+      await onNodeStart(record);
+    }
+
     try {
       // Execute with retry policy
       const result = await executeWithRetry(node, executor, context, node.retry);
@@ -247,6 +279,17 @@ export async function runGraph(
           channels,
           metadata: { phase: "node_complete", completedNodes: [...completed, nodeId] },
         });
+
+        // Call onCheckpoint callback
+        if (onCheckpoint) {
+          await onCheckpoint({
+            runId,
+            seq: seq - 1,
+            nodeId,
+            phase: "node_complete",
+            metadata: { completedNodes: [...completed, nodeId] },
+          });
+        }
       }
 
       // Handle explicit nextNodeIds (branch) or normal adjacency
@@ -273,14 +316,18 @@ export async function runGraph(
         break;
       }
 
-      onNodeComplete?.(record);
+      if (onNodeComplete) {
+        await onNodeComplete(record);
+      }
       steps++;
     } catch (error) {
       record.finishedAt = new Date().toISOString();
       record.status = "failed";
       record.error = { message: (error as Error).message, code: (error as Error & { code?: string }).code };
 
-      onNodeError?.(record, error as Error);
+      if (onNodeError) {
+        await onNodeError(record, error as Error);
+      }
 
       // Check for onError edges
       const errorEdges = compiledGraph.edges.filter(

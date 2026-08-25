@@ -4,7 +4,7 @@
 ✅ **COMPLETED**
 
 ## Commit SHA
-`5042740`
+`ba59858`
 
 ## Summary
 Implemented Human-in-the-Loop (HITL) gateway and resume functionality for the agent-runtime package.
