@@ -3,13 +3,19 @@
  *
  * Why: Centralizes run state (created→running→completed/failed/cancelled),
  * provides getRun/cancelRun, and integrates compileGraph + scheduler.
- * No persistence yet (Task 4 adds SQLite checkpointing).
+ * Supports checkpoint-based crash recovery (Task 5).
  */
 
 import { compileGraph, GraphCompileError } from "../graph/compiler.js";
 import type { CompiledGraph, GraphDefinition } from "../graph/types.js";
 import { runGraph, type SchedulerOptions, type SchedulerResult } from "./scheduler.js";
-import type { RunMetadata, RunStatus, NodeExecutionRecord } from "./state.js";
+import type { RunMetadata, RunStatus, NodeExecutionRecord, ExecutionContext, ChannelMap } from "./state.js";
+import type { StateStore } from "../persistence/types.js";
+import { CheckpointService, type ResumeResult } from "./checkpoint-service.js";
+import { BUILTIN_EXECUTORS, getExecutor, type NodeExecutor, type NodeResult, BranchExecutor } from "./node-executors.js";
+import { executeWithRetry } from "./scheduler.js";
+import { mergeChannels, getChannel, serializeChannels } from "./state.js";
+import { getLastTerminalOutput } from "./scheduler.js";
 
 /** In-memory run store entry. */
 interface RunEntry {
@@ -28,6 +34,12 @@ export interface StartRunOptions {
   schedulerOptions?: SchedulerOptions;
   /** If true, compile the graph definition first (default: true). */
   compile?: boolean;
+  /** If true, resume from latest checkpoint for the given runId. */
+  resume?: boolean;
+  /** StateStore for persistence (required if resume=true). */
+  store?: StateStore;
+  /** Optional thread ID for conversation grouping. */
+  threadId?: string;
 }
 
 /** Result of startRun. */
@@ -44,6 +56,7 @@ export class RunManager {
   /**
    * Start a new run for a graph definition or compiled graph.
    * Compiles if needed, creates run metadata, kicks off scheduler.
+   * If resume=true and runId exists, loads latest checkpoint and continues from next ready node.
    */
   async startRun(
     graph: GraphDefinition | CompiledGraph,
@@ -77,6 +90,7 @@ export class RunManager {
     const metadata: RunMetadata = {
       runId,
       graphId: compiledGraph.graphId,
+      threadId: options.threadId ?? null,
       status: "created",
       createdAt: now,
       input: options.input,
@@ -98,6 +112,7 @@ export class RunManager {
 
   /**
    * Internal: run scheduler and update metadata on completion.
+   * Handles resume from checkpoint if options.resume is true.
    */
   private async runScheduler(
     compiledGraph: CompiledGraph,
@@ -108,7 +123,38 @@ export class RunManager {
     // Pass runId into context via metadata reference
     metadata.runId = metadata.runId; // already set
 
-    const result = await runGraph(compiledGraph, options.input, abortSignal, options.schedulerOptions);
+    // Prepare checkpoint service if store provided
+    let checkpointService: CheckpointService | undefined;
+    if (options.store) {
+      checkpointService = new CheckpointService(options.store);
+    }
+
+    // If resuming, load checkpoint and restore state
+    let resumeResult: ResumeResult | null = null;
+    if (options.resume && options.store && checkpointService) {
+      resumeResult = await checkpointService.resume(metadata.runId, compiledGraph);
+    }
+
+    // Prepare scheduler options with checkpoint integration
+    const schedulerOptions: SchedulerOptions = {
+      ...options.schedulerOptions,
+      checkpointService,
+      runId: metadata.runId,
+    };
+
+    // If we have a resume result, we need to run a modified scheduler that skips completed nodes
+    if (resumeResult) {
+      return this.runSchedulerWithResume(
+        compiledGraph,
+        metadata,
+        abortSignal,
+        schedulerOptions,
+        resumeResult,
+      );
+    }
+
+    // Normal execution (no resume)
+    const result = await runGraph(compiledGraph, options.input, abortSignal, schedulerOptions);
 
     // Update metadata with final state
     metadata.status = result.status;
@@ -120,6 +166,278 @@ export class RunManager {
     }
 
     return result;
+  }
+
+  /**
+   * Run scheduler with resume capability: skip already completed nodes.
+   * Uses restored channels and history from checkpoint.
+   * For completed branch nodes, re-evaluates condition to determine taken path.
+   */
+  private async runSchedulerWithResume(
+    compiledGraph: CompiledGraph,
+    metadata: RunMetadata,
+    abortSignal: AbortSignal,
+    schedulerOptions: SchedulerOptions,
+    resumeResult: ResumeResult,
+  ): Promise<SchedulerResult> {
+    const {
+      maxSteps = 1000,
+      executors = new Map(),
+      onNodeComplete,
+      onNodeError,
+      checkpointService,
+      runId,
+    } = schedulerOptions;
+
+    // Merge custom executors with built-ins (custom wins)
+    const executorMap = new Map(BUILTIN_EXECUTORS);
+    for (const [key, value] of executors) {
+      executorMap.set(key, value);
+    }
+
+    // Initialize state from resume
+    const channels = resumeResult.channels;
+    const history = [...resumeResult.history];
+    let steps = 0;
+    let seq = resumeResult.nextSeq;
+    const completedArray = resumeResult.completedNodeIds;
+    const completed = new Set(completedArray);
+
+    // Build in-degree map for Kahn's algorithm (only normal edges)
+    const inDegree = new Map<string, number>();
+    const adjacency = compiledGraph.adjacency;
+
+    for (const nodeId of compiledGraph.nodes.keys()) {
+      inDegree.set(nodeId, 0);
+    }
+    for (const [from, tos] of adjacency) {
+      for (const to of tos) {
+        inDegree.set(to, (inDegree.get(to) ?? 0) + 1);
+      }
+    }
+
+    // Ready queue: nodes with in-degree 0 that are NOT already completed
+    const ready = new Set<string>();
+    for (const [nodeId, degree] of inDegree) {
+      if (degree === 0 && !completed.has(nodeId)) {
+        ready.add(nodeId);
+      }
+    }
+
+    // Process completed nodes to decrement in-degree of their ACTUAL taken successors
+    // For branch nodes, re-evaluate condition using restored channels to find taken edge.
+    // For other nodes, only successors that are also completed were on the taken path.
+    for (const completedNodeId of completedArray) {
+      const node = compiledGraph.nodes.get(completedNodeId);
+      if (!node) continue;
+
+      let actualSuccessors: string[] = [];
+      if (node.type === "branch") {
+        // Re-evaluate branch condition using restored channel state
+        const branchExecutor = executorMap.get("branch") as BranchExecutor | undefined;
+        if (branchExecutor && node.config?.condition) {
+          // Create a temporary context with restored channels for condition evaluation
+          const tempContext: ExecutionContext = {
+            compiledGraph,
+            channels,
+            metadata: {
+              runId: metadata.runId,
+              graphId: compiledGraph.graphId,
+              status: "running",
+              createdAt: metadata.createdAt,
+              input: metadata.input,
+              nodeHistory: history,
+            },
+            abortSignal,
+          };
+          try {
+            const channelValues = serializeChannels(channels);
+            const conditionFn = node.config?.condition as ((channels: Record<string, unknown>, context: ExecutionContext) => string | Promise<string>) | undefined;
+            if (!conditionFn) throw new Error("No condition function");
+            const conditionResult = await conditionFn(channelValues, tempContext);
+            // Find matching edge
+            const edges = compiledGraph.edges.filter((e) => e.from === completedNodeId && !e.onError);
+            for (const edge of edges) {
+              if (edge.condition === undefined) {
+                if (!actualSuccessors.length) actualSuccessors = [edge.to];
+              } else if (edge.condition === conditionResult) {
+                actualSuccessors = [edge.to];
+                break;
+              }
+            }
+          } catch {
+            // If condition evaluation fails, fall back to completed successors
+            const allSuccessors = adjacency.get(completedNodeId) ?? [];
+            actualSuccessors = allSuccessors.filter((s) => completed.has(s));
+          }
+        } else {
+          // No condition function, fall back to completed successors
+          const allSuccessors = adjacency.get(completedNodeId) ?? [];
+          actualSuccessors = allSuccessors.filter((s) => completed.has(s));
+        }
+      } else {
+        // Non-branch nodes: only successors that are also completed were on the taken path
+        const allSuccessors = adjacency.get(completedNodeId) ?? [];
+        actualSuccessors = allSuccessors.filter((s) => completed.has(s));
+      }
+
+      for (const nextId of actualSuccessors) {
+        const newDegree = (inDegree.get(nextId) ?? 1) - 1;
+        inDegree.set(nextId, newDegree);
+        if (newDegree === 0 && !completed.has(nextId)) {
+          ready.add(nextId);
+        }
+      }
+    }
+
+    // Execution context
+    const context: ExecutionContext = {
+      compiledGraph,
+      channels,
+      metadata: {
+        runId: metadata.runId,
+        graphId: compiledGraph.graphId,
+        status: "running",
+        createdAt: metadata.createdAt,
+        input: metadata.input,
+        nodeHistory: history,
+      },
+      abortSignal,
+    };
+
+    while (ready.size > 0 && steps < maxSteps) {
+      if (abortSignal.aborted) {
+        return {
+          status: "cancelled",
+          channels,
+          history,
+          error: { message: "Run cancelled via abort signal", code: "CANCELLED" },
+        };
+      }
+
+      // Pick a ready node (deterministic: first by id)
+      const nodeId = [...ready].sort()[0]!;
+      ready.delete(nodeId);
+
+      const node = compiledGraph.nodes.get(nodeId)!;
+      const executor = executorMap.get(node.type);
+      if (!executor) {
+        const error = new Error(`No executor for node type "${node.type}"`);
+        return failRun(error, "NO_EXECUTOR");
+      }
+
+      // Record execution start
+      const record: NodeExecutionRecord = {
+        nodeId,
+        nodeType: node.type,
+        startedAt: new Date().toISOString(),
+        status: "running",
+        input: getNodeInput(node, channels),
+        attempt: 1,
+      };
+      history.push(record);
+
+      try {
+        // Execute with retry policy
+        const result = await executeWithRetry(node, executor, context, node.retry);
+
+        // Update record
+        record.finishedAt = new Date().toISOString();
+        record.status = "completed";
+        record.output = result.updates;
+
+        // Merge channel updates
+        mergeChannels(channels, result.updates);
+
+        // Write checkpoint after successful node execution
+        if (checkpointService && runId) {
+          await checkpointService.write({
+            runId,
+            seq: seq++,
+            nodeId,
+            channels,
+            metadata: { phase: "node_complete", completedNodes: [...completed, nodeId] },
+          });
+        }
+
+        // Handle explicit nextNodeIds (branch) or normal adjacency
+        let nextNodes: readonly string[];
+        if (result.nextNodeIds && result.nextNodeIds.length > 0) {
+          nextNodes = result.nextNodeIds;
+        } else {
+          nextNodes = adjacency.get(nodeId) ?? [];
+        }
+
+        // Decrement in-degree for successors
+        for (const nextId of nextNodes) {
+          const newDegree = (inDegree.get(nextId) ?? 1) - 1;
+          inDegree.set(nextId, newDegree);
+          if (newDegree === 0 && !completed.has(nextId)) {
+            ready.add(nextId);
+          }
+        }
+
+        completed.add(nodeId);
+
+        // Halt signal (end node or explicit halt)
+        if (result.halt || node.type === "end") {
+          break;
+        }
+
+        onNodeComplete?.(record);
+        steps++;
+      } catch (error) {
+        record.finishedAt = new Date().toISOString();
+        record.status = "failed";
+        record.error = { message: (error as Error).message, code: (error as Error & { code?: string }).code };
+
+        onNodeError?.(record, error as Error);
+
+        // Check for onError edges
+        const errorEdges = compiledGraph.edges.filter(
+          (e) => e.from === nodeId && e.onError,
+        );
+        if (errorEdges.length > 0) {
+          // Route to first error handler
+          const errorTarget = errorEdges[0]!.to;
+          ready.add(errorTarget);
+          continue;
+        }
+
+        return failRun(error as Error, "NODE_ERROR");
+      }
+    }
+
+    if (steps >= maxSteps) {
+      return failRun(new Error(`Max steps (${maxSteps}) exceeded`), "MAX_STEPS");
+    }
+
+    // Determine final status
+    const status: RunStatus = abortSignal.aborted ? "cancelled" : "completed";
+
+    // Get output from "output" channel or last terminal node's output channel
+    const output = getChannel(channels, "output") ?? getLastTerminalOutput(compiledGraph, channels);
+
+    // Update metadata with final state
+    metadata.status = status;
+    metadata.finishedAt = new Date().toISOString();
+    metadata.nodeHistory = history;
+    metadata.output = output;
+
+    return { status, channels, history, output };
+
+    function failRun(error: Error, code: string): SchedulerResult {
+      metadata.status = "failed";
+      metadata.finishedAt = new Date().toISOString();
+      metadata.nodeHistory = history;
+      metadata.error = { message: error.message, code, cause: error };
+      return {
+        status: "failed",
+        channels,
+        history,
+        error: { message: error.message, code, cause: error },
+      };
+    }
   }
 
   /**
@@ -200,6 +518,20 @@ export class RunManager {
   evictGraph(graphId: string): boolean {
     return this.graphCache.delete(graphId);
   }
+}
+
+/** Extract input channels for a node (for history). */
+function getNodeInput(
+  node: import("../graph/types.js").GraphNode,
+  channels: ChannelMap,
+): Record<string, unknown> {
+  const config = node.config ?? {};
+  const inputChannels: string[] = (config.inputChannels as string[]) ?? ["input"];
+  const input: Record<string, unknown> = {};
+  for (const ch of inputChannels) {
+    input[ch] = getChannel(channels, ch);
+  }
+  return input;
 }
 
 /** Default singleton instance for convenience. */

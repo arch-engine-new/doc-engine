@@ -55,6 +55,8 @@ export interface RunMetadata {
   runId: string;
   /** Graph identifier this run executes. */
   graphId: string;
+  /** Optional thread identifier for conversation grouping. */
+  threadId?: string | null;
   /** Run status. */
   status: RunStatus;
   /** When the run was created (ISO string). */

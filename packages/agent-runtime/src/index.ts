@@ -98,6 +98,20 @@ export {
 } from "./runtime/run-manager.js";
 
 /**
+ * CheckpointService: crash recovery checkpoint persistence.
+ */
+export type {
+  CheckpointRow,
+  WriteCheckpointOptions,
+  ResumeResult,
+} from "./runtime/checkpoint-service.js";
+
+export {
+  CheckpointService,
+  createCheckpointService,
+} from "./runtime/checkpoint-service.js";
+
+/**
  * Persistence: SQLite state store and migration.
  */
 export type {

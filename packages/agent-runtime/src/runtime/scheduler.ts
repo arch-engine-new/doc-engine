@@ -9,7 +9,8 @@
 import type { CompiledGraph } from "../graph/types.js";
 import type { ExecutionContext, NodeExecutionRecord, RunStatus } from "./state.js";
 import { getExecutor, type NodeExecutor, type NodeResult, BUILTIN_EXECUTORS } from "./node-executors.js";
-import { createInitialChannels, mergeChannels, getChannel } from "./state.js";
+import { createInitialChannels, mergeChannels, getChannel, serializeChannels } from "./state.js";
+import type { CheckpointService, WriteCheckpointOptions } from "./checkpoint-service.js";
 
 /** Scheduler options. */
 export interface SchedulerOptions {
@@ -21,6 +22,10 @@ export interface SchedulerOptions {
   onNodeComplete?: (record: NodeExecutionRecord) => void;
   /** Called if a node fails (for observability/retry). */
   onNodeError?: (record: NodeExecutionRecord, error: Error) => void;
+  /** Optional checkpoint service for crash recovery. */
+  checkpointService?: CheckpointService;
+  /** Run ID for checkpointing (required if checkpointService provided). */
+  runId?: string;
 }
 
 /** Result of a scheduler run. */
@@ -52,6 +57,8 @@ export async function runGraph(
     executors = new Map(),
     onNodeComplete,
     onNodeError,
+    checkpointService,
+    runId,
   } = options;
 
   // Merge custom executors with built-ins (custom wins)
@@ -64,6 +71,7 @@ export async function runGraph(
   const channels = createInitialChannels(input);
   const history: NodeExecutionRecord[] = [];
   let steps = 0;
+  let seq = 0;
 
   // Build in-degree map for Kahn's algorithm (only normal edges)
   const inDegree = new Map<string, number>();
@@ -91,7 +99,7 @@ export async function runGraph(
     compiledGraph,
     channels,
     metadata: {
-      runId: "", // Filled by RunManager
+      runId: runId ?? "",
       graphId: compiledGraph.graphId,
       status: "running",
       createdAt: new Date().toISOString(),
@@ -103,6 +111,17 @@ export async function runGraph(
 
   // Track completed nodes for fan-in (future: wait for all predecessors)
   const completed = new Set<string>();
+
+  // Write initial checkpoint (before any node executes)
+  if (checkpointService && runId) {
+    await checkpointService.write({
+      runId,
+      seq: seq++,
+      nodeId: null,
+      channels,
+      metadata: { phase: "initial" },
+    });
+  }
 
   while (ready.size > 0 && steps < maxSteps) {
     if (abortSignal.aborted) {
@@ -147,6 +166,17 @@ export async function runGraph(
 
       // Merge channel updates
       mergeChannels(channels, result.updates);
+
+      // Write checkpoint after successful node execution
+      if (checkpointService && runId) {
+        await checkpointService.write({
+          runId,
+          seq: seq++,
+          nodeId,
+          channels,
+          metadata: { phase: "node_complete", completedNodes: [...completed, nodeId] },
+        });
+      }
 
       // Handle explicit nextNodeIds (branch) or normal adjacency
       let nextNodes: readonly string[];
@@ -221,7 +251,7 @@ export async function runGraph(
 /**
  * Execute a node with retry policy.
  */
-async function executeWithRetry(
+export async function executeWithRetry(
   node: import("../graph/types.js").GraphNode,
   executor: NodeExecutor,
   context: ExecutionContext,
@@ -264,7 +294,7 @@ function getNodeInput(
 }
 
 /** Get output from last terminal node's default output channel. */
-function getLastTerminalOutput(
+export function getLastTerminalOutput(
   compiledGraph: CompiledGraph,
   channels: Map<string, { value: unknown; version: number }>,
 ): unknown {
