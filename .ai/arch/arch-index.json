@@ -46,7 +46,9 @@
       "title": "agent-runtime",
       "summary": "backend module agent-runtime",
       "children": [
-        "backend/agent-runtime/pojo"
+        "backend/agent-runtime/pojo",
+        "backend/agent-runtime/util",
+        "backend/agent-runtime/api"
       ],
       "chunks": [],
       "keywords": [
@@ -57,21 +59,149 @@
       "path": "backend/agent-runtime/pojo",
       "kind": "api-doc",
       "title": "agent-runtime Pojo",
-      "summary": "1 pojo asset(s)",
+      "summary": "4 pojo asset(s)",
       "children": [],
       "chunks": [
-        "backend/agent-runtime/pojo/AgentRuntimeSchemaSql"
+        "backend/agent-runtime/pojo/AgentRuntimeSchemaSql",
+        "backend/agent-runtime/pojo/Channel/RunStatus/RunMetadata types",
+        "backend/agent-runtime/pojo/Graph types",
+        "backend/agent-runtime/pojo/StateStore and Stored types"
       ],
       "keywords": [
         "agent-runtime",
         "AgentRuntimeSchemaSql",
         "schema",
-        "agent-runtime",
-        "sqlite"
+        "sqlite",
+        "Channel/RunStatus/RunMetadata types",
+        "state",
+        "channels",
+        "types",
+        "Graph types",
+        "graph",
+        "StateStore and Stored types",
+        "persistence",
+        "statestore"
       ],
       "docFile": "backend/agent-runtime/pojo.md",
       "anchors": [
-        "AgentRuntimeSchemaSql"
+        "AgentRuntimeSchemaSql",
+        "Channel/RunStatus/RunMetadata types",
+        "Graph types",
+        "StateStore and Stored types"
+      ]
+    },
+    "backend/agent-runtime/util": {
+      "path": "backend/agent-runtime/util",
+      "kind": "api-doc",
+      "title": "agent-runtime Utils",
+      "summary": "13 util asset(s)",
+      "children": [],
+      "chunks": [
+        "backend/agent-runtime/util/RunManager",
+        "backend/agent-runtime/util/Scheduler",
+        "backend/agent-runtime/util/NodeExecutors",
+        "backend/agent-runtime/util/CheckpointService",
+        "backend/agent-runtime/util/EventLog",
+        "backend/agent-runtime/util/GraphCompiler",
+        "backend/agent-runtime/util/HitlGateway",
+        "backend/agent-runtime/util/ToolRegistry",
+        "backend/agent-runtime/util/ToolRuntime",
+        "backend/agent-runtime/util/SQLiteStateStore",
+        "backend/agent-runtime/util/SQLite migration runner",
+        "backend/agent-runtime/util/OtelHooks",
+        "backend/agent-runtime/util/agent-runtime index"
+      ],
+      "keywords": [
+        "agent-runtime",
+        "RunManager",
+        "run",
+        "lifecycle",
+        "scheduler",
+        "Scheduler",
+        "graph-execution",
+        "retry",
+        "NodeExecutors",
+        "node",
+        "executor",
+        "graph",
+        "CheckpointService",
+        "checkpoint",
+        "resume",
+        "crash-recovery",
+        "EventLog",
+        "events",
+        "trace",
+        "observability",
+        "GraphCompiler",
+        "compiler",
+        "validation",
+        "HitlGateway",
+        "hitl",
+        "interrupt",
+        "ToolRegistry",
+        "tools",
+        "registry",
+        "ToolRuntime",
+        "runtime",
+        "idempotency",
+        "SQLiteStateStore",
+        "sqlite",
+        "persistence",
+        "statestore",
+        "SQLite migration runner",
+        "migration",
+        "ddl",
+        "OtelHooks",
+        "otel",
+        "tracing",
+        "span",
+        "agent-runtime index",
+        "public-api",
+        "barrel",
+        "module"
+      ],
+      "docFile": "backend/agent-runtime/utils.md",
+      "anchors": [
+        "RunManager",
+        "Scheduler",
+        "NodeExecutors",
+        "CheckpointService",
+        "EventLog",
+        "GraphCompiler",
+        "HitlGateway",
+        "ToolRegistry",
+        "ToolRuntime",
+        "SQLiteStateStore",
+        "SQLite migration runner",
+        "OtelHooks",
+        "agent-runtime index"
+      ]
+    },
+    "backend/agent-runtime/api": {
+      "path": "backend/agent-runtime/api",
+      "kind": "api-doc",
+      "title": "agent-runtime Api",
+      "summary": "2 api asset(s)",
+      "children": [],
+      "chunks": [
+        "backend/agent-runtime/api/ControlPlane",
+        "backend/agent-runtime/api/HttpControlServer"
+      ],
+      "keywords": [
+        "agent-runtime",
+        "ControlPlane",
+        "api",
+        "control-plane",
+        "run",
+        "HttpControlServer",
+        "http",
+        "fetch",
+        "node"
+      ],
+      "docFile": "backend/agent-runtime/api.md",
+      "anchors": [
+        "ControlPlane",
+        "HttpControlServer"
       ]
     }
   }

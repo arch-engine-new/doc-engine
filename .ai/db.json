@@ -55,6 +55,13 @@
       "tsFilePath": "packages/agent-runtime/src/index.ts",
       "registeredAt": "2026-08-25T10:38:37.387Z",
       "source": "manual"
+    },
+    {
+      "name": "ToolExecutionResult",
+      "description": "Output of a tool execution: toolName, input, output, status (completed/failed/timeout/cancelled/error), durationMs, attempt, idempotencyKey and error info.",
+      "tsFilePath": "packages/agent-runtime/src/index.ts",
+      "registeredAt": "2026-08-25T10:43:23.544Z",
+      "source": "manual"
     }
   ],
   "missingRequests": []

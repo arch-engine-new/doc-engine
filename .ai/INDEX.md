@@ -14,6 +14,7 @@
 | RunView | Run snapshot from ControlPlane.getRun: run metadata plus ordered event trace. | packages/agent-runtime/src/index.ts | 2026-08-25T10:38:35.540Z |
 | EventRow | A single trace event row: runId, seq, eventType (node_start/node_end/tool_call/checkpoint/hitl/run_started/run_completed/run_failed/run_cancelled), payload, createdAt. | packages/agent-runtime/src/index.ts | 2026-08-25T10:38:36.638Z |
 | StateStore | Persistence interface for agent-runtime: runs, node executions, checkpoints, tool calls, events, HITL interrupts. Implemented by SQLiteStateStore. | packages/agent-runtime/src/index.ts | 2026-08-25T10:38:37.387Z |
+| ToolExecutionResult | Output of a tool execution: toolName, input, output, status (completed/failed/timeout/cancelled/error), durationMs, attempt, idempotencyKey and error info. | packages/agent-runtime/src/index.ts | 2026-08-25T10:43:23.544Z |
 
 ## Pending Missing Requests
 

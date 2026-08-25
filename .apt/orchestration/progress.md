@@ -15,7 +15,7 @@ updatedAt: 2026-08-25T03:45:00.000Z
 | 6 | ToolRuntime + 幂等 + retry | DONE | 91dcd7c | task-6-report.md |
 | 7 | HITL + resume API | DONE | 0e05c1e | task-7-report.md |
 | 8 | EventLog + 控制面 API | DONE | 116d410 | task-8-report.md |
-| 9 | 契约注册 + 示例 + 文档 | pending | | |
-| 10 | 知识闭环预备 | pending | | |
+| 9 | 契约注册 + 示例 + 文档 | DONE | 2c406c6 | task-9-report.md |
+| 10 | 知识闭环预备 | DONE | 3fcd078 | task-10-report.md |
 
 BASE_SHA_initial: nogit

@@ -6,7 +6,7 @@
 
 | Module | Path | APIs | RPCs | Utils | Enums | POJO |
 |--------|------|------|------|-------|-------|------|
-| agent-runtime | backend/agent-runtime |  |  |  |  | 1 pojo asset(s) |
+| agent-runtime | backend/agent-runtime | 2 api asset(s) |  | 13 util asset(s) |  | 4 pojo asset(s) |
 
 ## Frontend Packages
 
