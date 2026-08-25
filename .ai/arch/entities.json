@@ -1,0 +1,632 @@
+{
+  "entities": [
+    {
+      "name": "t_agent_graph",
+      "table": "t_agent_graph",
+      "moduleSlug": "",
+      "filePath": "docs/schema/generated/agent-runtime-migration.sql",
+      "fields": [
+        {
+          "name": "id",
+          "type": "INTEGER",
+          "column": "id",
+          "nullable": true
+        },
+        {
+          "name": "graph_id",
+          "type": "VARCHAR",
+          "column": "graph_id",
+          "nullable": false
+        },
+        {
+          "name": "name",
+          "type": "VARCHAR",
+          "column": "name",
+          "nullable": true
+        },
+        {
+          "name": "version",
+          "type": "INTEGER",
+          "column": "version",
+          "nullable": false
+        },
+        {
+          "name": "def_json",
+          "type": "TEXT",
+          "column": "def_json",
+          "nullable": false
+        },
+        {
+          "name": "status",
+          "type": "INTEGER",
+          "column": "status",
+          "nullable": false
+        },
+        {
+          "name": "created_at",
+          "type": "TEXT",
+          "column": "created_at",
+          "nullable": false
+        },
+        {
+          "name": "updated_at",
+          "type": "TEXT",
+          "column": "updated_at",
+          "nullable": false
+        },
+        {
+          "name": "creator",
+          "type": "VARCHAR",
+          "column": "creator",
+          "nullable": false
+        },
+        {
+          "name": "updater",
+          "type": "VARCHAR",
+          "column": "updater",
+          "nullable": false
+        },
+        {
+          "name": "deleted",
+          "type": "INTEGER",
+          "column": "deleted",
+          "nullable": false
+        }
+      ],
+      "source": "sql"
+    },
+    {
+      "name": "t_agent_run",
+      "table": "t_agent_run",
+      "moduleSlug": "",
+      "filePath": "docs/schema/generated/agent-runtime-migration.sql",
+      "fields": [
+        {
+          "name": "id",
+          "type": "INTEGER",
+          "column": "id",
+          "nullable": true
+        },
+        {
+          "name": "run_id",
+          "type": "VARCHAR",
+          "column": "run_id",
+          "nullable": false
+        },
+        {
+          "name": "graph_id",
+          "type": "VARCHAR",
+          "column": "graph_id",
+          "nullable": false
+        },
+        {
+          "name": "thread_id",
+          "type": "VARCHAR",
+          "column": "thread_id",
+          "nullable": true
+        },
+        {
+          "name": "status",
+          "type": "VARCHAR",
+          "column": "status",
+          "nullable": false
+        },
+        {
+          "name": "input_json",
+          "type": "TEXT",
+          "column": "input_json",
+          "nullable": true
+        },
+        {
+          "name": "output_json",
+          "type": "TEXT",
+          "column": "output_json",
+          "nullable": true
+        },
+        {
+          "name": "error_json",
+          "type": "TEXT",
+          "column": "error_json",
+          "nullable": true
+        },
+        {
+          "name": "current_node_id",
+          "type": "VARCHAR",
+          "column": "current_node_id",
+          "nullable": true
+        },
+        {
+          "name": "parent_run_id",
+          "type": "VARCHAR",
+          "column": "parent_run_id",
+          "nullable": true
+        },
+        {
+          "name": "started_at",
+          "type": "TEXT",
+          "column": "started_at",
+          "nullable": true
+        },
+        {
+          "name": "finished_at",
+          "type": "TEXT",
+          "column": "finished_at",
+          "nullable": true
+        },
+        {
+          "name": "created_at",
+          "type": "TEXT",
+          "column": "created_at",
+          "nullable": false
+        },
+        {
+          "name": "updated_at",
+          "type": "TEXT",
+          "column": "updated_at",
+          "nullable": false
+        },
+        {
+          "name": "creator",
+          "type": "VARCHAR",
+          "column": "creator",
+          "nullable": false
+        },
+        {
+          "name": "updater",
+          "type": "VARCHAR",
+          "column": "updater",
+          "nullable": false
+        },
+        {
+          "name": "deleted",
+          "type": "INTEGER",
+          "column": "deleted",
+          "nullable": false
+        }
+      ],
+      "source": "sql"
+    },
+    {
+      "name": "t_agent_node_execution",
+      "table": "t_agent_node_execution",
+      "moduleSlug": "",
+      "filePath": "docs/schema/generated/agent-runtime-migration.sql",
+      "fields": [
+        {
+          "name": "id",
+          "type": "INTEGER",
+          "column": "id",
+          "nullable": true
+        },
+        {
+          "name": "run_id",
+          "type": "VARCHAR",
+          "column": "run_id",
+          "nullable": false
+        },
+        {
+          "name": "node_id",
+          "type": "VARCHAR",
+          "column": "node_id",
+          "nullable": false
+        },
+        {
+          "name": "node_type",
+          "type": "VARCHAR",
+          "column": "node_type",
+          "nullable": false
+        },
+        {
+          "name": "attempt",
+          "type": "INTEGER",
+          "column": "attempt",
+          "nullable": false
+        },
+        {
+          "name": "status",
+          "type": "VARCHAR",
+          "column": "status",
+          "nullable": false
+        },
+        {
+          "name": "input_json",
+          "type": "TEXT",
+          "column": "input_json",
+          "nullable": true
+        },
+        {
+          "name": "output_json",
+          "type": "TEXT",
+          "column": "output_json",
+          "nullable": true
+        },
+        {
+          "name": "error_json",
+          "type": "TEXT",
+          "column": "error_json",
+          "nullable": true
+        },
+        {
+          "name": "started_at",
+          "type": "TEXT",
+          "column": "started_at",
+          "nullable": true
+        },
+        {
+          "name": "finished_at",
+          "type": "TEXT",
+          "column": "finished_at",
+          "nullable": true
+        },
+        {
+          "name": "created_at",
+          "type": "TEXT",
+          "column": "created_at",
+          "nullable": false
+        },
+        {
+          "name": "updated_at",
+          "type": "TEXT",
+          "column": "updated_at",
+          "nullable": false
+        },
+        {
+          "name": "creator",
+          "type": "VARCHAR",
+          "column": "creator",
+          "nullable": false
+        },
+        {
+          "name": "updater",
+          "type": "VARCHAR",
+          "column": "updater",
+          "nullable": false
+        },
+        {
+          "name": "deleted",
+          "type": "INTEGER",
+          "column": "deleted",
+          "nullable": false
+        }
+      ],
+      "source": "sql"
+    },
+    {
+      "name": "t_agent_checkpoint",
+      "table": "t_agent_checkpoint",
+      "moduleSlug": "",
+      "filePath": "docs/schema/generated/agent-runtime-migration.sql",
+      "fields": [
+        {
+          "name": "id",
+          "type": "INTEGER",
+          "column": "id",
+          "nullable": true
+        },
+        {
+          "name": "run_id",
+          "type": "VARCHAR",
+          "column": "run_id",
+          "nullable": false
+        },
+        {
+          "name": "seq",
+          "type": "INTEGER",
+          "column": "seq",
+          "nullable": false
+        },
+        {
+          "name": "node_id",
+          "type": "VARCHAR",
+          "column": "node_id",
+          "nullable": true
+        },
+        {
+          "name": "state_json",
+          "type": "TEXT",
+          "column": "state_json",
+          "nullable": false
+        },
+        {
+          "name": "metadata_json",
+          "type": "TEXT",
+          "column": "metadata_json",
+          "nullable": true
+        },
+        {
+          "name": "created_at",
+          "type": "TEXT",
+          "column": "created_at",
+          "nullable": false
+        },
+        {
+          "name": "updated_at",
+          "type": "TEXT",
+          "column": "updated_at",
+          "nullable": false
+        },
+        {
+          "name": "creator",
+          "type": "VARCHAR",
+          "column": "creator",
+          "nullable": false
+        },
+        {
+          "name": "updater",
+          "type": "VARCHAR",
+          "column": "updater",
+          "nullable": false
+        },
+        {
+          "name": "deleted",
+          "type": "INTEGER",
+          "column": "deleted",
+          "nullable": false
+        }
+      ],
+      "source": "sql"
+    },
+    {
+      "name": "t_agent_tool_call",
+      "table": "t_agent_tool_call",
+      "moduleSlug": "",
+      "filePath": "docs/schema/generated/agent-runtime-migration.sql",
+      "fields": [
+        {
+          "name": "id",
+          "type": "INTEGER",
+          "column": "id",
+          "nullable": true
+        },
+        {
+          "name": "run_id",
+          "type": "VARCHAR",
+          "column": "run_id",
+          "nullable": false
+        },
+        {
+          "name": "node_execution_id",
+          "type": "INTEGER",
+          "column": "node_execution_id",
+          "nullable": true
+        },
+        {
+          "name": "tool_name",
+          "type": "VARCHAR",
+          "column": "tool_name",
+          "nullable": false
+        },
+        {
+          "name": "idempotency_key",
+          "type": "VARCHAR",
+          "column": "idempotency_key",
+          "nullable": false
+        },
+        {
+          "name": "request_json",
+          "type": "TEXT",
+          "column": "request_json",
+          "nullable": true
+        },
+        {
+          "name": "response_json",
+          "type": "TEXT",
+          "column": "response_json",
+          "nullable": true
+        },
+        {
+          "name": "status",
+          "type": "VARCHAR",
+          "column": "status",
+          "nullable": false
+        },
+        {
+          "name": "error_json",
+          "type": "TEXT",
+          "column": "error_json",
+          "nullable": true
+        },
+        {
+          "name": "duration_ms",
+          "type": "INTEGER",
+          "column": "duration_ms",
+          "nullable": true
+        },
+        {
+          "name": "created_at",
+          "type": "TEXT",
+          "column": "created_at",
+          "nullable": false
+        },
+        {
+          "name": "updated_at",
+          "type": "TEXT",
+          "column": "updated_at",
+          "nullable": false
+        },
+        {
+          "name": "creator",
+          "type": "VARCHAR",
+          "column": "creator",
+          "nullable": false
+        },
+        {
+          "name": "updater",
+          "type": "VARCHAR",
+          "column": "updater",
+          "nullable": false
+        },
+        {
+          "name": "deleted",
+          "type": "INTEGER",
+          "column": "deleted",
+          "nullable": false
+        }
+      ],
+      "source": "sql"
+    },
+    {
+      "name": "t_agent_run_event",
+      "table": "t_agent_run_event",
+      "moduleSlug": "",
+      "filePath": "docs/schema/generated/agent-runtime-migration.sql",
+      "fields": [
+        {
+          "name": "id",
+          "type": "INTEGER",
+          "column": "id",
+          "nullable": true
+        },
+        {
+          "name": "run_id",
+          "type": "VARCHAR",
+          "column": "run_id",
+          "nullable": false
+        },
+        {
+          "name": "seq",
+          "type": "INTEGER",
+          "column": "seq",
+          "nullable": false
+        },
+        {
+          "name": "event_type",
+          "type": "VARCHAR",
+          "column": "event_type",
+          "nullable": false
+        },
+        {
+          "name": "payload_json",
+          "type": "TEXT",
+          "column": "payload_json",
+          "nullable": false
+        },
+        {
+          "name": "created_at",
+          "type": "TEXT",
+          "column": "created_at",
+          "nullable": false
+        },
+        {
+          "name": "updated_at",
+          "type": "TEXT",
+          "column": "updated_at",
+          "nullable": false
+        },
+        {
+          "name": "creator",
+          "type": "VARCHAR",
+          "column": "creator",
+          "nullable": false
+        },
+        {
+          "name": "updater",
+          "type": "VARCHAR",
+          "column": "updater",
+          "nullable": false
+        },
+        {
+          "name": "deleted",
+          "type": "INTEGER",
+          "column": "deleted",
+          "nullable": false
+        }
+      ],
+      "source": "sql"
+    },
+    {
+      "name": "t_agent_hitl_interrupt",
+      "table": "t_agent_hitl_interrupt",
+      "moduleSlug": "",
+      "filePath": "docs/schema/generated/agent-runtime-migration.sql",
+      "fields": [
+        {
+          "name": "id",
+          "type": "INTEGER",
+          "column": "id",
+          "nullable": true
+        },
+        {
+          "name": "run_id",
+          "type": "VARCHAR",
+          "column": "run_id",
+          "nullable": false
+        },
+        {
+          "name": "node_id",
+          "type": "VARCHAR",
+          "column": "node_id",
+          "nullable": false
+        },
+        {
+          "name": "token",
+          "type": "VARCHAR",
+          "column": "token",
+          "nullable": false
+        },
+        {
+          "name": "status",
+          "type": "VARCHAR",
+          "column": "status",
+          "nullable": false
+        },
+        {
+          "name": "payload_json",
+          "type": "TEXT",
+          "column": "payload_json",
+          "nullable": true
+        },
+        {
+          "name": "decision_json",
+          "type": "TEXT",
+          "column": "decision_json",
+          "nullable": true
+        },
+        {
+          "name": "expires_at",
+          "type": "TEXT",
+          "column": "expires_at",
+          "nullable": true
+        },
+        {
+          "name": "resumed_at",
+          "type": "TEXT",
+          "column": "resumed_at",
+          "nullable": true
+        },
+        {
+          "name": "created_at",
+          "type": "TEXT",
+          "column": "created_at",
+          "nullable": false
+        },
+        {
+          "name": "updated_at",
+          "type": "TEXT",
+          "column": "updated_at",
+          "nullable": false
+        },
+        {
+          "name": "creator",
+          "type": "VARCHAR",
+          "column": "creator",
+          "nullable": false
+        },
+        {
+          "name": "updater",
+          "type": "VARCHAR",
+          "column": "updater",
+          "nullable": false
+        },
+        {
+          "name": "deleted",
+          "type": "INTEGER",
+          "column": "deleted",
+          "nullable": false
+        }
+      ],
+      "source": "sql"
+    }
+  ],
+  "relations": []
+}

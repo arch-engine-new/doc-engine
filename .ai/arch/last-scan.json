@@ -1,10 +1,26 @@
 {
   "version": 2,
-  "commit": "nogit",
-  "branch": "nogit",
-  "scannedAt": "2026-08-25T03:22:10.017Z",
-  "modules": {},
-  "packages": {},
+  "commit": "8ccf47c1e92a9ceb0b43e731d02b0c9f7e748b80",
+  "branch": "master",
+  "scannedAt": "2026-08-25T11:12:56.774Z",
+  "modules": {
+    "agent-runtime": {
+      "sourcePath": "packages/agent-runtime",
+      "assetCount": 0,
+      "fileHashes": {
+        "packages/agent-runtime/src/api/http.ts": "62182e39b2898a44a6eee2d9ef64fda2e14f6812f5cf2618127113b4991dbb07",
+        "packages/agent-runtime/src/graph/compiler.ts": "10caa4b05b58671a1cc5f47d995cce89b37ad207cdf93df34ea224f99624219d",
+        "packages/agent-runtime/src/obs/otel-hooks.ts": "349ea8a4246cf34103a7df8e7b84e3289fe9ca4cd9dd88dcc4c7187a16bcef5c"
+      }
+    }
+  },
+  "packages": {
+    "agent-runtime": {
+      "sourcePath": "packages/agent-runtime",
+      "assetCount": 58,
+      "fileHashes": {}
+    }
+  },
   "pathRulesHash": "d487fe672dbca127a94bc25b005bdff95cde9a935483ec9992bb8611b1770fbd",
   "scanMode": "full"
 }

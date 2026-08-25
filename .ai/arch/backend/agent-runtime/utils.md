@@ -76,15 +76,15 @@ _No utils discovered._
 
 | Field | Value |
 |-------|-------|
-| Summary | Graph validation + compile pipeline: entry/terminal resolution, adjacency build, duplicate/dangling edge checks, auto graphId generation; outputs immutable CompiledGraph. |
-| When to use | Before scheduling any run, to fail fast on malformed authoring-time graph definitions. |
-| How to use | compileGraph({graphId?, nodes, edges, entryNodeId?}) → CompiledGraph with adjacency/terminals; throws GraphCompileError on dangling edges, duplicate ids, missing terminals. |
-| Exports | compileGraph, GraphCompileError |
-| Related | 暂无 |
-| Tags | agent-runtime, graph, compiler, validation |
+| Summary | Graph validation + compile pipeline: definition shape → node ids/types/retry → edge endpoints → terminal reachability → entry resolution; precomputes adjacency/terminals/entry so the scheduler never runs authoring-time checks. Throws typed GraphCompileError (INVALID_DEFINITION, EMPTY_GRAPH, DUPLICATE_NODE, UNKNOWN_NODE_TYPE, INVALID_RETRY, INVALID_EDGE, MISSING_NODE, MISSING_ENTRY, AMBIGUOUS_ENTRY). |
+| When to use | Before scheduling any run, to fail fast on malformed authoring-time graph definitions; compileGraph output is the immutable input to runGraph. |
+| How to use | compileGraph({graphId?, nodes, edges, entryNodeId?}) -> CompiledGraph with adjacency/terminals/entry; NODE_TYPES/serializeChannels helpers exported. |
+| Exports | compileGraph, isNodeType |
+| Related | backend/agent-runtime/pojo/Graph types |
+| Tags | 暂无 |
 | Source | register |
 | Path | packages/agent-runtime/src/graph/compiler.ts |
-| Updated | 2026-08-25T10:42:33.869Z |
+| Updated | 2026-08-25T11:07:52.523Z |
 
 ## HitlGateway
 
@@ -160,15 +160,15 @@ _No utils discovered._
 
 | Field | Value |
 |-------|-------|
-| Summary | OpenTelemetry integration points: optional hook registration bridging EventLog events into OTel spans, plus run-span helpers; no-ops cleanly when OTel is absent. |
-| When to use | Want run/node/tool events to appear in an existing OTel pipeline without hard dependency. |
-| How to use | registerOtelHooks(eventLog) attaches OTel-instrumenting listeners to an EventLog (best-effort when @opentelemetry API present); isOtelAvailable(): boolean; createRunSpan/endRunSpan for manual spans. |
+| Summary | OpenTelemetry integration points: optional hook registration bridging EventLog events into OTel spans plus run-span helpers (createRunSpan/endRunSpan); no-ops cleanly when OTel is absent. Output/error attributes are size-capped (2KB) and failure-guarded so telemetry never breaks the run. |
+| When to use | Want run/node/tool events to appear in an existing OTel pipeline without hard dependency on the OTel SDK. |
+| How to use | registerOtelHooks(eventLog?) attaches OTel-instrumenting listeners (best-effort when @opentelemetry API present); createRunSpan(runId, graphId, input?) starts a run span; endRunSpan(span, status, output?, error?) finalizes it with status/output/error attributes — attributes must be written before span.end() since spans are immutable after end. |
 | Exports | registerOtelHooks, createRunSpan, endRunSpan, isOtelAvailable, getOtelApi |
-| Related | 暂无 |
-| Tags | agent-runtime, otel, observability, tracing, span |
+| Related | backend/agent-runtime/util/agent-runtime index |
+| Tags | otel, telemetry, span |
 | Source | register |
 | Path | packages/agent-runtime/src/obs/otel-hooks.ts |
-| Updated | 2026-08-25T10:43:12.962Z |
+| Updated | 2026-08-25T11:08:05.306Z |
 
 ## agent-runtime index
 
@@ -183,3 +183,8 @@ _No utils discovered._
 | Source | register |
 | Path | packages/agent-runtime/src/index.ts |
 | Updated | 2026-08-25T10:43:15.753Z |
+
+
+
+
+

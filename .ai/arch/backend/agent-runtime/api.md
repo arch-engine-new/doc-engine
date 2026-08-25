@@ -20,12 +20,12 @@ _No api discovered._
 
 | Field | Value |
 |-------|-------|
-| Summary | HTTP adapter for ControlPlane: JSON REST endpoints (compile/start/get/list/resume/cancel/trace) with an optional basePath, available as fetch handler or node http server. |
-| When to use | Need remote/HTTP access to the agent control API, e.g. for dashboards or external callers. |
-| How to use | createFetchHandler(controlPlane, {basePath?}) returns a Request→Response handler for any fetch runtime; createHttpServer(...) wraps node http with listen/close. |
-| Exports | HttpServer, HttpServerOptions, createHttpServer, createFetchHandler |
-| Related | 暂无 |
-| Tags | agent-runtime, http, api, fetch, node |
+| Summary | HTTP adapter for ControlPlane: JSON REST endpoints (POST /graphs, GET /graphs/:id, POST /runs, GET /runs, GET /runs/:id, POST /runs/:id/wait, POST /runs/:id/cancel, POST /runs/:id/resume, GET /runs/:id/trace, DELETE /runs/:id, GET /health) with optional basePath and scheme flag; available as native node http server or fetch handler for serverless. |
+| When to use | Need remote/HTTP access to the agent control API from dashboards or external callers; or need a serverless fetch handler. |
+| How to use | createHttpServer(controlPlane, {port, hostname?, scheme?, basePath?, logger?}) -> HttpServer (listen/close/address); createFetchHandler(controlPlane, {basePath?}) -> (Request) => Promise<Response>. |
+| Exports | createHttpServer, createFetchHandler |
+| Related | backend/agent-runtime/api/ControlPlane |
+| Tags | 暂无 |
 | Source | register |
 | Path | packages/agent-runtime/src/api/http.ts |
-| Updated | 2026-08-25T10:43:02.328Z |
+| Updated | 2026-08-25T11:07:55.535Z |

@@ -301,6 +301,48 @@ describe("api/control.ts - ControlPlane", () => {
 
       expect(result.runId).toBe("my-custom-run-id");
     });
+
+    it("startRun with resume re-uses the persisted runId row (crash recovery)", async () => {
+      const def: GraphDefinition = {
+        graphId: "test-graph-resume-id",
+        nodes: [
+          { id: "start", type: "start" },
+          { id: "fn1", type: "fn", config: { inlineFn: async () => ({ s: 1 }), outputChannel: "output" } },
+          { id: "end", type: "end" },
+        ],
+        edges: [{ from: "start", to: "fn1" }, { from: "fn1", to: "end" }],
+      };
+
+      controlPlane.compileGraph({ definition: def });
+      const RUN_ID = "resume-fixed-run";
+
+      const first = await controlPlane.startRun({ graphId: "test-graph-resume-id", input: {}, runId: RUN_ID });
+      await controlPlane.getRunManager().waitForRun(first.runId);
+
+      // Second startRun with the SAME runId + resume:true must not crash on
+      // the existing t_agent_run row (crash-recovery semantics).
+      const resumed = await controlPlane.startRun({ graphId: "test-graph-resume-id", input: {}, runId: RUN_ID, resume: true });
+      const result = await controlPlane.getRunManager().waitForRun(resumed.runId);
+      expect(result?.status).toBe("completed");
+      expect(result?.output).toEqual({ s: 1 });
+    });
+
+    it("startRun with an existing runId and resume:false rejects", async () => {
+      const def: GraphDefinition = {
+        graphId: "test-graph-dup-id",
+        nodes: [{ id: "start", type: "start" }, { id: "end", type: "end" }],
+        edges: [{ from: "start", to: "end" }],
+      };
+
+      controlPlane.compileGraph({ definition: def });
+
+      const first = await controlPlane.startRun({ graphId: "test-graph-dup-id", input: {}, runId: "dup-run-id" });
+      await controlPlane.getRunManager().waitForRun(first.runId);
+
+      await expect(
+        controlPlane.startRun({ graphId: "test-graph-dup-id", input: {}, runId: "dup-run-id" }),
+      ).rejects.toThrow(/Run already exists/);
+    });
   });
 
   describe("cancelRun", () => {
@@ -634,7 +676,7 @@ describe("api/control.ts - ControlPlane", () => {
   });
 });
 
-describe.skip("api/http.ts - HTTP adapter", () => {
+describe("api/http.ts - HTTP adapter", () => {
   let store: SQLiteStateStore;
   let controlPlane: ControlPlane;
   let server: any;
@@ -645,11 +687,11 @@ describe.skip("api/http.ts - HTTP adapter", () => {
     store = await createTestStore();
     controlPlane = await createControlPlane(store);
     const { createHttpServer } = await import("../src/api/http.js");
-    server = await createHttpServer(controlPlane, { port: PORT, logger: () => {} });
+    server = await createHttpServer(controlPlane, { port: PORT, basePath: "/api/v1", logger: () => {} });
   });
 
   afterEach(async () => {
-    await new Promise<void>((resolve) => server.close(() => resolve()));
+    await server.close();
     await store.close();
   });
 
@@ -685,32 +727,30 @@ describe.skip("api/http.ts - HTTP adapter", () => {
   it("POST /graphs returns 400 for invalid graph", async () => {
     const { status, data } = await fetchJson("/graphs", {
       method: "POST",
-      body: JSON.stringify({ definition: { nodes: [{ id: "start", type: "start" }], edges: [] } }),
+      body: JSON.stringify({ definition: { nodes: [{ id: "start", type: "start" }], edges: [{ from: "start", to: "ghost" }] } }),
     });
     expect(status).toBe(400);
     expect(data.error.code).toBe("GRAPH_COMPILE_ERROR");
   });
 
   it("POST /runs starts a run", async () => {
-    // First compile a graph
-    const { data: graphData } = await fetchJson("/graphs", {
-      method: "POST",
-      body: JSON.stringify({
-        definition: {
-          graphId: "http-test-graph",
-          nodes: [
-            { id: "start", type: "start" },
-            { id: "fn1", type: "fn", config: { inlineFn: async () => ({ ok: true }), outputChannel: "output" } },
-            { id: "end", type: "end" },
-          ],
-          edges: [{ from: "start", to: "fn1" }, { from: "fn1", to: "end" }],
-        },
-      }),
+    // fn handlers are functions — not JSON-serializable. Inject via the shared
+    // in-proc ControlPlane; the HTTP layer only drives orchestration.
+    controlPlane.compileGraph({
+      definition: {
+        graphId: "http-test-graph",
+        nodes: [
+          { id: "start", type: "start" },
+          { id: "fn1", type: "fn", config: { inlineFn: async () => ({ ok: true }), outputChannel: "output" } },
+          { id: "end", type: "end" },
+        ],
+        edges: [{ from: "start", to: "fn1" }, { from: "fn1", to: "end" }],
+      },
     });
 
     const { status, data } = await fetchJson("/runs", {
       method: "POST",
-      body: JSON.stringify({ graphId: graphData.graphId, input: { test: true } }),
+      body: JSON.stringify({ graphId: "http-test-graph", input: { test: true } }),
     });
     expect(status).toBe(201);
     expect(data.runId).toBeDefined();
@@ -747,24 +787,22 @@ describe.skip("api/http.ts - HTTP adapter", () => {
   });
 
   it("POST /runs/:runId/cancel cancels run", async () => {
-    const { data: graphData } = await fetchJson("/graphs", {
-      method: "POST",
-      body: JSON.stringify({
-        definition: {
-          graphId: "http-test-graph-cancel",
-          nodes: [
-            { id: "start", type: "start" },
-            { id: "fn1", type: "fn", config: { inlineFn: async () => { await new Promise(r => setTimeout(r, 500)); return {}; }, outputChannel: "out" } },
-            { id: "end", type: "end" },
-          ],
-          edges: [{ from: "start", to: "fn1" }, { from: "fn1", to: "end" }],
-        },
-      }),
+    // Inject the slow fn in-proc (functions are not JSON-serializable).
+    controlPlane.compileGraph({
+      definition: {
+        graphId: "http-test-graph-cancel",
+        nodes: [
+          { id: "start", type: "start" },
+          { id: "fn1", type: "fn", config: { inlineFn: async () => { await new Promise(r => setTimeout(r, 500)); return {}; }, outputChannel: "out" } },
+          { id: "end", type: "end" },
+        ],
+        edges: [{ from: "start", to: "fn1" }, { from: "fn1", to: "end" }],
+      },
     });
 
     const { data: runData } = await fetchJson("/runs", {
       method: "POST",
-      body: JSON.stringify({ graphId: graphData.graphId, input: {} }),
+      body: JSON.stringify({ graphId: "http-test-graph-cancel", input: {} }),
     });
 
     const { status, data } = await fetchJson(`/runs/${runData.runId}/cancel`, { method: "POST" });
@@ -773,24 +811,22 @@ describe.skip("api/http.ts - HTTP adapter", () => {
   });
 
 it("GET /runs/:runId/trace returns trace", async () => {
-    const { data: graphData } = await fetchJson("/graphs", {
-      method: "POST",
-      body: JSON.stringify({
-        definition: {
-          graphId: "http-test-graph-trace",
-          nodes: [
-            { id: "start", type: "start" },
-            { id: "fn1", type: "fn", config: { inlineFn: async () => ({ x: 1 }), outputChannel: "output" } },
-            { id: "end", type: "end" },
-          ],
-          edges: [{ from: "start", to: "fn1" }, { from: "fn1", to: "end" }],
-        },
-      }),
+    // fn handlers are not JSON-serializable: inject via shared ControlPlane.
+    controlPlane.compileGraph({
+      definition: {
+        graphId: "http-test-graph-trace",
+        nodes: [
+          { id: "start", type: "start" },
+          { id: "fn1", type: "fn", config: { inlineFn: async () => ({ x: 1 }), outputChannel: "output" } },
+          { id: "end", type: "end" },
+        ],
+        edges: [{ from: "start", to: "fn1" }, { from: "fn1", to: "end" }],
+      },
     });
 
     const { data: runData } = await fetchJson("/runs", {
       method: "POST",
-      body: JSON.stringify({ graphId: graphData.graphId, input: {} }),
+      body: JSON.stringify({ graphId: "http-test-graph-trace", input: {} }),
     });
 
     const runManager = controlPlane.getRunManager();

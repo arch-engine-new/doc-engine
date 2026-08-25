@@ -15,6 +15,7 @@
 | EventRow | A single trace event row: runId, seq, eventType (node_start/node_end/tool_call/checkpoint/hitl/run_started/run_completed/run_failed/run_cancelled), payload, createdAt. | packages/agent-runtime/src/index.ts | 2026-08-25T10:38:36.638Z |
 | StateStore | Persistence interface for agent-runtime: runs, node executions, checkpoints, tool calls, events, HITL interrupts. Implemented by SQLiteStateStore. | packages/agent-runtime/src/index.ts | 2026-08-25T10:38:37.387Z |
 | ToolExecutionResult | Output of a tool execution: toolName, input, output, status (completed/failed/timeout/cancelled/error), durationMs, attempt, idempotencyKey and error info. | packages/agent-runtime/src/index.ts | 2026-08-25T10:43:23.544Z |
+| AgentRuntime | agent-runtime 对外契约：graph 作者面（GraphDefinition/CompiledGraph/NodeType/RetryPolicy）、run 生命周期（RunStatus/RunMetadata/SchedulerResult/ChannelMap）、HITL（HitlDecision/HitlInterruptStatus）、持久化（StateStore/SQLiteStateStore）、可观测（EventRow/EventType）、控制面（RunView）、工具（ToolExecutionResult）。源码载体 src/contracts/agent-runtime.ts；实现 barrel packages/agent-runtime/src/index.ts。 | src/contracts/agent-runtime.ts | 2026-08-25T11:07:00.734Z |
 
 ## Pending Missing Requests
 

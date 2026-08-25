@@ -66,3 +66,100 @@
 {"ts":"2026-08-25T10:52:24.523Z","tool":"check_code_quality","args":{"projectRoot":"D:\\software\\doc-engine"},"durationMs":919,"result":{"ok":true}}
 {"ts":"2026-08-25T11:00:55.568Z","tool":"query_project_status","args":{},"durationMs":183,"result":{"ok":true}}
 {"ts":"2026-08-25T11:05:14.182Z","tool":"check_code_quality","args":{"projectRoot":"D:\\software\\doc-engine"},"durationMs":13,"result":{"ok":true}}
+{"ts":"2026-08-25T11:05:55.029Z","tool":"query_project_status","args":{},"durationMs":188,"result":{"ok":true}}
+{"ts":"2026-08-25T11:06:12.539Z","tool":"audit_arch_changes","args":{"since":"last-scan"},"durationMs":12,"result":{"ok":true}}
+{"ts":"2026-08-25T11:06:24.633Z","tool":"search_arch","args":{"query":"graph compiler validate definition","limit":3},"durationMs":337,"result":{"ok":true}}
+{"ts":"2026-08-25T11:06:25.067Z","tool":"search_arch","args":{"query":"otel span hooks","limit":3},"durationMs":217,"result":{"ok":true}}
+{"ts":"2026-08-25T11:06:25.507Z","tool":"search_arch","args":{"query":"HTTP adapter control plane server","limit":3},"durationMs":196,"result":{"ok":true}}
+{"ts":"2026-08-25T11:06:35.575Z","tool":"refresh_asset","args":{"sourcePath":"packages/agent-runtime/src/api/http.ts","kind":"api","name":"HttpControlServer","module":"agent-runtime"},"durationMs":15244,"result":{"ok":true}}
+{"ts":"2026-08-25T11:06:33.961Z","tool":"refresh_asset","args":{"sourcePath":"packages/agent-runtime/src/graph/compiler.ts","kind":"util","name":"GraphCompiler","module":"agent-runtime"},"durationMs":17498,"result":{"ok":true}}
+{"ts":"2026-08-25T11:06:34.781Z","tool":"refresh_asset","args":{"sourcePath":"packages/agent-runtime/src/obs/otel-hooks.ts","kind":"util","name":"OtelHooks","module":"agent-runtime"},"durationMs":18167,"result":{"ok":true}}
+{"ts":"2026-08-25T11:07:00.733Z","tool":"register_contract","args":{"name":"AgentRuntime","description":"agent-runtime 对外契约：graph 作者面（GraphDefinition/CompiledGraph/NodeType/RetryPolicy）、run 生命周期（RunStatus/RunMetadata/SchedulerResult/ChannelMap）、HITL（HitlDecision/HitlInterruptStatus）、持久化（StateStore/SQLite...","tsFilePath":"src/contracts/agent-runtime.ts"},"durationMs":8,"result":{"ok":true}}
+{"ts":"2026-08-25T11:07:08.694Z","tool":"query_contract","args":{"name":"AgentRuntime"},"durationMs":1,"result":{"ok":true}}
+{"ts":"2026-08-25T11:07:09.138Z","tool":"search_arch","args":{"query":"GraphCompiler compile validation","limit":2},"durationMs":273,"result":{"ok":true}}
+{"ts":"2026-08-25T11:07:21.014Z","tool":"search_arch","args":{"query":"HTTP adapter ControlPlane REST server","limit":1},"durationMs":239,"result":{"ok":true}}
+{"ts":"2026-08-25T11:07:20.557Z","tool":"refresh_asset","args":{"sourcePath":"packages/agent-runtime/src/graph/compiler.ts","kind":"util","name":"GraphCompiler","module":"agent-runtime"},"durationMs":18139,"result":{"ok":true}}
+{"ts":"2026-08-25T11:07:52.518Z","tool":"register_asset","args":{"kind":"util","name":"GraphCompiler","module":"agent-runtime","sourcePath":"packages/agent-runtime/src/graph/compiler.ts","summary":"Graph validation + compile pipeline: definition shape → node ids/types/retry → edge endpoints → terminal reachability → entry resolution; precomputes adjacency/terminals/entry so the scheduler never r...","whenToUse":"Before scheduling any run, to fail fast on malformed authoring-time graph definitions; compileGraph output is the immutable input to runGraph.","howToUse":"compileGraph({graphId?, nodes, edges, entryNodeId?}) -> CompiledGraph with adjacency/terminals/entry; NODE_TYPES/serializeChannels helpers exported.","exports":["compileGraph","isNodeType"],"related":["backend/agent-runtime/pojo/Graph types"]},"durationMs":384,"result":{"ok":true}}
+{"ts":"2026-08-25T11:07:55.530Z","tool":"register_asset","args":{"kind":"api","name":"HttpControlServer","module":"agent-runtime","sourcePath":"packages/agent-runtime/src/api/http.ts","summary":"HTTP adapter for ControlPlane: JSON REST endpoints (POST /graphs, GET /graphs/:id, POST /runs, GET /runs, GET /runs/:id, POST /runs/:id/wait, POST /runs/:id/cancel, POST /runs/:id/resume, GET /runs/:i...","whenToUse":"Need remote/HTTP access to the agent control API from dashboards or external callers; or need a serverless fetch handler.","howToUse":"createHttpServer(controlPlane, {port, hostname?, scheme?, basePath?, logger?}) -> HttpServer (listen/close/address); createFetchHandler(controlPlane, {basePath?}) -> (Request) => Promise<Response>.","exports":["createHttpServer","createFetchHandler"],"related":["backend/agent-runtime/api/ControlPlane"]},"durationMs":180,"result":{"ok":true}}
+{"ts":"2026-08-25T11:08:05.301Z","tool":"register_asset","args":{"kind":"util","name":"OtelHooks","module":"agent-runtime","sourcePath":"packages/agent-runtime/src/obs/otel-hooks.ts","summary":"OpenTelemetry integration points: optional hook registration bridging EventLog events into OTel spans plus run-span helpers (createRunSpan/endRunSpan); no-ops cleanly when OTel is absent. Output/error...","whenToUse":"Want run/node/tool events to appear in an existing OTel pipeline without hard dependency on the OTel SDK.","howToUse":"registerOtelHooks(eventLog?) attaches OTel-instrumenting listeners (best-effort when @opentelemetry API present); createRunSpan(runId, graphId, input?) starts a run span; endRunSpan(span, status, outp...","exports":["registerOtelHooks","createRunSpan","endRunSpan","isOtelAvailable","getOtelApi"],"related":["backend/agent-runtime/util/agent-runtime index"],"tags":["otel","telemetry","span"]},"durationMs":297,"result":{"ok":true}}
+{"ts":"2026-08-25T11:08:11.619Z","tool":"search_arch","args":{"query":"GraphCompiler entry terminal adjacency","limit":2},"durationMs":398,"result":{"ok":true}}
+{"ts":"2026-08-25T11:08:12.068Z","tool":"search_arch","args":{"query":"OtelHooks span register","limit":2},"durationMs":315,"result":{"ok":true}}
+{"ts":"2026-08-25T11:10:06.163Z","tool":"query_project_status","args":{},"durationMs":190,"result":{"ok":true}}
+{"ts":"2026-08-25T11:10:07.074Z","tool":"audit_arch_changes","args":{"since":"last-scan"},"durationMs":23,"result":{"ok":true}}
+{"ts":"2026-08-25T11:10:07.417Z","tool":"check_code_quality","args":{"projectRoot":"D:\\software\\doc-engine"},"durationMs":9,"result":{"ok":true}}
+{"ts":"2026-08-25T11:10:44.949Z","tool":"query_contract","args":{"name":"AgentRuntime"},"durationMs":2,"result":{"ok":true}}
+{"ts":"2026-08-25T11:10:45.243Z","tool":"query_contract","args":{"name":"SchedulerResult"},"durationMs":2,"result":{"ok":true}}
+{"ts":"2026-08-25T11:10:45.705Z","tool":"search_arch","args":{"query":"HttpControlServer REST endpoints createFetchHandler","limit":2},"durationMs":272,"result":{"ok":true}}
+{"ts":"2026-08-25T11:11:51.539Z","tool":"query_project_status","args":{},"durationMs":180,"result":{"ok":true}}
+{"ts":"2026-08-25T11:11:51.871Z","tool":"audit_arch_changes","args":{"since":"last-scan"},"durationMs":18,"result":{"ok":true}}
+{"ts":"2026-08-25T11:12:01.511Z","tool":"start_init","args":{},"durationMs":55326,"result":{"ok":true}}
+{"ts":"2026-08-25T11:13:04.583Z","tool":"audit_arch_changes","args":{"since":"last-scan"},"durationMs":208,"result":{"ok":true}}
+{"ts":"2026-08-25T11:13:14.925Z","tool":"search_arch","args":{"query":"GraphCompiler entry terminal adjacency compile","limit":1},"durationMs":354,"result":{"ok":true}}
+{"ts":"2026-08-25T11:13:54.012Z","tool":"audit_arch_changes","args":{"since":"last-scan"},"durationMs":225,"result":{"ok":true}}
+{"ts":"2026-08-25T11:13:53.669Z","tool":"query_project_status","args":{},"durationMs":583,"result":{"ok":true}}
+{"ts":"2026-08-25T11:13:54.332Z","tool":"query_contract","args":{"name":"AgentRuntime"},"durationMs":2,"result":{"ok":true}}
+{"ts":"2026-08-25T11:13:54.762Z","tool":"search_arch","args":{"query":"checkpoint crash recovery resume","limit":2},"durationMs":263,"result":{"ok":true}}
+{"ts":"2026-08-25T11:13:55.076Z","tool":"check_code_quality","args":{"projectRoot":"D:\\software\\doc-engine"},"durationMs":11,"result":{"ok":true}}
+{"ts":"2026-08-25T11:15:04.215Z","tool":"query_project_status","args":{},"durationMs":358,"result":{"ok":true}}
+{"ts":"2026-08-25T11:15:12.665Z","tool":"audit_arch_changes","args":{"since":"last-scan"},"durationMs":216,"result":{"ok":true}}
+{"ts":"2026-08-25T11:15:13.144Z","tool":"remove_asset","args":{"assetId":"frontend/agent-runtime/util/CheckpointService"},"durationMs":36,"result":{"ok":true}}
+{"ts":"2026-08-25T11:15:19.661Z","tool":"search_arch","args":{"query":"CheckpointService crash recovery resume","limit":5},"durationMs":282,"result":{"ok":true}}
+{"ts":"2026-08-25T11:15:29.468Z","tool":"search_arch","args":{"query":"agent-runtime module","limit":20},"durationMs":279,"result":{"ok":true}}
+{"ts":"2026-08-25T11:17:30.488Z","tool":"remove_asset","args":{"assetId":"frontend/agent-runtime/util/AGENT_RUNTIME_VERSION"},"durationMs":32,"result":{"ok":true}}
+{"ts":"2026-08-25T11:17:30.775Z","tool":"remove_asset","args":{"assetId":"frontend/agent-runtime/util/BranchExecutor"},"durationMs":35,"result":{"ok":true}}
+{"ts":"2026-08-25T11:17:31.189Z","tool":"remove_asset","args":{"assetId":"frontend/agent-runtime/util/BUILTIN_EXECUTORS"},"durationMs":32,"result":{"ok":true}}
+{"ts":"2026-08-25T11:17:31.837Z","tool":"remove_asset","args":{"assetId":"frontend/agent-runtime/util/cancelRun"},"durationMs":37,"result":{"ok":true}}
+{"ts":"2026-08-25T11:17:31.913Z","tool":"remove_asset","args":{"assetId":"frontend/agent-runtime/util/compileGraph"},"durationMs":32,"result":{"ok":true}}
+{"ts":"2026-08-25T11:17:32.277Z","tool":"remove_asset","args":{"assetId":"frontend/agent-runtime/util/ControlPlane"},"durationMs":30,"result":{"ok":true}}
+{"ts":"2026-08-25T11:17:32.770Z","tool":"remove_asset","args":{"assetId":"frontend/agent-runtime/util/createCheckpointService"},"durationMs":34,"result":{"ok":true}}
+{"ts":"2026-08-25T11:17:33.019Z","tool":"remove_asset","args":{"assetId":"frontend/agent-runtime/util/createControlPlane"},"durationMs":34,"result":{"ok":true}}
+{"ts":"2026-08-25T11:17:33.402Z","tool":"remove_asset","args":{"assetId":"frontend/agent-runtime/util/createEventLog"},"durationMs":32,"result":{"ok":true}}
+{"ts":"2026-08-25T11:17:33.759Z","tool":"remove_asset","args":{"assetId":"frontend/agent-runtime/util/createFetchHandler"},"durationMs":30,"result":{"ok":true}}
+{"ts":"2026-08-25T11:17:34.135Z","tool":"remove_asset","args":{"assetId":"frontend/agent-runtime/util/createHitlGateway"},"durationMs":71,"result":{"ok":true}}
+{"ts":"2026-08-25T11:17:34.510Z","tool":"remove_asset","args":{"assetId":"frontend/agent-runtime/util/createHttpServer"},"durationMs":33,"result":{"ok":true}}
+{"ts":"2026-08-25T11:17:34.868Z","tool":"remove_asset","args":{"assetId":"frontend/agent-runtime/util/createInitialChannels"},"durationMs":30,"result":{"ok":true}}
+{"ts":"2026-08-25T11:17:35.240Z","tool":"remove_asset","args":{"assetId":"frontend/agent-runtime/util/createRunSpan"},"durationMs":29,"result":{"ok":true}}
+{"ts":"2026-08-25T11:17:35.598Z","tool":"remove_asset","args":{"assetId":"frontend/agent-runtime/util/createToolRuntime"},"durationMs":29,"result":{"ok":true}}
+{"ts":"2026-08-25T11:17:35.937Z","tool":"remove_asset","args":{"assetId":"frontend/agent-runtime/util/defaultRunManager"},"durationMs":31,"result":{"ok":true}}
+{"ts":"2026-08-25T11:17:36.340Z","tool":"remove_asset","args":{"assetId":"frontend/agent-runtime/util/deserializeChannels"},"durationMs":30,"result":{"ok":true}}
+{"ts":"2026-08-25T11:17:36.703Z","tool":"remove_asset","args":{"assetId":"frontend/agent-runtime/util/EndExecutor"},"durationMs":35,"result":{"ok":true}}
+{"ts":"2026-08-25T11:17:37.064Z","tool":"remove_asset","args":{"assetId":"frontend/agent-runtime/util/endRunSpan"},"durationMs":33,"result":{"ok":true}}
+{"ts":"2026-08-25T11:17:45.227Z","tool":"remove_asset","args":{"assetId":"frontend/agent-runtime/util/EventLog"},"durationMs":33,"result":{"ok":true}}
+{"ts":"2026-08-25T11:17:45.593Z","tool":"remove_asset","args":{"assetId":"frontend/agent-runtime/util/executeWithRetry"},"durationMs":33,"result":{"ok":true}}
+{"ts":"2026-08-25T11:17:46.054Z","tool":"remove_asset","args":{"assetId":"frontend/agent-runtime/util/FnExecutor"},"durationMs":32,"result":{"ok":true}}
+{"ts":"2026-08-25T11:17:46.303Z","tool":"remove_asset","args":{"assetId":"frontend/agent-runtime/util/getChannel"},"durationMs":31,"result":{"ok":true}}
+{"ts":"2026-08-25T11:17:46.683Z","tool":"remove_asset","args":{"assetId":"frontend/agent-runtime/util/getChannelNames"},"durationMs":32,"result":{"ok":true}}
+{"ts":"2026-08-25T11:17:47.038Z","tool":"remove_asset","args":{"assetId":"frontend/agent-runtime/util/getDefaultRegistry"},"durationMs":33,"result":{"ok":true}}
+{"ts":"2026-08-25T11:17:47.436Z","tool":"remove_asset","args":{"assetId":"frontend/agent-runtime/util/getExecutor"},"durationMs":185,"result":{"ok":true}}
+{"ts":"2026-08-25T11:17:47.876Z","tool":"remove_asset","args":{"assetId":"frontend/agent-runtime/util/getLastTerminalOutput"},"durationMs":31,"result":{"ok":true}}
+{"ts":"2026-08-25T11:17:48.195Z","tool":"remove_asset","args":{"assetId":"frontend/agent-runtime/util/getOtelApi"},"durationMs":34,"result":{"ok":true}}
+{"ts":"2026-08-25T11:17:48.717Z","tool":"remove_asset","args":{"assetId":"frontend/agent-runtime/util/getRun"},"durationMs":37,"result":{"ok":true}}
+{"ts":"2026-08-25T11:17:49.606Z","tool":"remove_asset","args":{"assetId":"frontend/agent-runtime/util/GraphCompileError"},"durationMs":31,"result":{"ok":true}}
+{"ts":"2026-08-25T11:17:49.719Z","tool":"remove_asset","args":{"assetId":"frontend/agent-runtime/util/hasChannel"},"durationMs":34,"result":{"ok":true}}
+{"ts":"2026-08-25T11:17:49.778Z","tool":"remove_asset","args":{"assetId":"frontend/agent-runtime/util/HITLExecutor"},"durationMs":33,"result":{"ok":true}}
+{"ts":"2026-08-25T11:17:50.065Z","tool":"remove_asset","args":{"assetId":"frontend/agent-runtime/util/HitlGateway"},"durationMs":32,"result":{"ok":true}}
+{"ts":"2026-08-25T11:17:50.394Z","tool":"remove_asset","args":{"assetId":"frontend/agent-runtime/util/isMigrated"},"durationMs":29,"result":{"ok":true}}
+{"ts":"2026-08-25T11:17:50.782Z","tool":"remove_asset","args":{"assetId":"frontend/agent-runtime/util/isOtelAvailable"},"durationMs":29,"result":{"ok":true}}
+{"ts":"2026-08-25T11:17:51.136Z","tool":"remove_asset","args":{"assetId":"frontend/agent-runtime/util/LLMExecutor"},"durationMs":34,"result":{"ok":true}}
+{"ts":"2026-08-25T11:17:51.513Z","tool":"remove_asset","args":{"assetId":"frontend/agent-runtime/util/mergeChannels"},"durationMs":33,"result":{"ok":true}}
+{"ts":"2026-08-25T11:17:51.905Z","tool":"remove_asset","args":{"assetId":"frontend/agent-runtime/util/NODE_TYPES"},"durationMs":32,"result":{"ok":true}}
+{"ts":"2026-08-25T11:18:00.161Z","tool":"remove_asset","args":{"assetId":"frontend/agent-runtime/util/nodeExecutionRecordToStored"},"durationMs":30,"result":{"ok":true}}
+{"ts":"2026-08-25T11:18:00.683Z","tool":"remove_asset","args":{"assetId":"frontend/agent-runtime/util/NotImplementedError"},"durationMs":36,"result":{"ok":true}}
+{"ts":"2026-08-25T11:18:00.956Z","tool":"remove_asset","args":{"assetId":"frontend/agent-runtime/util/registerOtelHooks"},"durationMs":32,"result":{"ok":true}}
+{"ts":"2026-08-25T11:18:01.321Z","tool":"remove_asset","args":{"assetId":"frontend/agent-runtime/util/runGraph"},"durationMs":35,"result":{"ok":true}}
+{"ts":"2026-08-25T11:18:01.715Z","tool":"remove_asset","args":{"assetId":"frontend/agent-runtime/util/RunManager"},"durationMs":46,"result":{"ok":true}}
+{"ts":"2026-08-25T11:18:02.066Z","tool":"remove_asset","args":{"assetId":"frontend/agent-runtime/util/runMetadataToStoredRun"},"durationMs":35,"result":{"ok":true}}
+{"ts":"2026-08-25T11:18:02.460Z","tool":"remove_asset","args":{"assetId":"frontend/agent-runtime/util/runMigration"},"durationMs":30,"result":{"ok":true}}
+{"ts":"2026-08-25T11:18:02.840Z","tool":"remove_asset","args":{"assetId":"frontend/agent-runtime/util/runMigrationOnDb"},"durationMs":33,"result":{"ok":true}}
+{"ts":"2026-08-25T11:18:03.212Z","tool":"remove_asset","args":{"assetId":"frontend/agent-runtime/util/serializeChannels"},"durationMs":29,"result":{"ok":true}}
+{"ts":"2026-08-25T11:18:03.584Z","tool":"remove_asset","args":{"assetId":"frontend/agent-runtime/util/setDefaultRegistry"},"durationMs":31,"result":{"ok":true}}
+{"ts":"2026-08-25T11:18:03.985Z","tool":"remove_asset","args":{"assetId":"frontend/agent-runtime/util/SQLiteStateStore"},"durationMs":30,"result":{"ok":true}}
+{"ts":"2026-08-25T11:18:04.353Z","tool":"remove_asset","args":{"assetId":"frontend/agent-runtime/util/StartExecutor"},"durationMs":34,"result":{"ok":true}}
+{"ts":"2026-08-25T11:18:04.688Z","tool":"remove_asset","args":{"assetId":"frontend/agent-runtime/util/startRun"},"durationMs":32,"result":{"ok":true}}
+{"ts":"2026-08-25T11:18:05.073Z","tool":"remove_asset","args":{"assetId":"frontend/agent-runtime/util/SubgraphExecutor"},"durationMs":34,"result":{"ok":true}}
+{"ts":"2026-08-25T11:18:05.454Z","tool":"remove_asset","args":{"assetId":"frontend/agent-runtime/util/ToolExecutionError"},"durationMs":32,"result":{"ok":true}}
+{"ts":"2026-08-25T11:18:05.808Z","tool":"remove_asset","args":{"assetId":"frontend/agent-runtime/util/ToolExecutor"},"durationMs":35,"result":{"ok":true}}
+{"ts":"2026-08-25T11:18:06.191Z","tool":"remove_asset","args":{"assetId":"frontend/agent-runtime/util/ToolRegistry"},"durationMs":28,"result":{"ok":true}}
+{"ts":"2026-08-25T11:18:06.541Z","tool":"remove_asset","args":{"assetId":"frontend/agent-runtime/util/ToolRuntime"},"durationMs":34,"result":{"ok":true}}
+{"ts":"2026-08-25T11:18:06.904Z","tool":"remove_asset","args":{"assetId":"frontend/agent-runtime/util/waitForRun"},"durationMs":34,"result":{"ok":true}}
+{"ts":"2026-08-25T11:18:15.319Z","tool":"search_arch","args":{"query":"CheckpointService crash recovery resume","limit":5},"durationMs":444,"result":{"ok":true}}

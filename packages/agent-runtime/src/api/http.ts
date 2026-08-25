@@ -53,17 +53,21 @@ interface Route {
 /**
  * Create a minimal HTTP server using native fetch API.
  * Works in Node.js 18+, Cloudflare Workers, Deno, Bun.
+ *
+ * Why a dynamic import: `require("http")` inside an ES module that also uses
+ * top-level await throws ERR_AMBIGUOUS_MODULE_SYNTAX at runtime; `await
+ * import("node:http")` keeps the lazy-load for non-Node runtimes while staying
+ * valid ESM.
  */
-function createNativeServer(handler: RequestHandler, scheme: "http" | "https"): HttpServer {
+async function createNativeServer(handler: RequestHandler, scheme: "http" | "https"): Promise<HttpServer> {
   // Check if we're in Node.js environment
   const isNode = typeof process !== "undefined" && process.versions?.node;
 
   if (isNode) {
-    // Dynamic import for Node.js http module
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const http = require("http");
+    // Load lazily so Workers/Bun paths never touch node:http.
+    const { createServer } = await import("node:http");
 
-    const server = http.createServer(async (req: IncomingMessage, res: ServerResponse) => {
+    const server = createServer(async (req: IncomingMessage, res: ServerResponse) => {
       const url = new URL(req.url ?? "/", `${scheme}://${req.headers.host ?? "localhost"}`);
       const headers: Record<string, string> = {};
       for (const key of Object.keys(req.headers)) {
@@ -109,6 +113,8 @@ function createNativeServer(handler: RequestHandler, scheme: "http" | "https"): 
       },
       close(): Promise<void> {
         return new Promise((resolve, reject) => {
+          // Drop idle keep-alive connections so close() resolves promptly.
+          (server as { closeAllConnections?: () => void }).closeAllConnections?.();
           server.close((err: Error | null | undefined) => (err ? reject(err) : resolve()));
         });
       },
@@ -259,7 +265,7 @@ function createRoutes(controlPlane: ControlPlane, basePath: string = ""): Route[
         const url = new URL(req.url);
         const fromSeq = url.searchParams.get("fromSeq");
         const trace = await controlPlane.getTrace(runId, fromSeq ? parseInt(fromSeq, 10) : undefined);
-        return jsonResponse(200, { trace });
+        return jsonResponse(200, { runId, trace });
       },
     },
 
@@ -334,7 +340,7 @@ export async function createHttpServer(controlPlane: ControlPlane, options?: Htt
   const routes = createRoutes(controlPlane, options?.basePath);
   const handler = createRouter(routes);
   const scheme = options?.scheme ?? "http";
-  const server = createNativeServer(handler, scheme);
+  const server = await createNativeServer(handler, scheme);
 
   if (options?.port !== undefined) {
     const hostname = options.hostname ?? "0.0.0.0";
@@ -394,7 +400,12 @@ function jsonResponse(status: number, body: unknown): Response {
 /** Create error response. */
 function errorResponse(error: unknown): Response {
   const message = error instanceof Error ? error.message : String(error);
-  const code = error instanceof Error && "code" in error ? (error as any).code : "INTERNAL_ERROR";
-  const status = code === "NOT_FOUND" ? 404 : code === "VALIDATION_ERROR" ? 400 : 500;
-  return jsonResponse(status, { error: message, code });
+  let code = error instanceof Error && "code" in error ? (error as any).code : "INTERNAL_ERROR";
+  let status = code === "NOT_FOUND" ? 404 : code === "VALIDATION_ERROR" ? 400 : 500;
+  // Graph compile failures are authoring-time errors: 400 with a stable code.
+  if (error instanceof Error && error.name === "GraphCompileError") {
+    status = 400;
+    code = "GRAPH_COMPILE_ERROR";
+  }
+  return jsonResponse(status, { error: { code, message }, code });
 }

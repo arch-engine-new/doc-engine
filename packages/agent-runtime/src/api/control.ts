@@ -196,22 +196,31 @@ export class ControlPlane {
       payload: { graphId, input, threadId },
     });
 
-    // Persist the run row up front so listRunsFromStore and queries see it
+    // Persist the run row up front so listRunsFromStore and queries see it.
+    // Why the resume branch: crash recovery re-uses the SAME runId, and the
+    // row already exists — createRun would violate t_agent_run.run_id UNIQUE.
     if (effectiveStore) {
-      const now = new Date().toISOString();
-      await effectiveStore.createRun({
-        runId: actualRunId,
-        graphId,
-        threadId: threadId ?? null,
-        status: "running",
-        inputJson: input,
-        outputJson: null,
-        errorJson: null,
-        currentNodeId: null,
-        parentRunId: null,
-        startedAt: now,
-        finishedAt: null,
-      });
+      const existing = await effectiveStore.getRun(actualRunId);
+      if (existing) {
+        if (!resume) {
+          throw new Error(`Run already exists: ${actualRunId}. Use resume:true to continue a previous run.`);
+        }
+      } else {
+        const now = new Date().toISOString();
+        await effectiveStore.createRun({
+          runId: actualRunId,
+          graphId,
+          threadId: threadId ?? null,
+          status: "running",
+          inputJson: input,
+          outputJson: null,
+          errorJson: null,
+          currentNodeId: null,
+          parentRunId: null,
+          startedAt: now,
+          finishedAt: null,
+        });
+      }
     }
 
     // Create checkpoint service if store provided

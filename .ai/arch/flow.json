@@ -1,0 +1,40 @@
+{
+  "nodes": [
+    {
+      "id": "entity:t_agent_graph",
+      "layer": "entity",
+      "name": "t_agent_graph"
+    },
+    {
+      "id": "entity:t_agent_run",
+      "layer": "entity",
+      "name": "t_agent_run"
+    },
+    {
+      "id": "entity:t_agent_node_execution",
+      "layer": "entity",
+      "name": "t_agent_node_execution"
+    },
+    {
+      "id": "entity:t_agent_checkpoint",
+      "layer": "entity",
+      "name": "t_agent_checkpoint"
+    },
+    {
+      "id": "entity:t_agent_tool_call",
+      "layer": "entity",
+      "name": "t_agent_tool_call"
+    },
+    {
+      "id": "entity:t_agent_run_event",
+      "layer": "entity",
+      "name": "t_agent_run_event"
+    },
+    {
+      "id": "entity:t_agent_hitl_interrupt",
+      "layer": "entity",
+      "name": "t_agent_hitl_interrupt"
+    }
+  ],
+  "edges": []
+}

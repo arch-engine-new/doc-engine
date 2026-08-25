@@ -1,3 +1,4 @@
+import { existsSync, unlinkSync } from "node:fs";
 import {
   createControlPlane,
   SQLiteStateStore,
@@ -7,7 +8,13 @@ import {
 // 崩溃前状态：进程内计数器 —— resume 成功后不应被再次执行（副作用幂等）
 let sideEffectRuns = 0;
 
-const store = new SQLiteStateStore("agent-runtime-crash.db");
+// 每次演示从全新存储开始（真实场景为进程被杀后复用同一 DB 文件）
+const DB_FILE = "agent-runtime-crash.db";
+if (existsSync(DB_FILE)) {
+  unlinkSync(DB_FILE);
+}
+
+const store = new SQLiteStateStore(DB_FILE);
 await store.initialize();
 
 const definition: GraphDefinition = {

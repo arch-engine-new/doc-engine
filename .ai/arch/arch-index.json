@@ -158,7 +158,15 @@
         "agent-runtime index",
         "public-api",
         "barrel",
-        "module"
+        "module",
+        "otel-hooks",
+        "OpenTelemetry",
+        "OTel",
+        "obs",
+        "TypeScript",
+        "compile",
+        "edge",
+        "telemetry"
       ],
       "docFile": "backend/agent-runtime/utils.md",
       "anchors": [
