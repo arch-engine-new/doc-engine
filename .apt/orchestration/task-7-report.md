@@ -4,7 +4,7 @@
 ✅ **COMPLETED**
 
 ## Commit SHA
-`0e05c1e2ef6c3bb04d6ef302816edea760c2de7d`
+`5042740`
 
 ## Summary
 Implemented Human-in-the-Loop (HITL) gateway and resume functionality for the agent-runtime package.
@@ -36,13 +36,14 @@ Implemented Human-in-the-Loop (HITL) gateway and resume functionality for the ag
 - Added `hitlInterrupt` field to SchedulerResult with token, nodeId, payload, expiresAt
 
 ### RunManager (`run-manager.ts`)
-- Added `hitlGateway` to StartRunOptions
-- Modified `startRun` to wait for scheduler when HITL gateway provided
+- Added `hitlGateway` and `store` to StartRunOptions
+- Modified `startRun` to store gateway and store in run entry
 - Added `resumeHitl(runId, token, decision)` method:
-  - Verifies token/runId match
-  - Marks interrupt resumed via gateway
-  - Resumes scheduler from HITL node's successors via `runSchedulerFromNodes()`
-  - Injects decision into channels for downstream nodes
+  - Verifies token/runId match via gateway
+  - Marks interrupt resumed via gateway (idempotent)
+  - Loads latest checkpoint (hitl_waiting phase)
+  - Injects decision into channels (`hitl_decision_${nodeId}`, `hitl_token_${nodeId}`, `hitl_resumed_at_${nodeId}`)
+  - Resumes scheduler via `runSchedulerWithResume()` with `hitlNodeId` to treat HITL successors as ready
   - Idempotent: returns cached result if interrupt already resumed
 
 ### Tests (`hitl.test.ts`)

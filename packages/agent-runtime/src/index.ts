@@ -182,3 +182,113 @@ export {
   runMetadataToStoredRun,
   nodeExecutionRecordToStored,
 } from "./persistence/types.js";
+
+/**
+ * Observability: Event logging and OpenTelemetry hooks.
+ */
+export type {
+  EventType,
+  EventPayload,
+  EventRow,
+  AppendEventOptions,
+  NodeStartPayload,
+  NodeEndPayload,
+  ToolCallPayload,
+  CheckpointPayload,
+  HitlPayload,
+  RunCompletedPayload,
+  RunFailedPayload,
+  RunCancelledPayload,
+} from "./obs/event-log.js";
+
+export {
+  EventLog,
+  createEventLog,
+} from "./obs/event-log.js";
+
+export {
+  registerOtelHooks,
+  createRunSpan,
+  endRunSpan,
+  isOtelAvailable,
+  getOtelApi,
+} from "./obs/otel-hooks.js";
+
+/**
+ * Control Plane: In-process API and HTTP adapter.
+ */
+export type {
+  CompileResult,
+  RunView,
+  StartRunControlOptions,
+  ResumeHitlOptions,
+} from "./api/control.js";
+
+export {
+  ControlPlane,
+  createControlPlane,
+} from "./api/control.js";
+
+export type {
+  HttpServer,
+} from "./api/http.js";
+
+export {
+  createHttpServer,
+  createFetchHandler,
+} from "./api/http.js";
+
+/**
+ * Observability: EventLog and OpenTelemetry hooks.
+ */
+export type {
+  EventType,
+  EventPayload,
+  EventRow,
+  AppendEventOptions,
+} from "./obs/event-log.js";
+
+export {
+  EventLog,
+  createEventLog,
+} from "./obs/event-log.js";
+
+export type {
+  OtelSpan,
+  OtelTracer,
+} from "./obs/otel-hooks.js";
+
+export {
+  getOtelTracer,
+  isOtelAvailable,
+  OtelEventLog,
+  createOtelEventLog,
+  createRunSpan,
+  createNodeSpan,
+  createToolSpan,
+  createHitlSpan,
+} from "./obs/otel-hooks.js";
+
+/**
+ * Control Plane API: in-process and HTTP.
+ */
+export type {
+  CompileGraphOptions,
+  CompileGraphResult,
+  StartRunOptionsControl,
+  StartRunResultControl,
+  ResumeHitlOptions,
+  ResumeHitlResult,
+  RunView,
+  HttpServerOptions,
+} from "./api/control.js";
+
+export {
+  ControlPlane,
+  createControlPlane,
+} from "./api/control.js";
+
+export {
+  createHttpServer,
+  startHttpServer,
+} from "./api/http.js";

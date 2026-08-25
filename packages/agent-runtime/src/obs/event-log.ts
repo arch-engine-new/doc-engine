@@ -1,14 +1,17 @@
 /**
  * EventLog: append-only event store for run traces.
  *
- * Provides structured event logging alongside the existing checkpoint system.
- * Events are stored in t_agent_run_event table via StateStore.
- * Event types: node_start, node_end, tool_call, checkpoint, hitl, run_completed, run_failed, run_cancelled.
+ * Why: Provides a durable, ordered event stream per runId for debugging,
+ * replay, audit, and observability. Uses SQLiteStateStore for persistence.
+ * Events are typed and ordered by sequence number.
  */
 
 import type { StateStore, StoredRunEvent } from "../persistence/types.js";
 
-/** Event types for the run event log. */
+/**
+ * Event types emitted during a run lifecycle.
+ * Matches the eventType column in t_agent_run_event.
+ */
 export type EventType =
   | "node_start"
   | "node_end"
@@ -19,25 +22,90 @@ export type EventType =
   | "run_failed"
   | "run_cancelled";
 
-/** Base event payload structure. */
-export interface EventPayload {
-  /** Event-specific data. */
-  [key: string]: unknown;
+/**
+ * Payload shapes for each event type (for type-safe access).
+ */
+export interface NodeStartPayload {
+  nodeId: string;
+  nodeType: string;
+  input: unknown;
+  attempt: number;
 }
 
-/** Event row returned by EventLog. */
+export interface NodeEndPayload {
+  nodeId: string;
+  nodeType: string;
+  output?: unknown;
+  error?: { message: string; code?: string };
+  status: "completed" | "failed" | "skipped";
+  attempt: number;
+}
+
+export interface ToolCallPayload {
+  toolName: string;
+  request: unknown;
+  response?: unknown;
+  error?: { message: string; code?: string };
+  durationMs?: number;
+  idempotencyKey?: string;
+}
+
+export interface CheckpointPayload {
+  seq: number;
+  nodeId: string | null;
+  phase: string;
+  metadata?: Record<string, unknown>;
+}
+
+export interface HitlPayload {
+  nodeId: string;
+  token: string;
+  action: "created" | "resumed" | "expired" | "cancelled";
+  payload?: unknown;
+  decision?: unknown;
+}
+
+export interface RunCompletedPayload {
+  output?: unknown;
+  durationMs?: number;
+}
+
+export interface RunFailedPayload {
+  error: { message: string; code?: string; cause?: unknown };
+  durationMs?: number;
+}
+
+export interface RunCancelledPayload {
+  reason?: string;
+  durationMs?: number;
+}
+
+/** Union of all event payloads. */
+export type EventPayload =
+  | NodeStartPayload
+  | NodeEndPayload
+  | ToolCallPayload
+  | CheckpointPayload
+  | HitlPayload
+  | RunCompletedPayload
+  | RunFailedPayload
+  | RunCancelledPayload;
+
+/**
+ * Event row returned by EventLog (includes DB metadata).
+ */
 export interface EventRow {
-  /** Auto-incremented event ID. */
+  /** Auto-incrementing row ID. */
   id: number;
   /** Run identifier. */
   runId: string;
-  /** Sequence number within the run. */
+  /** Sequence number within the run (strictly increasing). */
   seq: number;
-  /** Event type. */
+  /** Event type discriminator. */
   eventType: EventType;
-  /** Event payload as JSON. */
+  /** Typed payload. */
   payload: EventPayload;
-  /** ISO timestamp of creation. */
+  /** ISO timestamp when event was created. */
   createdAt: string;
 }
 
@@ -49,88 +117,90 @@ export interface AppendEventOptions {
   eventType: EventType;
   /** Event payload. */
   payload: EventPayload;
-  /** Optional explicit sequence number (auto-assigned if omitted). */
+  /** Optional explicit sequence (auto-assigned if omitted). */
   seq?: number;
 }
 
 /**
- * EventLog provides append-only event logging for run traces.
- * Uses StateStore for persistence (SQLite by default).
+ * EventLog class for appending and querying run events.
+ * Uses a StateStore (e.g., SQLiteStateStore) for persistence.
  */
 export class EventLog {
   private store: StateStore;
   private seqCache = new Map<string, number>();
 
+  /**
+   * Create an EventLog.
+   * @param store - StateStore implementation (e.g., SQLiteStateStore)
+   */
   constructor(store: StateStore) {
     this.store = store;
   }
 
   /**
    * Append an event to the run's event log.
+   * Assigns the next sequence number if not provided.
    *
-   * @param options - Event options including runId, eventType, and payload
-   * @returns The created EventRow with assigned seq and id
+   * @param options - Event to append
+   * @returns The appended event row with assigned seq and id
    */
   async append(options: AppendEventOptions): Promise<EventRow> {
     const { runId, eventType, payload, seq } = options;
 
-    // Determine sequence number
-    let eventSeq = seq;
-    if (eventSeq === undefined) {
-      const cached = this.seqCache.get(runId) ?? 0;
-      eventSeq = cached + 1;
-      this.seqCache.set(runId, eventSeq);
-    } else {
-      // Update cache to stay in sync
-      this.seqCache.set(runId, Math.max(this.seqCache.get(runId) ?? 0, eventSeq));
+    // Determine next sequence number
+    let nextSeq = seq;
+    if (nextSeq === undefined) {
+      const cached = this.seqCache.get(runId);
+      if (cached !== undefined) {
+        nextSeq = cached + 1;
+      } else {
+        // Query the latest event from the store
+        const events = await this.store.getEvents(runId);
+        nextSeq = events.length > 0 ? (events[events.length - 1]?.seq ?? 0) + 1 : 1;
+      }
     }
 
-    // Persist via StateStore
-    const storedId = await this.store.appendEvent({
+    // Persist the event
+    const now = new Date().toISOString();
+    const rowId = await this.store.appendEvent({
       runId,
-      seq: eventSeq,
+      seq: nextSeq,
       eventType,
       payloadJson: payload,
     });
 
-    const row: EventRow = {
-      id: storedId,
+    // Update cache
+    this.seqCache.set(runId, nextSeq);
+
+    // Return the event row
+    return {
+      id: rowId,
       runId,
-      seq: eventSeq,
+      seq: nextSeq,
       eventType,
       payload,
-      createdAt: new Date().toISOString(),
+      createdAt: now,
     };
-
-    return row;
   }
 
   /**
-   * Get all events for a run, ordered by sequence number.
+   * Get the full trace (all events) for a run, ordered by sequence.
    *
    * @param runId - Run identifier
-   * @param fromSeq - Optional starting sequence (inclusive)
-   * @returns Array of EventRow ordered by seq ASC
+   * @param fromSeq - Optional sequence number to start from (inclusive)
+   * @returns Array of event rows ordered by seq ASC
    */
   async getTrace(runId: string, fromSeq?: number): Promise<EventRow[]> {
     const storedEvents = await this.store.getEvents(runId, fromSeq);
-
-    return storedEvents.map((e) => ({
-      id: e.id,
-      runId: e.runId,
-      seq: e.seq,
-      eventType: e.eventType as EventType,
-      payload: e.payloadJson as EventPayload,
-      createdAt: e.createdAt,
-    }));
+    return storedEvents.map((e) => this.mapStoredToRow(e));
   }
 
   /**
-   * Get events from a specific sequence number (for streaming/replay).
+   * Get events from a specific sequence onwards (for incremental polling).
    *
    * @param runId - Run identifier
-   * @param fromSeq - Starting sequence number (inclusive)
-   * @returns Array of EventRow ordered by seq ASC
+   * @param fromSeq - Sequence number to start from (inclusive)
+   * @returns Array of event rows ordered by seq ASC
    */
   async getEventsFrom(runId: string, fromSeq: number): Promise<EventRow[]> {
     return this.getTrace(runId, fromSeq);
@@ -140,163 +210,45 @@ export class EventLog {
    * Get the latest sequence number for a run.
    *
    * @param runId - Run identifier
-   * @returns Latest seq or 0 if no events
+   * @returns Latest sequence number, or 0 if no events
    */
   async getLatestSeq(runId: string): Promise<number> {
+    const cached = this.seqCache.get(runId);
+    if (cached !== undefined) {
+      return cached;
+    }
     const events = await this.store.getEvents(runId);
-    if (events.length === 0) return 0;
-    return Math.max(...events.map((e) => e.seq));
+    return events.length > 0 ? (events[events.length - 1]?.seq ?? 0) : 0;
   }
 
   /**
-   * Reset the internal sequence cache for a run.
-   * Call after loading existing events to avoid seq conflicts.
+   * Clear the sequence cache for a run (useful after external modifications).
    *
    * @param runId - Run identifier
    */
-  async resetSeqCache(runId: string): Promise<void> {
-    const latestSeq = await this.getLatestSeq(runId);
-    this.seqCache.set(runId, latestSeq);
+  clearCache(runId: string): void {
+    this.seqCache.delete(runId);
   }
 
   /**
-   * Convenience method to append a node_start event.
+   * Clear all cached sequences.
    */
-  async appendNodeStart(
-    runId: string,
-    nodeId: string,
-    nodeType: string,
-    input: unknown,
-    attempt: number = 1,
-  ): Promise<EventRow> {
-    return this.append({
-      runId,
-      eventType: "node_start",
-      payload: { nodeId, nodeType, input, attempt },
-    });
+  clearAllCache(): void {
+    this.seqCache.clear();
   }
 
   /**
-   * Convenience method to append a node_end event.
+   * Map StoredRunEvent to public EventRow.
    */
-  async appendNodeEnd(
-    runId: string,
-    nodeId: string,
-    nodeType: string,
-    output: unknown,
-    status: "completed" | "failed" | "skipped",
-    error?: { message: string; code?: string },
-    attempt: number = 1,
-  ): Promise<EventRow> {
-    return this.append({
-      runId,
-      eventType: "node_end",
-      payload: { nodeId, nodeType, output, status, error, attempt },
-    });
-  }
-
-  /**
-   * Convenience method to append a tool_call event.
-   */
-  async appendToolCall(
-    runId: string,
-    nodeId: string,
-    toolName: string,
-    request: unknown,
-    response?: unknown,
-    status: "pending" | "completed" | "failed" = "pending",
-    error?: { message: string; code?: string },
-    durationMs?: number,
-    idempotencyKey?: string,
-  ): Promise<EventRow> {
-    return this.append({
-      runId,
-      eventType: "tool_call",
-      payload: { nodeId, toolName, request, response, status, error, durationMs, idempotencyKey },
-    });
-  }
-
-  /**
-   * Convenience method to append a checkpoint event.
-   */
-  async appendCheckpoint(
-    runId: string,
-    nodeId: string | null,
-    seq: number,
-    metadata: Record<string, unknown>,
-  ): Promise<EventRow> {
-    return this.append({
-      runId,
-      eventType: "checkpoint",
-      payload: { nodeId, checkpointSeq: seq, metadata },
-      seq,
-    });
-  }
-
-  /**
-   * Convenience method to append a HITL event.
-   */
-  async appendHitl(
-    runId: string,
-    nodeId: string,
-    token: string,
-    action: "created" | "resumed" | "expired" | "cancelled",
-    payload?: unknown,
-    decision?: unknown,
-  ): Promise<EventRow> {
-    return this.append({
-      runId,
-      eventType: "hitl",
-      payload: { nodeId, token, action, payload, decision },
-    });
-  }
-
-  /**
-   * Convenience method to append a run_completed event.
-   */
-  async appendRunCompleted(
-    runId: string,
-    output: unknown,
-    durationMs: number,
-    nodeCount: number,
-  ): Promise<EventRow> {
-    return this.append({
-      runId,
-      eventType: "run_completed",
-      payload: { output, durationMs, nodeCount },
-    });
-  }
-
-  /**
-   * Convenience method to append a run_failed event.
-   */
-  async appendRunFailed(
-    runId: string,
-    error: { message: string; code?: string; cause?: unknown },
-    durationMs: number,
-    completedNodes: number,
-  ): Promise<EventRow> {
-    return this.append({
-      runId,
-      eventType: "run_failed",
-      payload: { error, durationMs, completedNodes },
-    });
-  }
-
-  /**
-   * Convenience method to append a run_cancelled event.
-   */
-  async appendRunCancelled(
-    runId: string,
-    reason: string,
-    durationMs: number,
-    completedNodes: number,
-  ): Promise<EventRow> {
-    return this.append({
-      runId,
-      eventType: "run_cancelled",
-      payload: { reason, durationMs, completedNodes },
-    });
+  private mapStoredToRow(stored: StoredRunEvent): EventRow {
+    return {
+      id: stored.id,
+      runId: stored.runId,
+      seq: stored.seq,
+      eventType: stored.eventType as EventType,
+      payload: stored.payloadJson as EventPayload,
+      createdAt: stored.createdAt,
+    };
   }
 }
 
