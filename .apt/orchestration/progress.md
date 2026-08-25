@@ -1,23 +1,21 @@
----
-plan: docs/apt/plans/2026-08-25-graph-agent-runtime-plan.md
 projectType: component
 status: running
-updatedAt: 2026-08-25T03:41:59.223Z
+updatedAt: 2026-08-25T03:45:00.000Z
 ---
 
 # Orchestration Progress
 
 | Task | Title | Status | Commit | Report |
 |------|-------|--------|--------|--------|
-| 1 | 鑴氭墜鏋?monorepo + agent-runtime 鍖?| pending | | |
-| 2 | graph-core 绫诲瀷涓?GraphCompiler | pending | | |
-| 3 | 鍐呭瓨 State + Scheduler + RunManager | pending | | |
+| 1 | 脚手架: monorepo + agent-runtime 包 | DONE | 41e729a | task-1-report.md |
+| 2 | graph-core 类型 + GraphCompiler | DONE | b05c401 | task-2-report.md |
+| 3 | 内存 State + Scheduler + RunManager | DONE | 95c5c88 | task-3-report.md |
 | 4 | SQLite StateStore + migration | DONE | 3e685e5 | task-4-report.md |
-| 5 | Checkpoint 宕╂簝鎭㈠ | pending | | |
-| 6 | ToolRuntime + 骞傜瓑 + retry | pending | | |
-| 7 | HITL + resume API | pending | | |
-| 8 | EventLog + 鎺у埗闈?API | pending | | |
-| 9 | 瀵瑰濂戠害娉ㄥ唽 + 绀轰緥 + 鏂囨。 | pending | | |
-| 10 | 鐭ヨ瘑闂幆棰勫 | pending | | |
+| 5 | Checkpoint 崩溃恢复 | DONE | 840015b | task-5-report.md |
+| 6 | ToolRuntime + 幂等 + retry | DONE | 91dcd7c | task-6-report.md |
+| 7 | HITL + resume API | DONE | 0e05c1e | task-7-report.md |
+| 8 | EventLog + 控制面 API | DONE | 116d410 | task-8-report.md |
+| 9 | 契约注册 + 示例 + 文档 | pending | | |
+| 10 | 知识闭环预备 | pending | | |
 
 BASE_SHA_initial: nogit
