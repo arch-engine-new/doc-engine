@@ -17,6 +17,13 @@ export interface HttpServerOptions {
   port: number;
   /** Hostname to bind to (default: "0.0.0.0"). */
   hostname?: string;
+  /**
+   * Scheme used in generated URLs/logs (default "http").
+   * Why: this adapter serves plain HTTP locally; TLS termination is expected
+   * at a reverse proxy/edge in production. Set "https" when the server is
+   * intentionally TLS-terminated so produced URLs stay correct.
+   */
+  scheme?: "http" | "https";
   /** Base path prefix for all routes (e.g., "/api/v1"). */
   basePath?: string;
   /** Optional logger function. */
@@ -47,7 +54,7 @@ interface Route {
  * Create a minimal HTTP server using native fetch API.
  * Works in Node.js 18+, Cloudflare Workers, Deno, Bun.
  */
-function createNativeServer(handler: RequestHandler): HttpServer {
+function createNativeServer(handler: RequestHandler, scheme: "http" | "https"): HttpServer {
   // Check if we're in Node.js environment
   const isNode = typeof process !== "undefined" && process.versions?.node;
 
@@ -57,7 +64,7 @@ function createNativeServer(handler: RequestHandler): HttpServer {
     const http = require("http");
 
     const server = http.createServer(async (req: IncomingMessage, res: ServerResponse) => {
-      const url = new URL(req.url ?? "/", `http://${req.headers.host ?? "localhost"}`);
+      const url = new URL(req.url ?? "/", `${scheme}://${req.headers.host ?? "localhost"}`);
       const headers: Record<string, string> = {};
       for (const key of Object.keys(req.headers)) {
         const value = req.headers[key];
@@ -326,12 +333,13 @@ function createRouter(routes: Route[]): RequestHandler {
 export async function createHttpServer(controlPlane: ControlPlane, options?: HttpServerOptions): Promise<HttpServer> {
   const routes = createRoutes(controlPlane, options?.basePath);
   const handler = createRouter(routes);
-  const server = createNativeServer(handler);
+  const scheme = options?.scheme ?? "http";
+  const server = createNativeServer(handler, scheme);
 
   if (options?.port !== undefined) {
     const hostname = options.hostname ?? "0.0.0.0";
     await server.listen(options.port, hostname);
-    options.logger?.(`HTTP server listening on http://${hostname}:${options.port}${options.basePath ?? ""}`);
+    options.logger?.(`HTTP server listening on ${scheme}://${hostname}:${options.port}${options.basePath ?? ""}`);
   }
 
   return server;

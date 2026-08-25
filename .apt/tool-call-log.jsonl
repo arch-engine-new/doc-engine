@@ -56,3 +56,13 @@
 {"ts":"2026-08-25T10:43:15.748Z","tool":"register_asset","args":{"kind":"util","name":"agent-runtime index","module":"agent-runtime","sourcePath":"packages/agent-runtime/src/index.ts","summary":"Public API barrel of agent-runtime (version constant, graph compiler/types, executors, scheduler, RunManager, checkpoint, HITL, tools, SQLite store, migration, events, OTel hooks, ControlPlane + HTTP ...","whenToUse":"Find or use the whole agent-runtime SDK surface; typecheck examples against exactly the public exports.","howToUse":"import from \"agent-runtime\" — this barrel is the single public surface; every runtime API listed here is exported from index.ts.","exports":["AGENT_RUNTIME_VERSION","compileGraph","RunManager","startRun","ControlPlane","SQLiteStateStore","EventLog","HitlGateway","ToolRuntime","all public types"],"tags":["agent-runtime","public-api","barrel","module"]},"durationMs":201,"result":{"ok":true}}
 {"ts":"2026-08-25T10:43:23.544Z","tool":"register_contract","args":{"name":"ToolExecutionResult","description":"Output of a tool execution: toolName, input, output, status (completed/failed/timeout/cancelled/error), durationMs, attempt, idempotencyKey and error info.","tsFilePath":"packages/agent-runtime/src/index.ts"},"durationMs":8,"result":{"ok":true}}
 {"ts":"2026-08-25T10:43:29.646Z","tool":"audit_arch_changes","args":{},"durationMs":13,"result":{"ok":true}}
+{"ts":"2026-08-25T10:51:30.795Z","tool":"query_project_status","args":{},"durationMs":186,"result":{"ok":true}}
+{"ts":"2026-08-25T10:51:52.694Z","tool":"audit_arch_changes","args":{"since":"last-scan"},"durationMs":11,"result":{"ok":true}}
+{"ts":"2026-08-25T10:52:07.445Z","tool":"query_contract","args":{"name":"AgentRuntime"},"durationMs":1,"result":{"ok":true}}
+{"ts":"2026-08-25T10:52:07.894Z","tool":"search_arch","args":{"query":"RunManager","limit":5},"durationMs":269,"result":{"ok":true}}
+{"ts":"2026-08-25T10:52:23.587Z","tool":"query_contract","args":{"name":"RunStatus"},"durationMs":3,"result":{"ok":true}}
+{"ts":"2026-08-25T10:52:23.928Z","tool":"query_contract","args":{"name":"CompiledGraph"},"durationMs":2,"result":{"ok":true}}
+{"ts":"2026-08-25T10:52:24.183Z","tool":"query_contract","args":{"name":"StateStore"},"durationMs":2,"result":{"ok":true}}
+{"ts":"2026-08-25T10:52:24.523Z","tool":"check_code_quality","args":{"projectRoot":"D:\\software\\doc-engine"},"durationMs":919,"result":{"ok":true}}
+{"ts":"2026-08-25T11:00:55.568Z","tool":"query_project_status","args":{},"durationMs":183,"result":{"ok":true}}
+{"ts":"2026-08-25T11:05:14.182Z","tool":"check_code_quality","args":{"projectRoot":"D:\\software\\doc-engine"},"durationMs":13,"result":{"ok":true}}

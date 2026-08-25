@@ -224,6 +224,13 @@ export function createRunSpan(runId: string, graphId: string, input?: unknown): 
 
 /**
  * End a run span with final status.
+ *
+ * Why (span finalization): attributes are written BEFORE span.end() —
+ * OpenTelemetry spans are immutable after end, so status/output/error must be
+ * collected first. Output/error capture is guarded (size cap + try/catch)
+ * because attribute values must be JSON-serializable and small; oversized
+ * payloads are dropped rather than failing the run. The optional cause chain
+ * is flattened into a string attribute for post-mortem queries.
  */
 export function endRunSpan(span: OtelSpan | null, status: "completed" | "failed" | "cancelled", output?: unknown, error?: Error): void {
   if (!span) return;

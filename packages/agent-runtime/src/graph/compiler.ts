@@ -43,6 +43,13 @@ function assignGraphId(existing?: string): string {
   return `graph_${newId()}`;
 }
 
+/**
+ * Build the normal (non-onError) adjacency map.
+ *
+ * Why: onError edges must NOT contribute to in-degree/readiness — the scheduler
+ * treats them as fallback routing only, so they are excluded here to keep
+ * topo-order semantics deterministic.
+ */
 function buildAdjacency(
   nodeIds: ReadonlySet<string>,
   edges: readonly GraphEdge[],
@@ -81,6 +88,14 @@ function findTerminals(
   return terminals;
 }
 
+/**
+ * Resolve the entry node id.
+ *
+ * Why: the runtime launches from exactly one entry; support four authoring
+ * styles in strict priority order — explicit entryNodeId (must exist), a
+ * single start node, a single root (in-degree-0) node, otherwise fail with an
+ * unambiguous error the author can act on rather than scheduling a random node.
+ */
 function resolveEntryNodeId(
   def: GraphDefinition,
   nodes: ReadonlyMap<string, GraphNode>,
@@ -129,6 +144,12 @@ function resolveEntryNodeId(
  *
  * Rejects empty graphs, unknown node types, dangling edges, and graphs with
  * no terminal path so the runtime never schedules an unfinishable run.
+ *
+ * Why (validation order): definition shape → node ids/types/retry → edge
+ * endpoints → terminal reachability → entry resolution. Each step fails fast
+ * with a typed GraphCompileError the author sees at compile time, not mid-run.
+ * The returned CompiledGraph precomputes adjacency/terminals/entry so the
+ * hot scheduler path does no authoring-time checks.
  */
 export function compileGraph(def: GraphDefinition): CompiledGraph {
   if (!def || !Array.isArray(def.nodes) || !Array.isArray(def.edges)) {

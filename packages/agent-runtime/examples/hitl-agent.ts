@@ -42,7 +42,7 @@ const { runId, status, hitlInterrupt } = await plane.startRun({
 if (status !== "waiting_hitl" || !hitlInterrupt) {
   throw new Error(`Expected HITL pause, got ${status}`);
 }
-console.log("review:", hitlInterrupt.payload, "token:", hitlInterrupt.token);
+console.log("review:", hitlInterrupt.payload, "token:", `${hitlInterrupt.token.slice(0, 8)}...`);
 
 const resume = await plane.resumeHitl({
   runId,
