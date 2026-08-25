@@ -1,7 +1,7 @@
 # Task 10 Report — Knowledge closure (audit + register + contracts)
 
 ## Status
-DONE — commit `56cf817`
+DONE — work commit `7e6fa9f`
 
 ## Audit (read-only)
 - `audit_arch_changes` ran against the baseline anchor (`nogit`/fileHashes, scannedAt 2026-08-25T03:22:10Z): reported `new: []`, `modified: []`, `deleted: []`, `unregistered: []`.
