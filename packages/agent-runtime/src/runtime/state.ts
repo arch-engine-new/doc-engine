@@ -87,6 +87,7 @@ export interface RunMetadata {
 export type RunStatus =
   | "created"
   | "running"
+  | "waiting_hitl"
   | "completed"
   | "failed"
   | "cancelled";

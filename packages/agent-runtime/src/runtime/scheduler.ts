@@ -4,6 +4,7 @@
  * Why: Uses Kahn's algorithm to compute ready set from precomputed adjacency.
  * Executes one node at a time (serial), merging channel updates after each.
  * Fan-out/fan-in barrier is prepared for future parallel execution but runs serial now.
+ * Supports HITL (Human-in-the-Loop) nodes that pause execution awaiting human input.
  */
 
 import type { CompiledGraph } from "../graph/types.js";
@@ -11,6 +12,7 @@ import type { ExecutionContext, NodeExecutionRecord, RunStatus } from "./state.j
 import { getExecutor, type NodeExecutor, type NodeResult, BUILTIN_EXECUTORS } from "./node-executors.js";
 import { createInitialChannels, mergeChannels, getChannel, serializeChannels } from "./state.js";
 import type { CheckpointService, WriteCheckpointOptions } from "./checkpoint-service.js";
+import type { HitlGateway, HitlDecision } from "../hitl/gateway.js";
 
 /** Scheduler options. */
 export interface SchedulerOptions {
@@ -26,6 +28,10 @@ export interface SchedulerOptions {
   checkpointService?: CheckpointService;
   /** Run ID for checkpointing (required if checkpointService provided). */
   runId?: string;
+  // HITL gateway for human-in-the-loop interrupts.
+  hitlGateway?: HitlGateway;
+  /** Called when a HITL interrupt is created (run pauses). */
+  onHitlInterrupt?: (interrupt: { token: string; nodeId: string; payload: unknown }) => void;
 }
 
 /** Result of a scheduler run. */
@@ -40,11 +46,19 @@ export interface SchedulerResult {
   error?: { message: string; code?: string; cause?: unknown };
   /** Output channel value (from "output" channel or last terminal node). */
   output?: unknown;
+  /** HITL interrupt info if status is "waiting_hitl". */
+  hitlInterrupt?: {
+    token: string;
+    nodeId: string;
+    payload: unknown;
+    expiresAt: string | null;
+  };
 }
 
 /**
- * Run a compiled graph to completion (or failure/cancellation).
+ * Run a compiled graph to completion (or failure/cancellation/HITL pause).
  * Serial execution: picks one ready node at a time, runs it, merges updates, repeats.
+ * If a HITL node is encountered and hitlGateway is provided, pauses and returns waiting_hitl.
  */
 export async function runGraph(
   compiledGraph: CompiledGraph,
@@ -59,6 +73,8 @@ export async function runGraph(
     onNodeError,
     checkpointService,
     runId,
+    hitlGateway,
+    onHitlInterrupt,
   } = options;
 
   // Merge custom executors with built-ins (custom wins)
@@ -142,6 +158,57 @@ export async function runGraph(
     ready.delete(nodeId);
 
     const node = compiledGraph.nodes.get(nodeId)!;
+
+    // Handle HITL node: pause execution and create interrupt
+    if (node.type === "hitl") {
+      if (!hitlGateway || !runId) {
+        const error = new Error(`HITL node "${nodeId}" requires hitlGateway and runId in options`);
+        return failRun(error, "HITL_CONFIG_MISSING");
+      }
+      const config = node.config ?? {};
+      const payload = config.payload ?? { nodeId, message: "Human input required" };
+
+      const { token, interrupt } = await hitlGateway.createInterrupt(runId, nodeId, payload);
+
+      // Record the HITL node as waiting (not completed)
+      const record: NodeExecutionRecord = {
+        nodeId,
+        nodeType: "hitl",
+        startedAt: new Date().toISOString(),
+        status: "running",
+        input: getNodeInput(node, channels),
+        attempt: 1,
+      };
+      history.push(record);
+
+      // Write checkpoint for HITL pause (so we can resume from here)
+      if (checkpointService) {
+        await checkpointService.write({
+          runId,
+          seq: seq++,
+          nodeId,
+          channels,
+          metadata: { phase: "hitl_waiting", hitlToken: token, hitlNodeId: nodeId, completedNodes: [...completed, nodeId] },
+        });
+      }
+
+      // Notify about interrupt creation
+      onHitlInterrupt?.({ token, nodeId, payload: interrupt.payload });
+
+      // Return waiting_hitl status with interrupt info
+      return {
+        status: "waiting_hitl",
+        channels,
+        history,
+        hitlInterrupt: {
+          token,
+          nodeId,
+          payload: interrupt.payload,
+          expiresAt: interrupt.expiresAt,
+        },
+      };
+    }
+
     const executor = executorMap.get(node.type);
     if (!executor) {
       const error = new Error(`No executor for node type "${node.type}"`);

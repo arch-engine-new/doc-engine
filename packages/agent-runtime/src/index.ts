@@ -71,6 +71,21 @@ export {
 } from "./runtime/node-executors.js";
 
 /**
+ * HITL (Human-in-the-Loop) gateway and types.
+ */
+export type {
+  HitlInterruptStatus,
+  HitlDecision,
+  CreateInterruptResult,
+  HitlInterruptRow,
+} from "./hitl/gateway.js";
+
+export {
+  HitlGateway,
+  createHitlGateway,
+} from "./hitl/gateway.js";
+
+/**
  * Scheduler: serial execution engine.
  */
 export type {

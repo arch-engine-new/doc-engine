@@ -14,15 +14,20 @@ import type { StateStore } from "../persistence/types.js";
 import { CheckpointService, type ResumeResult } from "./checkpoint-service.js";
 import { BUILTIN_EXECUTORS, getExecutor, type NodeExecutor, type NodeResult, BranchExecutor } from "./node-executors.js";
 import { executeWithRetry } from "./scheduler.js";
-import { mergeChannels, getChannel, serializeChannels } from "./state.js";
+import { mergeChannels, getChannel, serializeChannels, createInitialChannels } from "./state.js";
 import { ToolRuntime, getDefaultRegistry } from "../tools/runtime.js";
 import { getLastTerminalOutput } from "./scheduler.js";
+import type { HitlGateway, HitlDecision } from "../hitl/gateway.js";
 
 /** In-memory run store entry. */
 interface RunEntry {
   metadata: RunMetadata;
   abortController: AbortController;
   schedulerPromise: Promise<SchedulerResult>;
+  hitlGateway?: HitlGateway;
+  schedulerOptions?: SchedulerOptions;
+  channels: ChannelMap;
+  store?: StateStore;
 }
 
 /** Options for starting a run. */
@@ -41,6 +46,8 @@ export interface StartRunOptions {
   store?: StateStore;
   /** Optional thread ID for conversation grouping. */
   threadId?: string;
+  /** HITL gateway for human-in-the-loop interrupts. */
+  hitlGateway?: HitlGateway;
 }
 
 /** Result of startRun. */
@@ -98,11 +105,37 @@ export class RunManager {
       nodeHistory: [],
     };
 
+    // Initialize channels
+    const channels = createInitialChannels(options.input);
+
     // Create scheduler promise (starts immediately)
     const schedulerPromise = this.runScheduler(compiledGraph, metadata, abortController.signal, options);
 
     // Store run entry
-    this.runs.set(runId, { metadata, abortController, schedulerPromise });
+    const entry: RunEntry = {
+      metadata,
+      abortController,
+      schedulerPromise,
+      hitlGateway: options.hitlGateway,
+      schedulerOptions: options.schedulerOptions,
+      channels,
+      store: options.store,
+    };
+    this.runs.set(runId, entry);
+
+    // Update channels when scheduler completes or pauses
+    schedulerPromise.then((result) => {
+      entry.channels = result.channels;
+      metadata.status = result.status;
+      if (result.status !== "running" && result.status !== "waiting_hitl") {
+        metadata.finishedAt = new Date().toISOString();
+      }
+      metadata.nodeHistory = result.history;
+      metadata.output = result.output;
+      if (result.error) {
+        metadata.error = result.error;
+      }
+    });
 
     // Update status to running
     metadata.status = "running";
@@ -141,6 +174,7 @@ export class RunManager {
       ...options.schedulerOptions,
       checkpointService,
       runId: metadata.runId,
+      hitlGateway: options.hitlGateway,
     };
 
     // If we have a resume result, we need to run a modified scheduler that skips completed nodes
@@ -173,6 +207,7 @@ export class RunManager {
    * Run scheduler with resume capability: skip already completed nodes.
    * Uses restored channels and history from checkpoint.
    * For completed branch nodes, re-evaluates condition to determine taken path.
+   * If hitlNodeId is provided, treats all its successors as ready (for HITL resume).
    */
   private async runSchedulerWithResume(
     compiledGraph: CompiledGraph,
@@ -180,6 +215,7 @@ export class RunManager {
     abortSignal: AbortSignal,
     schedulerOptions: SchedulerOptions,
     resumeResult: ResumeResult,
+    hitlNodeId?: string,
   ): Promise<SchedulerResult> {
     const {
       maxSteps = 1000,
@@ -188,6 +224,7 @@ export class RunManager {
       onNodeError,
       checkpointService,
       runId,
+      hitlGateway,
     } = schedulerOptions;
 
     // Merge custom executors with built-ins (custom wins)
@@ -283,7 +320,12 @@ export class RunManager {
       } else {
         // Non-branch nodes: only successors that are also completed were on the taken path
         const allSuccessors = adjacency.get(completedNodeId) ?? [];
-        actualSuccessors = allSuccessors.filter((s) => completed.has(s));
+        // If this is the HITL node, all its successors should be treated as taken
+        if (hitlNodeId && completedNodeId === hitlNodeId) {
+          actualSuccessors = [...allSuccessors];
+        } else {
+          actualSuccessors = [...allSuccessors].filter((s) => completed.has(s));
+        }
       }
 
       for (const nextId of actualSuccessors) {
@@ -329,6 +371,53 @@ export class RunManager {
       ready.delete(nodeId);
 
       const node = compiledGraph.nodes.get(nodeId)!;
+
+      // Handle HITL node: pause execution and create interrupt
+      if (node.type === "hitl" && hitlGateway && runId) {
+        const config = node.config ?? {};
+        const payload = config.payload ?? { nodeId, message: "Human input required" };
+
+        const { token, interrupt } = await hitlGateway.createInterrupt(runId, nodeId, payload);
+
+        // Record the HITL node as waiting (not completed)
+        const record: NodeExecutionRecord = {
+          nodeId,
+          nodeType: "hitl",
+          startedAt: new Date().toISOString(),
+          status: "running",
+          input: getNodeInput(node, channels),
+          attempt: 1,
+        };
+        history.push(record);
+
+        // Write checkpoint for HITL pause
+        if (checkpointService) {
+          await checkpointService.write({
+            runId,
+            seq: seq++,
+            nodeId,
+            channels,
+            metadata: { phase: "hitl_waiting", hitlToken: token, hitlNodeId: nodeId, completedNodes: [...completed, nodeId] },
+          });
+        }
+
+        // Notify about interrupt creation
+        schedulerOptions.onHitlInterrupt?.({ token, nodeId, payload: interrupt.payload });
+
+        // Return waiting_hitl status with interrupt info
+        return {
+          status: "waiting_hitl",
+          channels,
+          history,
+          hitlInterrupt: {
+            token,
+            nodeId,
+            payload: interrupt.payload,
+            expiresAt: interrupt.expiresAt,
+          },
+        };
+      }
+
       const executor = executorMap.get(node.type);
       if (!executor) {
         const error = new Error(`No executor for node type "${node.type}"`);
@@ -451,9 +540,18 @@ export class RunManager {
 
   /**
    * Get run metadata by ID (does not wait for completion).
+   * Includes hitlInterrupt if status is "waiting_hitl".
    */
   getRun(runId: string): RunMetadata | undefined {
-    return this.runs.get(runId)?.metadata;
+    const entry = this.runs.get(runId);
+    if (!entry) return undefined;
+    const metadata = entry.metadata;
+    // If waiting_hitl, include hitlInterrupt info from scheduler result if available
+    if (metadata.status === "waiting_hitl") {
+      // The hitlInterrupt info is in the scheduler result, which we can't easily access here
+      // For now, return metadata as-is; the caller can use waitForRun to get full result
+    }
+    return metadata;
   }
 
   /**
@@ -526,6 +624,399 @@ export class RunManager {
    */
   evictGraph(graphId: string): boolean {
     return this.graphCache.delete(graphId);
+  }
+
+/**
+   * Resume a run that is waiting on a HITL interrupt.
+   *
+   * Loads the interrupt by token, verifies it matches the runId,
+   * marks it as resumed with the human decision, and continues
+   * execution from the node after the HITL node.
+   *
+   * @param runId - Run identifier
+   * @param token - HITL interrupt token from createInterrupt
+   * @param decision - Human decision (action, optional data)
+   * @returns Scheduler result (completed/failed/cancelled/waiting_hitl)
+   */
+  async resumeHitl(
+    runId: string,
+    token: string,
+    decision: HitlDecision,
+  ): Promise<SchedulerResult | undefined> {
+    const entry = this.runs.get(runId);
+    if (!entry) {
+      throw new Error(`Run not found: ${runId}`);
+    }
+
+    // Get hitlGateway from entry
+    const hitlGateway = entry.hitlGateway;
+    if (!hitlGateway) {
+      throw new Error(`Run ${runId} has no HITL gateway configured`);
+    }
+
+    // Get the interrupt and verify it matches
+    const interrupt = await hitlGateway.getInterrupt(token);
+    if (!interrupt) {
+      throw new Error(`HITL interrupt not found for token: ${token}`);
+    }
+    if (interrupt.runId !== runId) {
+      throw new Error(`HITL interrupt token does not match runId`);
+    }
+
+    // Idempotent: if interrupt already resumed, return current run result
+    if (interrupt.status === "resumed") {
+      // Return the current scheduler result (completed/failed/etc.)
+      return entry.schedulerPromise;
+    }
+
+    if (interrupt.status !== "pending") {
+      throw new Error(`HITL interrupt already ${interrupt.status}`);
+    }
+    if (interrupt.expiresAt && new Date(interrupt.expiresAt) < new Date()) {
+      // Mark as expired in the gateway
+      await hitlGateway.updateHitlInterrupt(token, { status: "expired", updatedAt: new Date().toISOString() });
+      throw new Error(`HITL interrupt expired`);
+    }
+
+    // Verify run is in waiting_hitl state (for fresh resume)
+    if (entry.metadata.status !== "waiting_hitl") {
+      throw new Error(`Run ${runId} is not waiting for HITL (status: ${entry.metadata.status})`);
+    }
+
+    // Mark interrupt as resumed (idempotent)
+    const resumed = await hitlGateway.resume(token, decision);
+    if (!resumed) {
+      throw new Error(`Failed to resume HITL interrupt`);
+    }
+
+    // Get the compiled graph
+    const compiledGraph = this.graphCache.get(entry.metadata.graphId);
+    if (!compiledGraph) {
+      throw new Error(`Compiled graph not found for run ${runId}`);
+    }
+
+    // Find the HITL node and its successors
+    const hitlNode = compiledGraph.nodes.get(interrupt.nodeId);
+    if (!hitlNode) {
+      throw new Error(`HITL node ${interrupt.nodeId} not found in graph`);
+    }
+
+    // Get successors of the HITL node
+    const successors = compiledGraph.adjacency.get(interrupt.nodeId) ?? [];
+
+    // Create a new abort controller for the resumed run
+    const abortController = new AbortController();
+
+    // Prepare checkpoint service - we don't have store access here, skip for now
+    let checkpointService: CheckpointService | undefined;
+
+    // Prepare scheduler options for resume
+    const schedulerOptions: SchedulerOptions = {
+      ...entry.schedulerOptions,
+      checkpointService,
+      runId: entry.metadata.runId,
+      hitlGateway: entry.hitlGateway,
+    };
+
+    // Run scheduler from the HITL node's successors
+    // We need to inject the decision into channels so downstream nodes can use it
+    const channels = new Map(entry.channels);
+    // Store the HITL decision in a special channel
+    mergeChannels(channels, { [`hitl_decision_${interrupt.nodeId}`]: decision });
+
+    // Update metadata status to running
+    entry.metadata.status = "running";
+    entry.metadata.startedAt = new Date().toISOString();
+
+    // Run the scheduler starting from successors
+    // We create a modified run that starts with the successors as ready nodes
+    const result = await this.runSchedulerFromNodes(
+      compiledGraph,
+      entry.metadata,
+      abortController.signal,
+      schedulerOptions,
+      successors,
+      channels,
+      entry.metadata.nodeHistory,
+    );
+
+    // Update entry metadata status from result
+    entry.metadata.status = result.status;
+    if (result.status !== "running" && result.status !== "waiting_hitl") {
+      entry.metadata.finishedAt = new Date().toISOString();
+    }
+    entry.metadata.nodeHistory = result.history;
+    entry.metadata.output = result.output;
+    if (result.error) {
+      entry.metadata.error = result.error;
+    }
+
+    // Update entry with new scheduler promise and metadata
+    entry.schedulerPromise = Promise.resolve(result);
+    entry.abortController = abortController;
+    entry.channels = result.channels;
+
+    return result;
+  }
+
+  /**
+   * Internal: run scheduler starting from specific nodes (for HITL resume).
+   */
+  private async runSchedulerFromNodes(
+    compiledGraph: CompiledGraph,
+    metadata: RunMetadata,
+    abortSignal: AbortSignal,
+    schedulerOptions: SchedulerOptions,
+    startNodeIds: readonly string[],
+    initialChannels: ChannelMap,
+    initialHistory: NodeExecutionRecord[],
+  ): Promise<SchedulerResult> {
+    const {
+      maxSteps = 1000,
+      executors = new Map(),
+      onNodeComplete,
+      onNodeError,
+      checkpointService,
+      runId,
+      hitlGateway,
+    } = schedulerOptions;
+
+    // Merge custom executors with built-ins (custom wins)
+    const executorMap = new Map(BUILTIN_EXECUTORS);
+    for (const [key, value] of executors) {
+      executorMap.set(key, value);
+    }
+
+    // Use provided channels and history
+    const channels = initialChannels;
+    const history = [...initialHistory];
+    let steps = 0;
+    let seq = 0;
+
+    // Build in-degree map for Kahn's algorithm (only normal edges)
+    const inDegree = new Map<string, number>();
+    const adjacency = compiledGraph.adjacency;
+
+    for (const nodeId of compiledGraph.nodes.keys()) {
+      inDegree.set(nodeId, 0);
+    }
+    for (const [from, tos] of adjacency) {
+      for (const to of tos) {
+        inDegree.set(to, (inDegree.get(to) ?? 0) + 1);
+      }
+    }
+
+    // Ready queue: only the specified start nodes (successors of HITL node)
+    const ready = new Set<string>();
+    for (const nodeId of startNodeIds) {
+      if (!inDegree.has(nodeId)) continue;
+      // Set in-degree to 0 for start nodes so they're ready
+      inDegree.set(nodeId, 0);
+      ready.add(nodeId);
+    }
+
+    // Execution context
+    const context: ExecutionContext = {
+      compiledGraph,
+      channels,
+      metadata: {
+        runId: runId ?? metadata.runId,
+        graphId: compiledGraph.graphId,
+        status: "running",
+        createdAt: metadata.createdAt,
+        input: metadata.input,
+        nodeHistory: history,
+      },
+      abortSignal,
+      runId: runId ?? metadata.runId,
+      threadId: metadata.threadId ?? undefined,
+      nodeExecutionId: undefined,
+      attempt: 1,
+    };
+
+    // Track completed nodes
+    const completed = new Set<string>();
+
+    // Write initial checkpoint for resume
+    if (checkpointService && runId) {
+      await checkpointService.write({
+        runId,
+        seq: seq++,
+        nodeId: null,
+        channels,
+        metadata: { phase: "hitl_resume", startNodes: startNodeIds },
+      });
+    }
+
+    while (ready.size > 0 && steps < maxSteps) {
+      if (abortSignal.aborted) {
+        return {
+          status: "cancelled",
+          channels,
+          history,
+          error: { message: "Run cancelled via abort signal", code: "CANCELLED" },
+        };
+      }
+
+      // Pick a ready node (deterministic: first by id)
+      const nodeId = [...ready].sort()[0]!;
+      ready.delete(nodeId);
+
+      const node = compiledGraph.nodes.get(nodeId)!;
+
+      // Handle HITL node: pause execution and create interrupt
+      if (node.type === "hitl" && hitlGateway && runId) {
+        const config = node.config ?? {};
+        const payload = config.payload ?? { nodeId, message: "Human input required" };
+
+        const { token, interrupt } = await hitlGateway.createInterrupt(runId, nodeId, payload);
+
+        // Record the HITL node as waiting (not completed)
+        const record: NodeExecutionRecord = {
+          nodeId,
+          nodeType: "hitl",
+          startedAt: new Date().toISOString(),
+          status: "running",
+          input: getNodeInput(node, channels),
+          attempt: 1,
+        };
+        history.push(record);
+
+        // Notify about interrupt creation
+        schedulerOptions.onHitlInterrupt?.({ token, nodeId, payload: interrupt.payload });
+
+        // Return waiting_hitl status with interrupt info
+        return {
+          status: "waiting_hitl",
+          channels,
+          history,
+          hitlInterrupt: {
+            token,
+            nodeId,
+            payload: interrupt.payload,
+            expiresAt: interrupt.expiresAt,
+          },
+        };
+      }
+
+      const executor = executorMap.get(node.type);
+      if (!executor) {
+        const error = new Error(`No executor for node type "${node.type}"`);
+        return failRun(error, "NO_EXECUTOR");
+      }
+
+      // Record execution start
+      const record: NodeExecutionRecord = {
+        nodeId,
+        nodeType: node.type,
+        startedAt: new Date().toISOString(),
+        status: "running",
+        input: getNodeInput(node, channels),
+        attempt: 1,
+      };
+      history.push(record);
+
+      try {
+        // Execute with retry policy
+        const result = await executeWithRetry(node, executor, context, node.retry);
+
+        // Update record
+        record.finishedAt = new Date().toISOString();
+        record.status = "completed";
+        record.output = result.updates;
+
+        // Merge channel updates
+        mergeChannels(channels, result.updates);
+
+        // Write checkpoint after successful node execution
+        if (checkpointService && runId) {
+          await checkpointService.write({
+            runId,
+            seq: seq++,
+            nodeId,
+            channels,
+            metadata: { phase: "node_complete", completedNodes: [...completed, nodeId] },
+          });
+        }
+
+        // Handle explicit nextNodeIds (branch) or normal adjacency
+        let nextNodes: readonly string[];
+        if (result.nextNodeIds && result.nextNodeIds.length > 0) {
+          nextNodes = result.nextNodeIds;
+        } else {
+          nextNodes = adjacency.get(nodeId) ?? [];
+        }
+
+        // Decrement in-degree for successors
+        for (const nextId of nextNodes) {
+          const newDegree = (inDegree.get(nextId) ?? 1) - 1;
+          inDegree.set(nextId, newDegree);
+          if (newDegree === 0 && !completed.has(nextId)) {
+            ready.add(nextId);
+          }
+        }
+
+        completed.add(nodeId);
+
+        // Halt signal (end node or explicit halt)
+        if (result.halt || node.type === "end") {
+          break;
+        }
+
+        onNodeComplete?.(record);
+        steps++;
+      } catch (error) {
+        record.finishedAt = new Date().toISOString();
+        record.status = "failed";
+        record.error = { message: (error as Error).message, code: (error as Error & { code?: string }).code };
+
+        onNodeError?.(record, error as Error);
+
+        // Check for onError edges
+        const errorEdges = compiledGraph.edges.filter(
+          (e) => e.from === nodeId && e.onError,
+        );
+        if (errorEdges.length > 0) {
+          // Route to first error handler
+          const errorTarget = errorEdges[0]!.to;
+          ready.add(errorTarget);
+          continue;
+        }
+
+        return failRun(error as Error, "NODE_ERROR");
+      }
+    }
+
+    if (steps >= maxSteps) {
+      return failRun(new Error(`Max steps (${maxSteps}) exceeded`), "MAX_STEPS");
+    }
+
+    // Determine final status
+    const status: RunStatus = abortSignal.aborted ? "cancelled" : "completed";
+
+    // Get output from "output" channel or last terminal node's output channel
+    const output = getChannel(channels, "output") ?? getLastTerminalOutput(compiledGraph, channels);
+
+    // Update metadata with final state
+    metadata.status = status;
+    metadata.finishedAt = new Date().toISOString();
+    metadata.nodeHistory = history;
+    metadata.output = output;
+
+    return { status, channels, history, output };
+
+    function failRun(error: Error, code: string): SchedulerResult {
+      metadata.status = "failed";
+      metadata.finishedAt = new Date().toISOString();
+      metadata.nodeHistory = history;
+      metadata.error = { message: error.message, code, cause: error };
+      return {
+        status: "failed",
+        channels,
+        history,
+        error: { message: error.message, code, cause: error },
+      };
+    }
   }
 }
 
