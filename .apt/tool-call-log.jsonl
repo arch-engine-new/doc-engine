@@ -21,3 +21,5 @@
 {"ts":"2026-08-25T03:39:24.358Z","tool":"search_arch","args":{"query":"agent runtime graph checkpoint store","limit":5},"durationMs":282,"result":{"ok":true}}
 {"ts":"2026-08-25T03:39:24.683Z","tool":"query_ontology","args":{"topic":"agent"},"durationMs":215,"result":{"ok":true}}
 {"ts":"2026-08-25T03:42:06.226Z","tool":"query_project_status","args":{},"durationMs":236,"result":{"ok":true}}
+{"ts":"2026-08-25T07:54:48.767Z","tool":"query_project_status","args":{},"durationMs":359,"result":{"ok":true}}
+{"ts":"2026-08-25T07:56:01.825Z","tool":"query_project_status","args":{},"durationMs":335,"result":{"ok":true}}

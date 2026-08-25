@@ -624,145 +624,127 @@ export class RunManager {
    */
   evictGraph(graphId: string): boolean {
     return this.graphCache.delete(graphId);
-  }
+}
 
 /**
-   * Resume a run that is waiting on a HITL interrupt.
-   *
-   * Loads the interrupt by token, verifies it matches the runId,
-   * marks it as resumed with the human decision, and continues
-   * execution from the node after the HITL node.
-   *
-   * @param runId - Run identifier
-   * @param token - HITL interrupt token from createInterrupt
-   * @param decision - Human decision (action, optional data)
-   * @returns Scheduler result (completed/failed/cancelled/waiting_hitl)
-   */
-  async resumeHitl(
-    runId: string,
-    token: string,
-    decision: HitlDecision,
-  ): Promise<SchedulerResult | undefined> {
-    const entry = this.runs.get(runId);
-    if (!entry) {
-      throw new Error(`Run not found: ${runId}`);
-    }
-
-    // Get hitlGateway from entry
-    const hitlGateway = entry.hitlGateway;
-    if (!hitlGateway) {
-      throw new Error(`Run ${runId} has no HITL gateway configured`);
-    }
-
-    // Get the interrupt and verify it matches
-    const interrupt = await hitlGateway.getInterrupt(token);
-    if (!interrupt) {
-      throw new Error(`HITL interrupt not found for token: ${token}`);
-    }
-    if (interrupt.runId !== runId) {
-      throw new Error(`HITL interrupt token does not match runId`);
-    }
-
-    // Idempotent: if interrupt already resumed, return current run result
-    if (interrupt.status === "resumed") {
-      // Return the current scheduler result (completed/failed/etc.)
-      return entry.schedulerPromise;
-    }
-
-    if (interrupt.status !== "pending") {
-      throw new Error(`HITL interrupt already ${interrupt.status}`);
-    }
-    if (interrupt.expiresAt && new Date(interrupt.expiresAt) < new Date()) {
-      // Mark as expired in the gateway
-      await hitlGateway.updateHitlInterrupt(token, { status: "expired", updatedAt: new Date().toISOString() });
-      throw new Error(`HITL interrupt expired`);
-    }
-
-    // Verify run is in waiting_hitl state (for fresh resume)
-    if (entry.metadata.status !== "waiting_hitl") {
-      throw new Error(`Run ${runId} is not waiting for HITL (status: ${entry.metadata.status})`);
-    }
-
-    // Mark interrupt as resumed (idempotent)
-    const resumed = await hitlGateway.resume(token, decision);
-    if (!resumed) {
-      throw new Error(`Failed to resume HITL interrupt`);
-    }
-
-    // Get the compiled graph
-    const compiledGraph = this.graphCache.get(entry.metadata.graphId);
-    if (!compiledGraph) {
-      throw new Error(`Compiled graph not found for run ${runId}`);
-    }
-
-    // Find the HITL node and its successors
-    const hitlNode = compiledGraph.nodes.get(interrupt.nodeId);
-    if (!hitlNode) {
-      throw new Error(`HITL node ${interrupt.nodeId} not found in graph`);
-    }
-
-    // Get successors of the HITL node
-    const successors = compiledGraph.adjacency.get(interrupt.nodeId) ?? [];
-
-    // Create a new abort controller for the resumed run
-    const abortController = new AbortController();
-
-    // Prepare checkpoint service - we don't have store access here, skip for now
-    let checkpointService: CheckpointService | undefined;
-
-    // Prepare scheduler options for resume
-    const schedulerOptions: SchedulerOptions = {
-      ...entry.schedulerOptions,
-      checkpointService,
-      runId: entry.metadata.runId,
-      hitlGateway: entry.hitlGateway,
-    };
-
-    // Run scheduler from the HITL node's successors
-    // We need to inject the decision into channels so downstream nodes can use it
-    const channels = new Map(entry.channels);
-    // Store the HITL decision in a special channel
-    mergeChannels(channels, { [`hitl_decision_${interrupt.nodeId}`]: decision });
-
-    // Update metadata status to running
-    entry.metadata.status = "running";
-    entry.metadata.startedAt = new Date().toISOString();
-
-    // Run the scheduler starting from successors
-    // We create a modified run that starts with the successors as ready nodes
-    const result = await this.runSchedulerFromNodes(
-      compiledGraph,
-      entry.metadata,
-      abortController.signal,
-      schedulerOptions,
-      successors,
-      channels,
-      entry.metadata.nodeHistory,
-    );
-
-    // Update entry metadata status from result
-    entry.metadata.status = result.status;
-    if (result.status !== "running" && result.status !== "waiting_hitl") {
-      entry.metadata.finishedAt = new Date().toISOString();
-    }
-    entry.metadata.nodeHistory = result.history;
-    entry.metadata.output = result.output;
-    if (result.error) {
-      entry.metadata.error = result.error;
-    }
-
-    // Update entry with new scheduler promise and metadata
-    entry.schedulerPromise = Promise.resolve(result);
-    entry.abortController = abortController;
-    entry.channels = result.channels;
-
-    return result;
+ * Resume a run that is waiting on a HITL interrupt.
+ *
+ * Loads the interrupt by token, verifies it matches the runId,
+ * marks it as resumed with the human decision, and continues
+ * execution from the node after the HITL node by loading the
+ * latest checkpoint and injecting the decision into channels.
+ *
+ * @param runId - Run identifier
+ * @param token - HITL interrupt token from createInterrupt
+ * @param decision - Human decision (action, optional data)
+ * @returns Scheduler result (completed/failed/cancelled/waiting_hitl)
+ */
+async resumeHitl(
+  runId: string,
+  token: string,
+  decision: HitlDecision,
+): Promise<SchedulerResult | undefined> {
+  const entry = this.runs.get(runId);
+  if (!entry) {
+    throw new Error(`Run not found: ${runId}`);
   }
 
-  /**
-   * Internal: run scheduler starting from specific nodes (for HITL resume).
-   */
-  private async runSchedulerFromNodes(
+  // Get hitlGateway and store from entry
+  const hitlGateway = entry.hitlGateway;
+  const store = entry.store;
+  if (!hitlGateway || !store) {
+    throw new Error(`Run ${runId} has no HITL gateway or store configured`);
+  }
+
+  // Get the interrupt and verify it matches
+  const interrupt = await hitlGateway.getInterrupt(token);
+  if (!interrupt) {
+    throw new Error(`HITL interrupt not found for token: ${token}`);
+  }
+  if (interrupt.runId !== runId) {
+    throw new Error(`HITL interrupt token does not match runId`);
+  }
+
+  // Idempotent: if interrupt already resumed, return current run result
+  if (interrupt.status === "resumed") {
+    return entry.schedulerPromise;
+  }
+
+  if (interrupt.status !== "pending") {
+    throw new Error(`HITL interrupt already ${interrupt.status}`);
+  }
+  if (interrupt.expiresAt && new Date(interrupt.expiresAt) < new Date()) {
+    // Mark as expired in the gateway
+    await hitlGateway.updateHitlInterrupt(token, { status: "expired", updatedAt: new Date().toISOString() });
+    throw new Error(`HITL interrupt expired`);
+  }
+
+  // Verify run is in waiting_hitl state (for fresh resume)
+  if (entry.metadata.status !== "waiting_hitl") {
+    throw new Error(`Run ${runId} is not waiting for HITL (status: ${entry.metadata.status})`);
+  }
+
+  // Mark interrupt as resumed (idempotent)
+  const resumed = await hitlGateway.resume(token, decision);
+  if (!resumed) {
+    throw new Error(`Failed to resume HITL interrupt`);
+  }
+
+  // Get the compiled graph
+  const compiledGraph = this.graphCache.get(entry.metadata.graphId);
+  if (!compiledGraph) {
+    throw new Error(`Compiled graph not found for run ${runId}`);
+  }
+
+  // Load the latest checkpoint (should be the hitl_waiting one)
+  const checkpointService = new CheckpointService(entry.store!);
+  const resumeResult = await checkpointService.resume(runId, compiledGraph);
+  if (!resumeResult) {
+    throw new Error(`No checkpoint found for run ${runId}`);
+  }
+
+  // Inject the HITL decision into channels so downstream nodes can access it
+  const hitlNodeId = interrupt.nodeId;
+  mergeChannels(resumeResult.channels, {
+    [`hitl_decision_${hitlNodeId}`]: decision,
+    [`hitl_token_${hitlNodeId}`]: token,
+    [`hitl_resumed_at_${hitlNodeId}`]: new Date().toISOString(),
+  });
+
+  // Create new abort controller for the resumed run
+  const abortController = new AbortController();
+  entry.abortController = abortController;
+
+  // Prepare scheduler options
+  const schedulerOptions: SchedulerOptions = {
+    ...entry.schedulerOptions,
+    checkpointService,
+    runId: entry.metadata.runId,
+    hitlGateway,
+  };
+
+  // Run scheduler with resume (uses checkpoint data + injected decision)
+  const result = await this.runSchedulerWithResume(
+    compiledGraph,
+    entry.metadata,
+    abortController.signal,
+    schedulerOptions,
+    resumeResult,
+    hitlNodeId,
+  );
+
+  // Update entry with new scheduler promise and metadata
+  entry.schedulerPromise = Promise.resolve(result);
+  entry.channels = result.channels;
+
+  return result;
+}
+
+/**
+ * Internal: run scheduler starting from specific nodes (for HITL resume).
+ * @deprecated Use runSchedulerWithResume instead
+ */
+private async runSchedulerFromNodes(
     compiledGraph: CompiledGraph,
     metadata: RunMetadata,
     abortSignal: AbortSignal,
