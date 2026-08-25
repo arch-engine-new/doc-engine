@@ -96,3 +96,32 @@ export {
   cancelRun,
   waitForRun,
 } from "./runtime/run-manager.js";
+
+/**
+ * Persistence: SQLite state store and migration.
+ */
+export type {
+  StateStore,
+  StoredGraph,
+  StoredRun,
+  StoredNodeExecution,
+  StoredCheckpoint,
+  StoredToolCall,
+  StoredRunEvent,
+  StoredHitlInterrupt,
+  ListRunsOptions,
+} from "./persistence/types.js";
+
+export {
+  SQLiteStateStore,
+} from "./persistence/sqlite-store.js";
+
+export {
+  runMigration,
+  isMigrated,
+} from "./persistence/migrate.js";
+
+export {
+  runMetadataToStoredRun,
+  nodeExecutionRecordToStored,
+} from "./persistence/types.js";
