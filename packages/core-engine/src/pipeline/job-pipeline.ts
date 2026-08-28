@@ -6,7 +6,10 @@
 import Database from "better-sqlite3";
 import { extractByTemplate } from "../extract/field-box.js";
 import { SqliteLedger, type LedgerStore } from "../persistence/ledger.js";
+import { resolveEngineMode } from "../persistence/live-env.js";
 import { runMigrationOnDb } from "../persistence/migrate.js";
+import { runPgMigration } from "../persistence/pg-migrate.js";
+import { PostgresLedger } from "../persistence/pg-store.js";
 import { CoreEngineStore, type FieldBoxWrite } from "../persistence/store.js";
 import { evaluate, RuleInterpreter } from "../rules/interpreter.js";
 import {
@@ -54,6 +57,7 @@ import {
   type IngestStandardResult,
   type SearchStandardInput,
 } from "../retrieve/library.js";
+import { liveRetrievePorts } from "../retrieve/live-ports.js";
 import type { RetrieveHit, RetrievePorts } from "../retrieve/ports.js";
 
 export interface FixtureJobResult {
@@ -147,6 +151,21 @@ export class JobPipeline {
     dbPath = ":memory:",
   ): JobPipeline {
     return new JobPipeline(JobPipeline.boot(dbPath), ports);
+  }
+
+  /**
+   * Live assembly belongs on the pipeline factory so HTTP session does not new
+   * Qdrant clients itself.
+   */
+  static async openLiveFromEnv(): Promise<JobPipeline> {
+    const mode = resolveEngineMode();
+    if (mode.mode === "memory") {
+      return JobPipeline.openStandardLibrary();
+    }
+    await runPgMigration(mode.databaseUrl);
+    const store = new PostgresLedger(mode.databaseUrl);
+    await store.seedPublishedRules();
+    return new JobPipeline(store, liveRetrievePorts());
   }
 
   async close(): Promise<void> {

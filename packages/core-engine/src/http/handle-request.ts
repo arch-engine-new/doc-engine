@@ -26,6 +26,18 @@ function json(status: number, body: unknown): DemoHttpResponse {
   return { status, body };
 }
 
+function isStoreOutage(lower: string): boolean {
+  return (
+    lower.includes("econnrefused") ||
+    lower.includes("not configured") ||
+    lower.includes("incomplete live engine") ||
+    lower.includes("connect") ||
+    lower.includes("neo4j") ||
+    lower.includes("qdrant") ||
+    lower.includes("timeout")
+  );
+}
+
 function errorStatus(err: unknown): DemoHttpResponse {
   const message = err instanceof Error ? err.message : String(err);
   const lower = message.toLowerCase();
@@ -41,6 +53,7 @@ function errorStatus(err: unknown): DemoHttpResponse {
   ) {
     return json(400, { error: message });
   }
+  if (isStoreOutage(lower)) return json(503, { error: message });
   return json(400, { error: message });
 }
 

@@ -199,4 +199,36 @@ describe("core-engine HTTP adapter", () => {
     const got = await call(session, "GET", `/api/packs/${packId}`);
     expect(got.status).toBe(200);
   });
+
+  it("maps store connectivity failures to 503", async () => {
+    const cases = [
+      "connect ECONNREFUSED 127.0.0.1:5434",
+      "Qdrant URL not configured (set QDRANT_URL)",
+      "Incomplete live engine configuration: missing NEO4J_PASSWORD",
+      "Neo4j connection failed",
+      "query timeout after 5000ms",
+    ];
+    for (const message of cases) {
+      session.pipeline.listProjects = async () => {
+        throw new Error(message);
+      };
+      const res = await call(session, "GET", "/api/projects");
+      expect(res.status, message).toBe(503);
+      expect((res.body as { error: string }).error).toBe(message);
+    }
+  });
+
+  it("keeps validation and not-found errors off 503", async () => {
+    const badKind = await call(session, "POST", "/api/jobs/fixture", { kind: "nope" });
+    expect(badKind.status).toBe(400);
+
+    const missing = await call(session, "POST", "/api/packs", { name: "空规范包" });
+    expect(missing.status).toBe(400);
+
+    session.pipeline.listProjects = async () => {
+      throw new Error("spec pack not found: pack_x");
+    };
+    const notFound = await call(session, "GET", "/api/projects");
+    expect(notFound.status).toBe(404);
+  });
 });
