@@ -65,6 +65,7 @@ export {
   createSearchClauseToolHandler,
   defaultRetrievePorts,
 } from "./retrieve/library.js";
+export { liveRetrievePorts } from "./retrieve/live-ports.js";
 export type {
   AddStandardEdgeInput,
   AttachStandardFitInput,
