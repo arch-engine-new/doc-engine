@@ -1,8 +1,7 @@
 /**
  * WHY: live ledger is Postgres per schema contract; tests keep SqliteLedger.
  *
- * Semantic clone of CoreEngineStore for config, rule, job, review, audit, and chat tables.
- * TIMESTAMP and JSONB are mapped back to generated row strings. Standard/clause/wipe wait for later.
+ * Semantic clone of CoreEngineStore. TIMESTAMP and JSONB map back to generated row strings.
  */
 
 import pg from "pg";
@@ -44,15 +43,12 @@ import {
   SEED_PACK_PROJECT_ID,
 } from "../pipeline/seed.js";
 import type { LedgerStore } from "./ledger.js";
+import { LEDGER_TABLES } from "./migrate.js";
 import type { FieldBoxWrite } from "./store.js";
 
 const SYSTEM = "system";
 
 type PgClient = pg.Pool | pg.Client;
-
-function notImplemented(methodName: string): never {
-  throw new Error(`not implemented until later triple-store task: ${methodName}`);
-}
 
 function asIso(value: unknown): string {
   if (value instanceof Date) {
@@ -297,6 +293,47 @@ function mapConversationMessage(row: QueryResultRow): ConversationMessageRow {
   };
 }
 
+function mapStandardDoc(row: QueryResultRow): StandardDocRow {
+  return {
+    ...mapAudit(row),
+    doc_id: String(row.doc_id),
+    pack_id: String(row.pack_id),
+    title: String(row.title),
+    file_uri: String(row.file_uri),
+  };
+}
+
+function mapStandardVersion(row: QueryResultRow): StandardVersionRow {
+  return {
+    ...mapAudit(row),
+    version_id: String(row.version_id),
+    doc_id: String(row.doc_id),
+    status: String(row.status),
+  };
+}
+
+function mapClause(row: QueryResultRow): ClauseRow {
+  return {
+    ...mapAudit(row),
+    clause_id: String(row.clause_id),
+    version_id: String(row.version_id),
+    parent_clause_id: row.parent_clause_id == null ? null : String(row.parent_clause_id),
+    heading: row.heading == null ? null : String(row.heading),
+    body: String(row.body),
+    span_json: asJsonStringOrNull(row.span_json),
+    qdrant_point_id: row.qdrant_point_id == null ? null : String(row.qdrant_point_id),
+  };
+}
+
+function mapStandardEdge(row: QueryResultRow): StandardEdgeRow {
+  return {
+    ...mapAudit(row),
+    from_clause_id: String(row.from_clause_id),
+    to_clause_id: String(row.to_clause_id),
+    kind: String(row.kind),
+  };
+}
+
 export class PostgresLedger implements LedgerStore {
   private readonly db: PgClient;
 
@@ -313,6 +350,10 @@ export class PostgresLedger implements LedgerStore {
 
   async close(): Promise<void> {
     await this.db.end();
+  }
+
+  async wipeLedger(): Promise<void> {
+    await this.q(`TRUNCATE TABLE ${LEDGER_TABLES.join(", ")} RESTART IDENTITY CASCADE`);
   }
 
   async seedPublishedRules(): Promise<void> {
@@ -416,55 +457,130 @@ export class PostgresLedger implements LedgerStore {
     return (await this.getSpecPack(packId))!;
   }
 
-  bindEffectiveVersion(_packId: string, _versionId: string): Promise<SpecPackRow> {
-    notImplemented("bindEffectiveVersion");
+  async bindEffectiveVersion(packId: string, versionId: string): Promise<SpecPackRow> {
+    const pack = await this.getSpecPack(packId);
+    if (!pack) {
+      throw new Error(`spec pack not found: ${packId}`);
+    }
+    const version = await this.getStandardVersion(versionId);
+    if (!version) {
+      throw new Error(`standard version not found: ${versionId}`);
+    }
+    if (version.status !== "effective") {
+      throw new Error(`standard version ${versionId} is ${version.status}, not effective`);
+    }
+    const doc = await this.getStandardDoc(version.doc_id);
+    if (!doc || doc.pack_id !== packId) {
+      throw new Error(`standard version ${versionId} does not belong to pack ${packId}`);
+    }
+    const ts = nowIso();
+    await this.q(
+      `UPDATE t_spec_pack
+       SET effective_standard_version_id = $1, updated_at = $2, updater = $3
+       WHERE pack_id = $4 AND deleted = 0`,
+      [versionId, ts, SYSTEM, packId],
+    );
+    return (await this.getSpecPack(packId))!;
   }
 
-  insertStandardDoc(_input: {
+  async insertStandardDoc(input: {
     pack_id: string;
     title: string;
     file_uri: string;
     doc_id?: string;
   }): Promise<StandardDocRow> {
-    notImplemented("insertStandardDoc");
+    const ts = nowIso();
+    const doc_id = input.doc_id ?? newId("sdoc");
+    const result = await this.q(
+      `INSERT INTO t_standard_doc
+        (doc_id, pack_id, title, file_uri, created_at, updated_at, creator, updater, deleted)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 0)
+       RETURNING *`,
+      [doc_id, input.pack_id, input.title, input.file_uri, ts, ts, SYSTEM, SYSTEM],
+    );
+    return mapStandardDoc(result.rows[0]);
   }
 
-  getStandardDoc(_docId: string): Promise<StandardDocRow | null> {
-    notImplemented("getStandardDoc");
+  async getStandardDoc(docId: string): Promise<StandardDocRow | null> {
+    const result = await this.q(
+      `SELECT * FROM t_standard_doc WHERE doc_id = $1 AND deleted = 0`,
+      [docId],
+    );
+    const row = result.rows[0];
+    return row ? mapStandardDoc(row) : null;
   }
 
-  listStandardDocs(_packId: string): Promise<StandardDocRow[]> {
-    notImplemented("listStandardDocs");
+  async listStandardDocs(packId: string): Promise<StandardDocRow[]> {
+    const result = await this.q(
+      `SELECT * FROM t_standard_doc WHERE pack_id = $1 AND deleted = 0 ORDER BY id ASC`,
+      [packId],
+    );
+    return result.rows.map(mapStandardDoc);
   }
 
-  insertStandardVersion(_input: {
+  async insertStandardVersion(input: {
     doc_id: string;
     status: string;
     version_id?: string;
   }): Promise<StandardVersionRow> {
-    notImplemented("insertStandardVersion");
+    const ts = nowIso();
+    const version_id = input.version_id ?? newId("sver");
+    const result = await this.q(
+      `INSERT INTO t_standard_version
+        (version_id, doc_id, status, created_at, updated_at, creator, updater, deleted)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, 0)
+       RETURNING *`,
+      [version_id, input.doc_id, input.status, ts, ts, SYSTEM, SYSTEM],
+    );
+    return mapStandardVersion(result.rows[0]);
   }
 
-  getStandardVersion(_versionId: string): Promise<StandardVersionRow | null> {
-    notImplemented("getStandardVersion");
+  async getStandardVersion(versionId: string): Promise<StandardVersionRow | null> {
+    const result = await this.q(
+      `SELECT * FROM t_standard_version WHERE version_id = $1 AND deleted = 0`,
+      [versionId],
+    );
+    const row = result.rows[0];
+    return row ? mapStandardVersion(row) : null;
   }
 
-  listStandardVersions(_docId: string): Promise<StandardVersionRow[]> {
-    notImplemented("listStandardVersions");
+  async listStandardVersions(docId: string): Promise<StandardVersionRow[]> {
+    const result = await this.q(
+      `SELECT * FROM t_standard_version WHERE doc_id = $1 AND deleted = 0 ORDER BY id ASC`,
+      [docId],
+    );
+    return result.rows.map(mapStandardVersion);
   }
 
-  listEffectiveStandardVersions(_packId: string): Promise<StandardVersionRow[]> {
-    notImplemented("listEffectiveStandardVersions");
+  async listEffectiveStandardVersions(packId: string): Promise<StandardVersionRow[]> {
+    const result = await this.q(
+      `SELECT v.* FROM t_standard_version v
+       INNER JOIN t_standard_doc d ON d.doc_id = v.doc_id
+       WHERE d.pack_id = $1 AND v.status = 'effective' AND v.deleted = 0 AND d.deleted = 0
+       ORDER BY v.id ASC`,
+      [packId],
+    );
+    return result.rows.map(mapStandardVersion);
   }
 
-  updateStandardVersionStatus(
-    _versionId: string,
-    _status: string,
+  async updateStandardVersionStatus(
+    versionId: string,
+    status: string,
   ): Promise<StandardVersionRow> {
-    notImplemented("updateStandardVersionStatus");
+    const version = await this.getStandardVersion(versionId);
+    if (!version) {
+      throw new Error(`standard version not found: ${versionId}`);
+    }
+    const ts = nowIso();
+    await this.q(
+      `UPDATE t_standard_version SET status = $1, updated_at = $2, updater = $3
+       WHERE version_id = $4 AND deleted = 0`,
+      [status, ts, SYSTEM, versionId],
+    );
+    return (await this.getStandardVersion(versionId))!;
   }
 
-  insertClause(_input: {
+  async insertClause(input: {
     clause_id: string;
     version_id: string;
     parent_clause_id?: string | null;
@@ -473,27 +589,86 @@ export class PostgresLedger implements LedgerStore {
     span_json?: string | null;
     qdrant_point_id?: string | null;
   }): Promise<ClauseRow> {
-    notImplemented("insertClause");
+    const ts = nowIso();
+    const qdrant_point_id = input.qdrant_point_id ?? input.clause_id;
+    const result = await this.q(
+      `INSERT INTO t_clause
+        (clause_id, version_id, parent_clause_id, heading, body, span_json, qdrant_point_id,
+         created_at, updated_at, creator, updater, deleted)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, 0)
+       ON CONFLICT (clause_id) DO UPDATE SET
+         version_id = EXCLUDED.version_id,
+         parent_clause_id = EXCLUDED.parent_clause_id,
+         heading = EXCLUDED.heading,
+         body = EXCLUDED.body,
+         span_json = EXCLUDED.span_json,
+         qdrant_point_id = EXCLUDED.qdrant_point_id,
+         updated_at = EXCLUDED.updated_at,
+         updater = EXCLUDED.updater,
+         deleted = 0
+       RETURNING *`,
+      [
+        input.clause_id,
+        input.version_id,
+        input.parent_clause_id ?? null,
+        input.heading ?? null,
+        input.body,
+        input.span_json ?? null,
+        qdrant_point_id,
+        ts,
+        ts,
+        SYSTEM,
+        SYSTEM,
+      ],
+    );
+    return mapClause(result.rows[0]);
   }
 
-  getClause(_clauseId: string): Promise<ClauseRow | null> {
-    notImplemented("getClause");
+  async getClause(clauseId: string): Promise<ClauseRow | null> {
+    const result = await this.q(
+      `SELECT * FROM t_clause WHERE clause_id = $1 AND deleted = 0`,
+      [clauseId],
+    );
+    const row = result.rows[0];
+    return row ? mapClause(row) : null;
   }
 
-  listClauses(_versionId: string): Promise<ClauseRow[]> {
-    notImplemented("listClauses");
+  async listClauses(versionId: string): Promise<ClauseRow[]> {
+    const result = await this.q(
+      `SELECT * FROM t_clause WHERE version_id = $1 AND deleted = 0 ORDER BY id ASC`,
+      [versionId],
+    );
+    return result.rows.map(mapClause);
   }
 
-  insertStandardEdge(_input: {
+  async insertStandardEdge(input: {
     from_clause_id: string;
     to_clause_id: string;
     kind: string;
   }): Promise<StandardEdgeRow> {
-    notImplemented("insertStandardEdge");
+    const ts = nowIso();
+    const result = await this.q(
+      `INSERT INTO t_standard_edge
+        (from_clause_id, to_clause_id, kind, created_at, updated_at, creator, updater, deleted)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, 0)
+       RETURNING *`,
+      [input.from_clause_id, input.to_clause_id, input.kind, ts, ts, SYSTEM, SYSTEM],
+    );
+    return mapStandardEdge(result.rows[0]);
   }
 
-  listStandardEdges(_fromClauseId?: string): Promise<StandardEdgeRow[]> {
-    notImplemented("listStandardEdges");
+  async listStandardEdges(fromClauseId?: string): Promise<StandardEdgeRow[]> {
+    if (fromClauseId) {
+      const result = await this.q(
+        `SELECT * FROM t_standard_edge WHERE from_clause_id = $1 AND deleted = 0 ORDER BY id ASC`,
+        [fromClauseId],
+      );
+      return result.rows.map(mapStandardEdge);
+    }
+    const result = await this.q(
+      `SELECT * FROM t_standard_edge WHERE deleted = 0 ORDER BY id ASC`,
+    );
+    return result.rows.map(mapStandardEdge);
   }
 
   async insertTemplate(input: {

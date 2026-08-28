@@ -28,10 +28,13 @@ import type {
   TemplateRow,
   VolumePreviewRow,
 } from "../types.js";
+import { LEDGER_TABLES } from "./migrate.js";
 import { CoreEngineStore, type FieldBoxWrite } from "./store.js";
 
 export interface LedgerStore {
   close(): Promise<void>;
+  /** Empty all core-engine t_* tables. Does not DROP DATABASE. */
+  wipeLedger(): Promise<void>;
   seedPublishedRules(): Promise<void>;
   insertSpecPack(input: {
     project_id: string;
@@ -194,6 +197,13 @@ export class SqliteLedger implements LedgerStore {
 
   close(): Promise<void> {
     return Promise.resolve(this.inner.close());
+  }
+
+  wipeLedger(): Promise<void> {
+    // sqlite tests use :memory:; DELETE all LEDGER_TABLES rows to match the contract.
+    const db = (this.inner as unknown as { db: { exec: (sql: string) => void } }).db;
+    db.exec(LEDGER_TABLES.map((table) => `DELETE FROM ${table};`).join("\n"));
+    return Promise.resolve();
   }
 
   seedPublishedRules(): Promise<void> {
