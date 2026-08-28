@@ -172,6 +172,11 @@ export class JobPipeline {
     await this.store.close();
   }
 
+  /** Empty t_* ledger tables so live demo reset can re-seed. Does not DROP DATABASE. */
+  wipeLedger(): Promise<void> {
+    return this.store.wipeLedger();
+  }
+
   async createProject(name = "SLICE-1 Demo"): Promise<ProjectRow> {
     this.project = await this.store.insertProject(name);
     return this.project;

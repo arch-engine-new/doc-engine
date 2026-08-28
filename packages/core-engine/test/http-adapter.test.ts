@@ -26,6 +26,17 @@ describe("core-engine HTTP adapter", () => {
     await session.close();
   });
 
+  it("GET /api/health on memory session returns mode memory", async () => {
+    const res = await call(session, "GET", "/api/health");
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({
+      mode: "memory",
+      postgres: "skip",
+      qdrant: "skip",
+      neo4j: "skip",
+    });
+  });
+
   it("POST /api/demo/reset is idempotent and seeds fixture jobs", async () => {
     const first = await call(session, "POST", "/api/demo/reset");
     expect(first.status).toBe(200);

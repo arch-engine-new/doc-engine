@@ -145,6 +145,10 @@ export async function handleDemoRequest(
   const p = session.pipeline;
 
   try {
+    if (method === "GET" && pathname === "/api/health") {
+      return json(200, await session.health());
+    }
+
     if (method === "POST" && pathname === "/api/demo/reset") {
       return json(200, await session.reset());
     }
