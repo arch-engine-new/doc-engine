@@ -4,5 +4,11 @@
     "approval": "approved",
     "at": "2026-08-25T03:18:45.283Z",
     "by": "user"
+  },
+  {
+    "spec": "docs/superpowers/specs/2026-08-28-upload-ocr-hard-path-design.md",
+    "approval": "approved",
+    "at": "2026-08-28T15:48:00.000Z",
+    "by": "user"
   }
 ]
