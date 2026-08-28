@@ -151,3 +151,31 @@ export { CoreEngineStore } from "./persistence/store.js";
 export type { FieldBoxWrite } from "./persistence/store.js";
 export { SqliteLedger } from "./persistence/ledger.js";
 export type { LedgerStore } from "./persistence/ledger.js";
+
+export type { BlobPutInput, BlobStore } from "./blob/port.js";
+export { MemoryBlobStore } from "./blob/memory.js";
+export { MinioBlobStore, fromEnv as minioBlobStoreFromEnv } from "./blob/minio.js";
+export type { MinioBlobStoreOptions } from "./blob/minio.js";
+
+export type {
+  OcrRecognizeInput,
+  OcrRecognizeResult,
+  OcrPort,
+} from "./ocr/port.js";
+export { FakeOcr } from "./ocr/fake.js";
+export { BaiduOcr, fromEnv as baiduOcrFromEnv } from "./ocr/baidu.js";
+export type { BaiduOcrApi, BaiduOcrEnvConfig } from "./ocr/env.js";
+export { DEFAULT_BAIDU_OCR_API, readBaiduOcrEnv } from "./ocr/env.js";
+
+export { extractOcrByTemplate, parseOcrFields } from "./extract/ocr-fields.js";
+
+export {
+  MAX_UPLOAD_BYTES,
+  UploadValidationError,
+  validateUploadInput,
+} from "./pipeline/job-pipeline.js";
+export type {
+  OpenUploadJobDeps,
+  OpenUploadJobInput,
+  OpenUploadJobResult,
+} from "./pipeline/job-pipeline.js";
