@@ -6,13 +6,48 @@
  */
 
 import { mockPendingMount, type FieldBoxWrite } from "../index.js";
+import { UploadValidationError } from "../pipeline/job-pipeline.js";
 import { DEMO_DICTS } from "./dicts.js";
 import type { DemoHttpSession } from "./session.js";
+import { UploadServiceUnavailableError } from "./session.js";
+
+/**
+ * Parsed multipart file for POST /api/jobs/upload — bytes stay binary so JPEG/PDF
+ * are not corrupted by UTF-8 decoding in the Node adapter.
+ */
+export interface DemoHttpMultipartFile {
+  bytes: Uint8Array;
+  fileName: string;
+  mime: string;
+}
+
+/**
+ * Text fields from multipart/form-data. Snake_case matches ledger columns; HTTP
+ * also accepts camelCase aliases when callers send projectId/packId/templateId.
+ */
+export interface DemoHttpMultipartFields {
+  pack_id?: string;
+  template_id?: string;
+  project_id?: string;
+  packId?: string;
+  templateId?: string;
+  projectId?: string;
+}
+
+/**
+ * Multipart payload when Content-Type is multipart/form-data. Populated by node.ts
+ * so handleDemoRequest can route uploads without re-parsing the raw body.
+ */
+export interface DemoHttpMultipart {
+  file?: DemoHttpMultipartFile;
+  fields: DemoHttpMultipartFields;
+}
 
 export interface DemoHttpRequest {
   method: string;
   url: string;
   body: unknown;
+  multipart?: DemoHttpMultipart;
 }
 
 export interface DemoHttpResponse {
@@ -41,6 +76,8 @@ function isStoreOutage(lower: string): boolean {
 function errorStatus(err: unknown): DemoHttpResponse {
   const message = err instanceof Error ? err.message : String(err);
   const lower = message.toLowerCase();
+  if (err instanceof UploadValidationError) return json(400, { error: message });
+  if (err instanceof UploadServiceUnavailableError) return json(503, { error: message });
   if (lower.includes("not found")) return json(404, { error: message });
   if (lower.includes("cannot confirm-next") || lower.includes("submit is not allowed")) {
     return json(409, { error: message });
@@ -306,6 +343,21 @@ export async function handleDemoRequest(
         requireStr(req.body, "versionId", "version_id"),
       );
       return json(200, { pack });
+    }
+
+    if (method === "POST" && pathname === "/api/jobs/upload") {
+      const mp = req.multipart;
+      if (!mp?.file) throw new Error("multipart file field required");
+      const fields = mp.fields;
+      const result = await session.openUploadJob({
+        projectId: fields.project_id ?? fields.projectId,
+        packId: fields.pack_id ?? fields.packId,
+        template_id: fields.template_id ?? fields.templateId,
+        fileName: mp.file.fileName,
+        mime: mp.file.mime,
+        bytes: mp.file.bytes,
+      });
+      return json(200, result);
     }
 
     if (method === "POST" && pathname === "/api/jobs/fixture") {

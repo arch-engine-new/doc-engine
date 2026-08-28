@@ -7,6 +7,11 @@
 import { QdrantClient } from "@qdrant/js-client-rest";
 import neo4j from "neo4j-driver";
 import pg from "pg";
+import { MemoryBlobStore } from "../blob/memory.js";
+import { fromEnv as minioFromEnv } from "../blob/minio.js";
+import { fromEnv as baiduFromEnv } from "../ocr/baidu.js";
+import { readBaiduOcrEnv } from "../ocr/env.js";
+import { FakeOcr } from "../ocr/fake.js";
 import {
   CHECK_WORDING_FIXTURE,
   EMPTY_PACK_NAME,
@@ -19,6 +24,7 @@ import {
   type SpecPackRow,
   type TemplateRow,
 } from "../index.js";
+import type { OpenUploadJobInput, OpenUploadJobResult } from "../pipeline/job-pipeline.js";
 import { resolveEngineMode, type LiveEngineMode } from "../persistence/live-env.js";
 
 const DEMO_BOXES = [
@@ -55,12 +61,27 @@ export interface DemoHealth {
   postgres: DemoHealthProbe;
   qdrant: DemoHealthProbe;
   neo4j: DemoHealthProbe;
+  ocr: DemoHealthProbe;
+  minio: DemoHealthProbe;
+}
+
+/**
+ * Thrown when live mode lacks MinIO or Baidu OCR assembly so HTTP returns 503
+ * instead of silently falling back to FakeOcr / MemoryBlobStore on real uploads.
+ */
+export class UploadServiceUnavailableError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "UploadServiceUnavailableError";
+  }
 }
 
 export class DemoHttpSession {
   pipeline: JobPipeline;
   mode: "memory" | "live";
   private liveConfig: LiveEngineMode | null;
+  private memoryBlob: MemoryBlobStore | null = null;
+  private memoryOcr: FakeOcr | null = null;
 
   /**
    * Tests construct this with no args so vitest stays sqlite+memory even if
@@ -114,15 +135,36 @@ export class DemoHttpSession {
 
   async health(): Promise<DemoHealth> {
     if (this.mode !== "live") {
-      return { mode: "memory", postgres: "skip", qdrant: "skip", neo4j: "skip" };
+      return {
+        mode: "memory",
+        postgres: "skip",
+        qdrant: "skip",
+        neo4j: "skip",
+        ocr: "skip",
+        minio: "skip",
+      };
     }
     const live = this.requireLiveConfig();
-    const [postgres, qdrant, neo4jStatus] = await Promise.all([
+    const [postgres, qdrant, neo4jStatus, minio, ocr] = await Promise.all([
       probePostgres(live.databaseUrl),
       probeQdrant(live.qdrantUrl),
       probeNeo4j(live.neo4jUri, live.neo4jUser, live.neo4jPassword),
+      probeMinio(),
+      probeBaiduOcr(),
     ]);
-    return { mode: "live", postgres, qdrant, neo4j: neo4jStatus };
+    return { mode: "live", postgres, qdrant, neo4j: neo4jStatus, minio, ocr };
+  }
+
+  /**
+   * HTTP upload wrapper: memory tests use MemoryBlobStore + FakeOcr; live mode
+   * requires both MinIO and Baidu from env — missing either throws 503, not Fake.
+   */
+  async openUploadJob(
+    input: Omit<OpenUploadJobInput, "projectId"> & { projectId?: string },
+  ): Promise<OpenUploadJobResult> {
+    const projectId = input.projectId ?? (await this.resolveDefaultUploadProjectId());
+    const deps = this.resolveUploadDeps();
+    return this.pipeline.openUploadJob({ ...input, projectId }, deps);
   }
 
   close(): Promise<void> {
@@ -137,6 +179,32 @@ export class DemoHttpSession {
     }
     this.liveConfig = resolved;
     return resolved;
+  }
+
+  private async resolveDefaultUploadProjectId(): Promise<string> {
+    const projects = await this.pipeline.listProjects();
+    if (projects.length > 0) return projects[0]!.project_id;
+    const created = await this.pipeline.createProject("演示上传");
+    return created.project_id;
+  }
+
+  private resolveUploadDeps(): { blob: MemoryBlobStore; ocr: FakeOcr } | {
+    blob: NonNullable<ReturnType<typeof minioFromEnv>>;
+    ocr: NonNullable<ReturnType<typeof baiduFromEnv>>;
+  } {
+    if (this.mode === "memory") {
+      if (!this.memoryBlob) this.memoryBlob = new MemoryBlobStore();
+      if (!this.memoryOcr) this.memoryOcr = new FakeOcr();
+      return { blob: this.memoryBlob, ocr: this.memoryOcr };
+    }
+    const blob = minioFromEnv();
+    const ocr = baiduFromEnv();
+    if (!blob || !ocr) {
+      throw new UploadServiceUnavailableError(
+        "Real upload not configured: MinIO and Baidu OCR must both be available in live mode",
+      );
+    }
+    return { blob, ocr };
   }
 
   private async resetLiveStores(): Promise<void> {
@@ -265,6 +333,37 @@ async function probeNeo4j(uri: string, user: string, password: string): Promise<
     return "fail";
   } finally {
     await driver.close().catch(() => undefined);
+  }
+}
+
+async function probeMinio(): Promise<DemoHealthProbe> {
+  const store = minioFromEnv();
+  if (!store) return "skip";
+  try {
+    await store.ensureBucket();
+    return "ok";
+  } catch {
+    return "fail";
+  }
+}
+
+async function probeBaiduOcr(): Promise<DemoHealthProbe> {
+  const config = readBaiduOcrEnv();
+  if (!config) return "skip";
+  try {
+    const form = new URLSearchParams();
+    form.set("grant_type", "client_credentials");
+    form.set("client_id", config.apiKey);
+    form.set("client_secret", config.secretKey);
+    const response = await fetch("https://aip.baidubce.com/oauth/2.0/token", {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: form,
+    });
+    const json = (await response.json()) as { access_token?: unknown };
+    return typeof json.access_token === "string" && json.access_token.length > 0 ? "ok" : "fail";
+  } catch {
+    return "fail";
   }
 }
 

@@ -34,7 +34,50 @@ describe("core-engine HTTP adapter", () => {
       postgres: "skip",
       qdrant: "skip",
       neo4j: "skip",
+      ocr: "skip",
+      minio: "skip",
     });
+  });
+
+  it("POST /api/jobs/upload with multipart file creates a checking job", async () => {
+    const reset = await call(session, "POST", "/api/demo/reset");
+    expect(reset.status).toBe(200);
+    const projectId = (reset.body as { project: { project_id: string } }).project.project_id;
+    const JPEG_BYTES = new Uint8Array([0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10]);
+
+    const res = await handleDemoRequest(session, {
+      method: "POST",
+      url: "/api/jobs/upload",
+      body: {},
+      multipart: {
+        file: { bytes: JPEG_BYTES, fileName: "form.jpg", mime: "image/jpeg" },
+        fields: { project_id: projectId },
+      },
+    });
+    expect(res.status).toBe(200);
+    const body = res.body as { job: { status: string; job_id: string } };
+    expect(body.job.status).toBe("checking");
+
+    const listed = await call(session, "GET", "/api/jobs");
+    const jobs = (listed.body as { jobs: { job_id: string }[] }).jobs;
+    expect(jobs.some((j) => j.job_id === body.job.job_id)).toBe(true);
+  });
+
+  it("POST /api/jobs/upload maps UploadValidationError to 400", async () => {
+    await call(session, "POST", "/api/demo/reset");
+    const JPEG_BYTES = new Uint8Array([0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10]);
+
+    const res = await handleDemoRequest(session, {
+      method: "POST",
+      url: "/api/jobs/upload",
+      body: {},
+      multipart: {
+        file: { bytes: JPEG_BYTES, fileName: "notes.txt", mime: "text/plain" },
+        fields: {},
+      },
+    });
+    expect(res.status).toBe(400);
+    expect((res.body as { error: string }).error).toMatch(/unsupported mime/i);
   });
 
   it("POST /api/demo/reset is idempotent and seeds fixture jobs", async () => {
