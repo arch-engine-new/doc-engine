@@ -1,28 +1,35 @@
-# Task 5 Report
+# Task 5 Report — PostgresLedger job / 待审 / 审计 / 对话表
 
 ## Status
 DONE
 
-## Commit
-`840015befb6c734aa05fe5326932fd336d92cbc1`  
-`feat(agent-runtime): checkpoint crash recovery (task 5)`
+## SHA
+(pending commit)
 
-## Deliverables
-- `packages/agent-runtime/src/runtime/checkpoint-service.ts` — write / getLatest / resume
-- `packages/agent-runtime/src/runtime/scheduler.ts` — checkpoint at node boundaries
-- `packages/agent-runtime/src/runtime/run-manager.ts` — `resume: true` path skips completed nodes
-- `packages/agent-runtime/test/checkpoint-recovery.test.ts` — mid-run recovery, idempotency, branch
-- `packages/agent-runtime/src/index.ts` — CheckpointService exports
+## commits
+- (pending) — `feat(core-engine): PostgresLedger job review audit chat tables`
 
-## Verify
+## What was implemented
+`PostgresLedger` in `packages/core-engine/src/persistence/pg-store.ts` now implements job / document / extraction / finding / proposal / receipt / volume_preview / audit_event / conversation_thread / conversation_message as an async `pg` clone of `CoreEngineStore`.
+
+- `$n` params; TIMESTAMP → ISO string; JSONB → `JSON.stringify` / `asJsonString`; BIGINT `id`/`seq`/`blocking` → number
+- `listJobs` `ORDER BY id DESC`; `getDocumentForJob` first doc; `getExtraction` / `getVolumePreview` latest by id DESC
+- `listPendingProposals` optional `jobId` + `status = 'pending'`
+- `appendAudit` `COALESCE(MAX(seq), 0) + 1` per `trace_id`, `listAudit` `ORDER BY seq ASC`
+- Conversation: `listThreads`, `listMessagesByTrace`, `getThread(trace, step)`, `insertThread` (`hitl_token` NULL), `insertMessage`, `listMessages`
+- `standard_doc` / version / clause / edge / `bindEffectiveVersion` still throw `not implemented until later triple-store task` (wipe is Task 6)
+
+MCP: `query_contract` name=`ClauseRow`. File whitelist: `pg-store.ts` only.
+
+## Test summary
 ```
-npm test -w agent-runtime -- checkpoint-recovery
-# Test Files  1 passed
-# Tests       11 passed
+npx tsc -p packages/core-engine --noEmit
 
-npx tsc -p packages/agent-runtime --noEmit
-# exit 0
+exit 0 (no output)
 ```
 
-## Notes
-Checkpoints store channel state + `completedNodes` metadata. Resume restores channels and continues from next ready nodes without re-executing completed work (AC-2).
+## Files changed
+- `packages/core-engine/src/persistence/pg-store.ts`
+
+## Concerns
+None. Standard library tables and `wipeLedger` remain for Task 6.

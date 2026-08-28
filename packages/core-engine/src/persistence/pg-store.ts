@@ -1,8 +1,8 @@
 /**
  * WHY: live ledger is Postgres per schema contract; tests keep SqliteLedger.
  *
- * Semantic clone of CoreEngineStore for project / spec_pack / template / field_box / rule tables.
- * TIMESTAMP and JSONB are mapped back to generated row strings. Remaining methods wait for later tasks.
+ * Semantic clone of CoreEngineStore for config, rule, job, review, audit, and chat tables.
+ * TIMESTAMP and JSONB are mapped back to generated row strings. Standard/clause/wipe wait for later.
  */
 
 import pg from "pg";
@@ -182,6 +182,118 @@ function mapRuleFixture(row: QueryResultRow): RuleFixtureRow {
     kind: String(row.kind),
     payload_json: asJsonString(row.payload_json),
     last_result: row.last_result == null ? null : String(row.last_result),
+  };
+}
+
+function mapJob(row: QueryResultRow): JobRow {
+  return {
+    ...mapAudit(row),
+    job_id: String(row.job_id),
+    project_id: String(row.project_id),
+    pack_id: row.pack_id == null ? null : String(row.pack_id),
+    trace_id: String(row.trace_id),
+    status: String(row.status),
+    template_id: row.template_id == null ? null : String(row.template_id),
+    agent_run_id: row.agent_run_id == null ? null : String(row.agent_run_id),
+  };
+}
+
+function mapDocument(row: QueryResultRow): DocumentRow {
+  return {
+    ...mapAudit(row),
+    doc_id: String(row.doc_id),
+    job_id: String(row.job_id),
+    file_name: String(row.file_name),
+    file_uri: String(row.file_uri),
+    mime: row.mime == null ? null : String(row.mime),
+  };
+}
+
+function mapExtraction(row: QueryResultRow): ExtractionRow {
+  return {
+    ...mapAudit(row),
+    extraction_id: String(row.extraction_id),
+    job_id: String(row.job_id),
+    ocr_text: row.ocr_text == null ? null : String(row.ocr_text),
+    fields_json: asJsonString(row.fields_json),
+  };
+}
+
+function mapFinding(row: QueryResultRow): FindingRow {
+  return {
+    ...mapAudit(row),
+    finding_id: String(row.finding_id),
+    job_id: String(row.job_id),
+    rule_version_id: String(row.rule_version_id),
+    result: String(row.result),
+    blocking: asNumber(row.blocking),
+    detail: row.detail == null ? null : String(row.detail),
+    clause_id: row.clause_id == null ? null : String(row.clause_id),
+    standard_version_id:
+      row.standard_version_id == null ? null : String(row.standard_version_id),
+    retrieve_path: row.retrieve_path == null ? null : String(row.retrieve_path),
+  };
+}
+
+function mapProposal(row: QueryResultRow): ProposalRow {
+  return {
+    ...mapAudit(row),
+    proposal_id: String(row.proposal_id),
+    job_id: String(row.job_id),
+    status: String(row.status),
+    wording: String(row.wording),
+    agent_run_id: row.agent_run_id == null ? null : String(row.agent_run_id),
+  };
+}
+
+function mapReceipt(row: QueryResultRow): ReceiptRow {
+  return {
+    ...mapAudit(row),
+    receipt_id: String(row.receipt_id),
+    proposal_id: row.proposal_id == null ? null : String(row.proposal_id),
+    job_id: String(row.job_id),
+    status: String(row.status),
+    payload_json: asJsonStringOrNull(row.payload_json),
+  };
+}
+
+function mapVolumePreview(row: QueryResultRow): VolumePreviewRow {
+  return {
+    ...mapAudit(row),
+    preview_id: String(row.preview_id),
+    job_id: String(row.job_id),
+    tree_json: asJsonString(row.tree_json),
+  };
+}
+
+function mapAuditEvent(row: QueryResultRow): AuditEventRow {
+  return {
+    ...mapAudit(row),
+    trace_id: String(row.trace_id),
+    seq: asNumber(row.seq),
+    event_type: String(row.event_type),
+    ref_id: row.ref_id == null ? null : String(row.ref_id),
+    payload_json: asJsonString(row.payload_json),
+  };
+}
+
+function mapConversationThread(row: QueryResultRow): ConversationThreadRow {
+  return {
+    ...mapAudit(row),
+    thread_id: String(row.thread_id),
+    trace_id: String(row.trace_id),
+    step: String(row.step),
+    job_id: row.job_id == null ? null : String(row.job_id),
+    hitl_token: row.hitl_token == null ? null : String(row.hitl_token),
+  };
+}
+
+function mapConversationMessage(row: QueryResultRow): ConversationMessageRow {
+  return {
+    ...mapAudit(row),
+    thread_id: String(row.thread_id),
+    role: String(row.role),
+    body: String(row.body),
   };
 }
 
@@ -611,81 +723,164 @@ export class PostgresLedger implements LedgerStore {
     return result.rows.map(mapTemplate);
   }
 
-  listJobs(): Promise<JobRow[]> {
-    notImplemented("listJobs");
+  async listJobs(): Promise<JobRow[]> {
+    const result = await this.q(`SELECT * FROM t_job WHERE deleted = 0 ORDER BY id DESC`);
+    return result.rows.map(mapJob);
   }
 
-  getDocumentForJob(_jobId: string): Promise<DocumentRow | null> {
-    notImplemented("getDocumentForJob");
+  async getDocumentForJob(jobId: string): Promise<DocumentRow | null> {
+    const result = await this.q(
+      `SELECT * FROM t_document WHERE job_id = $1 AND deleted = 0 ORDER BY id ASC LIMIT 1`,
+      [jobId],
+    );
+    const row = result.rows[0];
+    return row ? mapDocument(row) : null;
   }
 
-  getExtraction(_jobId: string): Promise<ExtractionRow | null> {
-    notImplemented("getExtraction");
+  async getExtraction(jobId: string): Promise<ExtractionRow | null> {
+    const result = await this.q(
+      `SELECT * FROM t_extraction WHERE job_id = $1 AND deleted = 0 ORDER BY id DESC LIMIT 1`,
+      [jobId],
+    );
+    const row = result.rows[0];
+    return row ? mapExtraction(row) : null;
   }
 
-  listThreads(_traceId: string): Promise<ConversationThreadRow[]> {
-    notImplemented("listThreads");
+  async listThreads(traceId: string): Promise<ConversationThreadRow[]> {
+    const result = await this.q(
+      `SELECT * FROM t_conversation_thread WHERE trace_id = $1 AND deleted = 0 ORDER BY id ASC`,
+      [traceId],
+    );
+    return result.rows.map(mapConversationThread);
   }
 
-  listMessagesByTrace(_traceId: string): Promise<ConversationMessageRow[]> {
-    notImplemented("listMessagesByTrace");
+  async listMessagesByTrace(traceId: string): Promise<ConversationMessageRow[]> {
+    const result = await this.q(
+      `SELECT m.* FROM t_conversation_message m
+       INNER JOIN t_conversation_thread t ON t.thread_id = m.thread_id
+       WHERE t.trace_id = $1 AND m.deleted = 0 AND t.deleted = 0
+       ORDER BY m.id ASC`,
+      [traceId],
+    );
+    return result.rows.map(mapConversationMessage);
   }
 
-  insertJob(_input: {
+  async insertJob(input: {
     project_id: string;
     pack_id: string | null;
     status: string;
     template_id?: string | null;
   }): Promise<JobRow> {
-    notImplemented("insertJob");
+    const ts = nowIso();
+    const job_id = newId("job");
+    const trace_id = newId("trc");
+    const result = await this.q(
+      `INSERT INTO t_job
+        (job_id, project_id, pack_id, trace_id, status, template_id, agent_run_id,
+         created_at, updated_at, creator, updater, deleted)
+       VALUES ($1, $2, $3, $4, $5, $6, NULL, $7, $8, $9, $10, 0)
+       RETURNING *`,
+      [job_id, input.project_id, input.pack_id, trace_id, input.status, input.template_id ?? null, ts, ts, SYSTEM, SYSTEM],
+    );
+    return mapJob(result.rows[0]);
   }
 
-  updateJobStatus(_jobId: string, _status: string): Promise<JobRow> {
-    notImplemented("updateJobStatus");
+  async updateJobStatus(jobId: string, status: string): Promise<JobRow> {
+    const ts = nowIso();
+    await this.q(
+      `UPDATE t_job SET status = $1, updated_at = $2, updater = $3 WHERE job_id = $4 AND deleted = 0`,
+      [status, ts, SYSTEM, jobId],
+    );
+    return (await this.getJob(jobId))!;
   }
 
-  getJob(_jobId: string): Promise<JobRow | null> {
-    notImplemented("getJob");
+  async getJob(jobId: string): Promise<JobRow | null> {
+    const result = await this.q(`SELECT * FROM t_job WHERE job_id = $1 AND deleted = 0`, [jobId]);
+    const row = result.rows[0];
+    return row ? mapJob(row) : null;
   }
 
-  getJobByTrace(_traceId: string): Promise<JobRow | null> {
-    notImplemented("getJobByTrace");
+  async getJobByTrace(traceId: string): Promise<JobRow | null> {
+    const result = await this.q(`SELECT * FROM t_job WHERE trace_id = $1 AND deleted = 0`, [traceId]);
+    const row = result.rows[0];
+    return row ? mapJob(row) : null;
   }
 
-  insertDocument(_input: {
+  async insertDocument(input: {
     job_id: string;
     file_name: string;
     file_uri: string;
     mime: string | null;
   }): Promise<DocumentRow> {
-    notImplemented("insertDocument");
+    const ts = nowIso();
+    const doc_id = newId("doc");
+    const result = await this.q(
+      `INSERT INTO t_document
+        (doc_id, job_id, file_name, file_uri, mime, created_at, updated_at, creator, updater, deleted)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 0)
+       RETURNING *`,
+      [doc_id, input.job_id, input.file_name, input.file_uri, input.mime, ts, ts, SYSTEM, SYSTEM],
+    );
+    return mapDocument(result.rows[0]);
   }
 
-  insertExtraction(_input: {
+  async insertExtraction(input: {
     job_id: string;
     ocr_text: string | null;
     fields: Record<string, unknown>;
   }): Promise<ExtractionRow> {
-    notImplemented("insertExtraction");
+    const ts = nowIso();
+    const extraction_id = newId("ext");
+    const result = await this.q(
+      `INSERT INTO t_extraction
+        (extraction_id, job_id, ocr_text, fields_json, created_at, updated_at, creator, updater, deleted)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 0)
+       RETURNING *`,
+      [extraction_id, input.job_id, input.ocr_text, JSON.stringify(input.fields), ts, ts, SYSTEM, SYSTEM],
+    );
+    return mapExtraction(result.rows[0]);
   }
 
-  listExtractions(_jobId: string): Promise<ExtractionRow[]> {
-    notImplemented("listExtractions");
+  async listExtractions(jobId: string): Promise<ExtractionRow[]> {
+    const result = await this.q(
+      `SELECT * FROM t_extraction WHERE job_id = $1 AND deleted = 0 ORDER BY id ASC`,
+      [jobId],
+    );
+    return result.rows.map(mapExtraction);
   }
 
-  insertVolumePreview(_input: { job_id: string; tree: unknown }): Promise<VolumePreviewRow> {
-    notImplemented("insertVolumePreview");
+  async insertVolumePreview(input: { job_id: string; tree: unknown }): Promise<VolumePreviewRow> {
+    const ts = nowIso();
+    const preview_id = newId("prv");
+    const result = await this.q(
+      `INSERT INTO t_volume_preview
+        (preview_id, job_id, tree_json, created_at, updated_at, creator, updater, deleted)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, 0)
+       RETURNING *`,
+      [preview_id, input.job_id, JSON.stringify(input.tree), ts, ts, SYSTEM, SYSTEM],
+    );
+    return mapVolumePreview(result.rows[0]);
   }
 
-  getVolumePreviewById(_previewId: string): Promise<VolumePreviewRow | null> {
-    notImplemented("getVolumePreviewById");
+  async getVolumePreviewById(previewId: string): Promise<VolumePreviewRow | null> {
+    const result = await this.q(
+      `SELECT * FROM t_volume_preview WHERE preview_id = $1 AND deleted = 0`,
+      [previewId],
+    );
+    const row = result.rows[0];
+    return row ? mapVolumePreview(row) : null;
   }
 
-  getVolumePreview(_jobId: string): Promise<VolumePreviewRow | null> {
-    notImplemented("getVolumePreview");
+  async getVolumePreview(jobId: string): Promise<VolumePreviewRow | null> {
+    const result = await this.q(
+      `SELECT * FROM t_volume_preview WHERE job_id = $1 AND deleted = 0 ORDER BY id DESC LIMIT 1`,
+      [jobId],
+    );
+    const row = result.rows[0];
+    return row ? mapVolumePreview(row) : null;
   }
 
-  insertFinding(_input: {
+  async insertFinding(input: {
     job_id: string;
     rule_version_id: string;
     result: string;
@@ -695,93 +890,248 @@ export class PostgresLedger implements LedgerStore {
     standard_version_id?: string | null;
     retrieve_path?: string | null;
   }): Promise<FindingRow> {
-    notImplemented("insertFinding");
+    const ts = nowIso();
+    const finding_id = newId("fnd");
+    const result = await this.q(
+      `INSERT INTO t_finding
+        (finding_id, job_id, rule_version_id, result, blocking, detail,
+         clause_id, standard_version_id, retrieve_path,
+         created_at, updated_at, creator, updater, deleted)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, 0)
+       RETURNING *`,
+      [
+        finding_id,
+        input.job_id,
+        input.rule_version_id,
+        input.result,
+        input.blocking,
+        input.detail,
+        input.clause_id ?? null,
+        input.standard_version_id ?? null,
+        input.retrieve_path ?? null,
+        ts,
+        ts,
+        SYSTEM,
+        SYSTEM,
+      ],
+    );
+    return mapFinding(result.rows[0]);
   }
 
-  listFindings(_jobId: string): Promise<FindingRow[]> {
-    notImplemented("listFindings");
+  async listFindings(jobId: string): Promise<FindingRow[]> {
+    const result = await this.q(
+      `SELECT * FROM t_finding WHERE job_id = $1 AND deleted = 0 ORDER BY id ASC`,
+      [jobId],
+    );
+    return result.rows.map(mapFinding);
   }
 
-  insertProposal(_input: {
+  async insertProposal(input: {
     job_id: string;
     wording: string;
     status?: string;
     agent_run_id?: string | null;
   }): Promise<ProposalRow> {
-    notImplemented("insertProposal");
+    const ts = nowIso();
+    const proposal_id = newId("prp");
+    const result = await this.q(
+      `INSERT INTO t_proposal
+        (proposal_id, job_id, status, wording, agent_run_id, created_at, updated_at, creator, updater, deleted)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 0)
+       RETURNING *`,
+      [
+        proposal_id,
+        input.job_id,
+        input.status ?? "pending",
+        input.wording,
+        input.agent_run_id ?? null,
+        ts,
+        ts,
+        SYSTEM,
+        SYSTEM,
+      ],
+    );
+    return mapProposal(result.rows[0]);
   }
 
-  getProposal(_proposalId: string): Promise<ProposalRow | null> {
-    notImplemented("getProposal");
+  async getProposal(proposalId: string): Promise<ProposalRow | null> {
+    const result = await this.q(
+      `SELECT * FROM t_proposal WHERE proposal_id = $1 AND deleted = 0`,
+      [proposalId],
+    );
+    const row = result.rows[0];
+    return row ? mapProposal(row) : null;
   }
 
-  updateProposalWording(_proposalId: string, _wording: string): Promise<ProposalRow> {
-    notImplemented("updateProposalWording");
+  async updateProposalWording(proposalId: string, wording: string): Promise<ProposalRow> {
+    const ts = nowIso();
+    await this.q(
+      `UPDATE t_proposal SET wording = $1, updated_at = $2, updater = $3 WHERE proposal_id = $4 AND deleted = 0`,
+      [wording, ts, SYSTEM, proposalId],
+    );
+    return (await this.getProposal(proposalId))!;
   }
 
-  updateProposalStatus(_proposalId: string, _status: string): Promise<ProposalRow> {
-    notImplemented("updateProposalStatus");
+  async updateProposalStatus(proposalId: string, status: string): Promise<ProposalRow> {
+    const ts = nowIso();
+    await this.q(
+      `UPDATE t_proposal SET status = $1, updated_at = $2, updater = $3 WHERE proposal_id = $4 AND deleted = 0`,
+      [status, ts, SYSTEM, proposalId],
+    );
+    return (await this.getProposal(proposalId))!;
   }
 
-  listPendingProposals(_jobId?: string): Promise<ProposalRow[]> {
-    notImplemented("listPendingProposals");
+  async listPendingProposals(jobId?: string): Promise<ProposalRow[]> {
+    if (jobId) {
+      const result = await this.q(
+        `SELECT * FROM t_proposal WHERE job_id = $1 AND status = 'pending' AND deleted = 0 ORDER BY id ASC`,
+        [jobId],
+      );
+      return result.rows.map(mapProposal);
+    }
+    const result = await this.q(
+      `SELECT * FROM t_proposal WHERE status = 'pending' AND deleted = 0 ORDER BY id ASC`,
+    );
+    return result.rows.map(mapProposal);
   }
 
-  insertReceipt(_input: {
+  async insertReceipt(input: {
     proposal_id: string | null;
     job_id: string;
     status?: string;
     payload?: unknown;
   }): Promise<ReceiptRow> {
-    notImplemented("insertReceipt");
+    const ts = nowIso();
+    const receipt_id = newId("rcp");
+    const result = await this.q(
+      `INSERT INTO t_receipt
+        (receipt_id, proposal_id, job_id, status, payload_json, created_at, updated_at, creator, updater, deleted)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 0)
+       RETURNING *`,
+      [
+        receipt_id,
+        input.proposal_id,
+        input.job_id,
+        input.status ?? "accepted",
+        input.payload === undefined ? null : JSON.stringify(input.payload),
+        ts,
+        ts,
+        SYSTEM,
+        SYSTEM,
+      ],
+    );
+    return mapReceipt(result.rows[0]);
   }
 
-  getReceipt(_receiptId: string): Promise<ReceiptRow | null> {
-    notImplemented("getReceipt");
+  async getReceipt(receiptId: string): Promise<ReceiptRow | null> {
+    const result = await this.q(
+      `SELECT * FROM t_receipt WHERE receipt_id = $1 AND deleted = 0`,
+      [receiptId],
+    );
+    const row = result.rows[0];
+    return row ? mapReceipt(row) : null;
   }
 
-  listReceipts(_jobId?: string): Promise<ReceiptRow[]> {
-    notImplemented("listReceipts");
+  async listReceipts(jobId?: string): Promise<ReceiptRow[]> {
+    if (jobId) {
+      const result = await this.q(
+        `SELECT * FROM t_receipt WHERE job_id = $1 AND deleted = 0 ORDER BY id ASC`,
+        [jobId],
+      );
+      return result.rows.map(mapReceipt);
+    }
+    const result = await this.q(`SELECT * FROM t_receipt WHERE deleted = 0 ORDER BY id ASC`);
+    return result.rows.map(mapReceipt);
   }
 
-  listReceiptsByProposal(_proposalId: string): Promise<ReceiptRow[]> {
-    notImplemented("listReceiptsByProposal");
+  async listReceiptsByProposal(proposalId: string): Promise<ReceiptRow[]> {
+    const result = await this.q(
+      `SELECT * FROM t_receipt WHERE proposal_id = $1 AND deleted = 0 ORDER BY id ASC`,
+      [proposalId],
+    );
+    return result.rows.map(mapReceipt);
   }
 
-  appendAudit(_input: {
+  async appendAudit(input: {
     trace_id: string;
     event_type: string;
     ref_id: string | null;
     payload: unknown;
   }): Promise<AuditEventRow> {
-    notImplemented("appendAudit");
+    const ts = nowIso();
+    const seqResult = await this.q(
+      `SELECT COALESCE(MAX(seq), 0) AS max_seq FROM t_audit_event WHERE trace_id = $1`,
+      [input.trace_id],
+    );
+    const seq = asNumber(seqResult.rows[0]?.max_seq) + 1;
+    const result = await this.q(
+      `INSERT INTO t_audit_event
+        (trace_id, seq, event_type, ref_id, payload_json, created_at, updated_at, creator, updater, deleted)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 0)
+       RETURNING *`,
+      [input.trace_id, seq, input.event_type, input.ref_id, JSON.stringify(input.payload), ts, ts, SYSTEM, SYSTEM],
+    );
+    return mapAuditEvent(result.rows[0]);
   }
 
-  listAudit(_traceId: string): Promise<AuditEventRow[]> {
-    notImplemented("listAudit");
+  async listAudit(traceId: string): Promise<AuditEventRow[]> {
+    const result = await this.q(
+      `SELECT * FROM t_audit_event WHERE trace_id = $1 AND deleted = 0 ORDER BY seq ASC`,
+      [traceId],
+    );
+    return result.rows.map(mapAuditEvent);
   }
 
-  getThread(_traceId: string, _step: string): Promise<ConversationThreadRow | null> {
-    notImplemented("getThread");
+  async getThread(traceId: string, step: string): Promise<ConversationThreadRow | null> {
+    const result = await this.q(
+      `SELECT * FROM t_conversation_thread WHERE trace_id = $1 AND step = $2 AND deleted = 0`,
+      [traceId, step],
+    );
+    const row = result.rows[0];
+    return row ? mapConversationThread(row) : null;
   }
 
-  insertThread(_input: {
+  async insertThread(input: {
     trace_id: string;
     step: string;
     job_id: string | null;
   }): Promise<ConversationThreadRow> {
-    notImplemented("insertThread");
+    const ts = nowIso();
+    const thread_id = newId("thr");
+    const result = await this.q(
+      `INSERT INTO t_conversation_thread
+        (thread_id, trace_id, step, job_id, hitl_token, created_at, updated_at, creator, updater, deleted)
+       VALUES ($1, $2, $3, $4, NULL, $5, $6, $7, $8, 0)
+       RETURNING *`,
+      [thread_id, input.trace_id, input.step, input.job_id, ts, ts, SYSTEM, SYSTEM],
+    );
+    return mapConversationThread(result.rows[0]);
   }
 
-  insertMessage(_input: {
+  async insertMessage(input: {
     thread_id: string;
     role: string;
     body: string;
   }): Promise<ConversationMessageRow> {
-    notImplemented("insertMessage");
+    const ts = nowIso();
+    const result = await this.q(
+      `INSERT INTO t_conversation_message
+        (thread_id, role, body, created_at, updated_at, creator, updater, deleted)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, 0)
+       RETURNING *`,
+      [input.thread_id, input.role, input.body, ts, ts, SYSTEM, SYSTEM],
+    );
+    return mapConversationMessage(result.rows[0]);
   }
 
-  listMessages(_traceId: string, _step: string): Promise<ConversationMessageRow[]> {
-    notImplemented("listMessages");
+  async listMessages(traceId: string, step: string): Promise<ConversationMessageRow[]> {
+    const result = await this.q(
+      `SELECT m.* FROM t_conversation_message m
+       INNER JOIN t_conversation_thread t ON t.thread_id = m.thread_id
+       WHERE t.trace_id = $1 AND t.step = $2 AND m.deleted = 0 AND t.deleted = 0
+       ORDER BY m.id ASC`,
+      [traceId, step],
+    );
+    return result.rows.map(mapConversationMessage);
   }
 }
