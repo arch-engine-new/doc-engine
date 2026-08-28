@@ -16,21 +16,18 @@ const MIGRATION_FILE = join(
   "../../../../docs/schema/generated/core-engine-migration.sql",
 );
 
-function isExecutableSql(chunk: string): boolean {
-  const withoutComments = chunk
+function stripLineComments(sql: string): string {
+  return sql
     .split("\n")
-    .map((line) => line.trim())
-    .filter((line) => line.length > 0 && !line.startsWith("--"))
-    .join("\n")
-    .trim();
-  return withoutComments.length > 0;
+    .map((line) => (line.trim().startsWith("--") ? "" : line))
+    .join("\n");
 }
 
 function splitStatements(sql: string): string[] {
-  return sql
+  return stripLineComments(sql)
     .split(";")
     .map((chunk) => chunk.trim())
-    .filter(isExecutableSql)
+    .filter((chunk) => chunk.length > 0)
     .map((chunk) => `${chunk};`);
 }
 
