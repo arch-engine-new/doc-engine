@@ -130,7 +130,7 @@ goalSha: 6900c96c0679cba37337f51c3356d096355eb577939de41b76d1d115a7818c37
 ### Error handling
 
 - 百度 17（日额度）/ 18（QPS）/ 网络：Job `failed`，审计 `ocr_error`，响应含可理解中文，不重试打爆额度。
-- 不支持的 MIME：400，不写半截 Job 或写 Job 后立即 failed（实现选一种并在测试钉死）。
+- 不支持的 MIME（非 `image/jpeg` / `image/png` / 文本层 `application/pdf`）：**400，不插入 Job**。OCR/额度失败：Job 已存在则置 `failed` 并写 `ocr_error` 审计。
 - Token 获取失败：与缺 key 一样，不静默 Fake。
 - 检索无命中：不 insert 带假 `clause_id` 的 Finding。
 
