@@ -1,29 +1,42 @@
-# Task 9 Report — Contracts + examples + docs
+# Task 9 Report — 任务页上传控件
 
 ## Status
-DONE — commit `2c406c6`
+DONE
+
+## SHA
+`ac9b1a16f41586e98ddd43d353d573efe7bca6a9`
+
+## BASE_SHA
+`9ad9ea582d00a4b64409b0f409da04bfcca8d2c9`
+
+## commits
+- `ac9b1a16f41586e98ddd43d353d573efe7bca6a9` — `feat(web): add job upload file picker and multipart uploadJob helper`
 
 ## What was implemented
+MCP:
+- `query_design` page=`job_upload`
+- `query_design` component=`PrimaryButton`
 
-### README.md (`packages/agent-runtime/README.md`)
-New, usage-focused: install (Node 18+, TS-source package), quick start (compile → start → wait → trace), API surface table covering compileGraph/startRun/resumeHitl/cancelRun/getTrace plus persistence, HITL, tools, checkpoint resume, and examples. No fluff.
+`apps/web/src/services/http.ts`:
+- `uploadJob(file, fields?)` — `FormData` POST `/api/jobs/upload` with optional `project_id` / `pack_id` / `template_id`
+- No JSON `Content-Type`; errors via existing `HttpError` / `errorMessage`
 
-### Examples (`packages/agent-runtime/examples/`)
-- `basic-agent.ts` — start → fn → end graph with inline fn; compile, start run, waitForRun, print status/output/event trace. Uses only public `agent-runtime` exports (self-referencing package import, so it mirrors real embedder usage).
-- `hitl-agent.ts` — start → hitl → fn → end graph with SQLite store; starts run, asserts `waiting_hitl`, prints token/payload, resumes with a `HitlDecision`, prints final output.
-- `tsconfig.json` — separate examples config (strict, NodeNext, noEmit). Main package tsconfig was NOT modified (its `include: ["src/**/*"]` and `rootDir` would conflict with examples outside src; a separate config typechecks examples against the package exactly as consumers would).
+`apps/web/src/views/job_upload/index.vue`:
+- Hidden `<input type="file" accept="image/jpeg,image/png,application/pdf">`
+- Primary `button.btn`「上传资料」opens picker; on select uploads and refreshes job list
+- Fixture buttons remain `button.btn.ghost`;「同意下一步」stays primary `btn`
+- Upload success selects new job via `load(result.job.job_id)` + `rememberDemoNav`
+- Styles use existing `--apt-*` tokens and `btn` / `btn ghost` only
 
-### Contracts
-- `.apt/contracts/ts/` does NOT exist in this project (checked — directory absent) and the brief's `src/contracts/agent-runtime.ts` was explicitly outside the task's file whitelist, so no file was invented.
-- Instead the project's actual contract convention (AGENTS.md: "新 TS 类型 → register_contract") was used: 8 contracts registered via MCP into `.ai/db.json` (+ `.ai/INDEX.md`): RunStatus, SchedulerResult, CompiledGraph, GraphDefinition, HitlDecision, RunView, EventRow, StateStore — all pointing at `packages/agent-runtime/src/index.ts`.
+Did not edit core-engine, routes, or new pages. Did not start Task 10.
 
-## Verification
+## Verify
+`npx tsc -p apps/web --noEmit`:
+
 ```
-npx tsc -p packages/agent-runtime --noEmit          PASS (0 errors)   # required verify
-npx tsc -p packages/agent-runtime/examples --noEmit PASS (0 errors)   # examples typecheck
-npm test -w agent-runtime                           122 passed, 8 skipped (HTTP suite skipped by design)
+(exit 0)
 ```
 
-## Notes
-- No runtime source changes; no Task 10 (knowledge closure / sync-changes) performed per instructions.
-- `examples/tsconfig.json` is a whitelisted file; main tsconfig untouched.
+## Files (whitelist commit)
+- `apps/web/src/views/job_upload/index.vue`
+- `apps/web/src/services/http.ts`
