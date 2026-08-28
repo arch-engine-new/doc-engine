@@ -1,6 +1,9 @@
 {
-  "phase": "done",
-  "loopDone": true,
-  "nextAction": "none",
-  "updatedAt": "2026-08-25T11:15:04.437Z"
+  "phase": "spec_pending_approval",
+  "loopDone": false,
+  "nextAction": "approve_spec",
+  "updatedAt": "2026-08-28T02:50:00.000Z",
+  "activeSpec": "docs/superpowers/specs/2026-08-28-triple-store-live-design.md",
+  "risk": "high",
+  "note": "triple-store-live design spec awaiting 批准 spec"
 }
