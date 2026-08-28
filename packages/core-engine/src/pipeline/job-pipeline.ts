@@ -4,7 +4,11 @@
  */
 
 import Database from "better-sqlite3";
+import type { BlobStore } from "../blob/port.js";
+import { blobObjectUri, uploadObjectKey } from "../blob/minio.js";
 import { extractByTemplate } from "../extract/field-box.js";
+import { extractOcrByTemplate, parseOcrFields } from "../extract/ocr-fields.js";
+import type { OcrPort } from "../ocr/port.js";
 import { SqliteLedger, type LedgerStore } from "../persistence/ledger.js";
 import { resolveEngineMode } from "../persistence/live-env.js";
 import { runMigrationOnDb } from "../persistence/migrate.js";
@@ -100,6 +104,48 @@ export interface RunFixtureJobInput {
 export interface OpenJobForPackInput {
   projectId: string;
   packId: string;
+}
+
+/** Reject before insertJob so HTTP can map 400 without orphan ledger rows. */
+export const MAX_UPLOAD_BYTES = 4 * 1024 * 1024;
+
+const ALLOWED_IMAGE_MIMES = new Set(["image/jpeg", "image/png"]);
+const PDF_MIME = "application/pdf";
+const DEFAULT_BLOB_BUCKET = "docengine";
+
+/**
+ * Thrown for >4MB or disallowed MIME before any Job row is inserted.
+ * HTTP maps this to 400; OCR/MinIO failures after insert use failed + audit instead.
+ */
+export class UploadValidationError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "UploadValidationError";
+  }
+}
+
+export interface OpenUploadJobInput {
+  projectId: string;
+  packId?: string;
+  template_id?: string;
+  fileName: string;
+  mime: string;
+  bytes: Uint8Array;
+  /** Optional retrieve query; defaults to joined 编号/日期 fields after extract. */
+  standardFitQuery?: string;
+}
+
+export interface OpenUploadJobDeps {
+  blob: BlobStore;
+  ocr: OcrPort;
+}
+
+export interface OpenUploadJobResult {
+  project: ProjectRow;
+  job: JobRow;
+  document: DocumentRow;
+  extraction: ExtractionRow;
+  findings: FindingRow[];
 }
 
 /** Human HITL only. Never used as a chat side effect. Submit is not a valid next status. */
@@ -342,6 +388,196 @@ export class JobPipeline {
   }
 
   /**
+   * Real upload path: validate → MinIO/memory blob → OCR or PDF text → extract → DSL.
+   * Validation errors throw UploadValidationError before insertJob; blob/OCR failures
+   * mark the Job failed and audit upload_error/ocr_error so operators can retry manually.
+   */
+  async openUploadJob(
+    input: OpenUploadJobInput,
+    deps: OpenUploadJobDeps,
+  ): Promise<OpenUploadJobResult> {
+    validateUploadInput(input);
+
+    const project = await this.resolveProjectForUpload(input.projectId);
+    const packId = input.packId ?? PACK_ID;
+
+    let job = await this.store.insertJob({
+      project_id: project.project_id,
+      pack_id: packId,
+      status: "uploaded",
+      template_id: input.template_id ?? null,
+    });
+
+    let document: DocumentRow;
+    try {
+      const { fileUri } = await this.persistUploadBlob(job.job_id, input, deps.blob);
+      document = await this.store.insertDocument({
+        job_id: job.job_id,
+        file_name: input.fileName,
+        file_uri: fileUri,
+        mime: input.mime,
+      });
+    } catch (err) {
+      return this.failUploadJob(job, "upload_error", err);
+    }
+
+    job = await this.store.updateJobStatus(job.job_id, "inspecting");
+    job = await this.store.updateJobStatus(job.job_id, "extracting");
+
+    let ocrText: string;
+    let ocrVendor: string;
+    try {
+      const recognized = await recognizeUploadText(input, deps.ocr);
+      ocrText = recognized.text;
+      ocrVendor = recognized.vendor;
+    } catch (err) {
+      return this.failUploadJob(job, "ocr_error", err);
+    }
+
+    const fields = await this.projectOcrExtractionFields(job.template_id, ocrText);
+
+    const extraction = await this.store.insertExtraction({
+      job_id: job.job_id,
+      ocr_text: ocrText,
+      fields,
+    });
+    await this.store.appendAudit({
+      trace_id: job.trace_id,
+      event_type: "extraction",
+      ref_id: extraction.extraction_id,
+      payload: {
+        extraction_id: extraction.extraction_id,
+        job_id: job.job_id,
+        ocr_vendor: ocrVendor,
+      },
+    });
+
+    const rules = await this.store.listPublishedRuleVersions();
+    for (const rule of rules) {
+      await this.store.appendAudit({
+        trace_id: job.trace_id,
+        event_type: "rule_version",
+        ref_id: rule.version_id,
+        payload: { version_id: rule.version_id, rule_id: rule.rule_id, blocking: rule.blocking },
+      });
+    }
+
+    job = await this.store.updateJobStatus(job.job_id, "checking");
+
+    const evaluated = evaluate(fields, rules);
+    const findings: FindingRow[] = [];
+    for (const item of evaluated) {
+      const finding = await this.store.insertFinding({
+        job_id: job.job_id,
+        rule_version_id: item.rule_version_id,
+        result: item.result,
+        blocking: item.blocking,
+        detail: item.detail,
+      });
+      findings.push(finding);
+      await this.store.appendAudit({
+        trace_id: job.trace_id,
+        event_type: "finding",
+        ref_id: finding.finding_id,
+        payload: {
+          finding_id: finding.finding_id,
+          rule_version_id: finding.rule_version_id,
+          result: finding.result,
+          blocking: finding.blocking,
+        },
+      });
+    }
+
+    if (packId) {
+      await this.tryAttachStandardFit(job, packId, input.standardFitQuery, fields, findings);
+    }
+
+    return { project, job, document, extraction, findings };
+  }
+
+  private async resolveProjectForUpload(projectId: string): Promise<ProjectRow> {
+    if (this.project?.project_id === projectId) {
+      return this.project;
+    }
+    const found = (await this.listProjects()).find((row) => row.project_id === projectId);
+    if (!found) {
+      throw new Error(`project not found: ${projectId}`);
+    }
+    this.project = found;
+    return found;
+  }
+
+  private blobBucketName(blob: BlobStore): string {
+    const maybe = blob as { bucket?: string };
+    return typeof maybe.bucket === "string" ? maybe.bucket : DEFAULT_BLOB_BUCKET;
+  }
+
+  private async persistUploadBlob(
+    jobId: string,
+    input: OpenUploadJobInput,
+    blob: BlobStore,
+  ): Promise<{ key: string; fileUri: string }> {
+    const key = uploadObjectKey(jobId, input.fileName);
+    const bucket = this.blobBucketName(blob);
+    await blob.ensureBucket();
+    await blob.put({ key, bytes: input.bytes, mime: input.mime });
+    return { key, fileUri: blobObjectUri(bucket, key) };
+  }
+
+  private async failUploadJob(
+    job: JobRow,
+    eventType: "ocr_error" | "upload_error",
+    err: unknown,
+  ): Promise<never> {
+    const error = err instanceof Error ? err : new Error(String(err));
+    await this.store.updateJobStatus(job.job_id, "failed");
+    await this.store.appendAudit({
+      trace_id: job.trace_id,
+      event_type: eventType,
+      ref_id: null,
+      payload: { message: error.message },
+    });
+    throw error;
+  }
+
+  private async projectOcrExtractionFields(
+    templateId: string | null,
+    ocrText: string,
+  ): Promise<Record<string, unknown>> {
+    if (!templateId) {
+      return parseOcrFields(ocrText);
+    }
+    const boxes = await this.store.listFieldBoxes(templateId);
+    if (boxes.length === 0) {
+      return parseOcrFields(ocrText);
+    }
+    return extractOcrByTemplate(ocrText, boxes);
+  }
+
+  private async tryAttachStandardFit(
+    job: JobRow,
+    packId: string,
+    explicitQuery: string | undefined,
+    fields: Record<string, unknown>,
+    findings: FindingRow[],
+  ): Promise<void> {
+    const query = explicitQuery ?? standardFitQueryFromFields(fields);
+    if (query.trim().length === 0) {
+      return;
+    }
+    try {
+      const fitFinding = await this.attachStandardFitFinding({
+        jobId: job.job_id,
+        query,
+        packId,
+      });
+      findings.push(fitFinding);
+    } catch {
+      /* no retrieve hit — skip; never invent clause_id */
+    }
+  }
+
+  /**
    * Bound template with boxes → project fixture onto field_key list.
    * No boxes (or no template) keeps SLICE-1 full fixture fields.
    */
@@ -517,4 +753,75 @@ export class JobPipeline {
     }
     return this.store.updateJobStatus(jobId, next);
   }
+}
+
+function normalizeMime(mime: string): string {
+  return mime.toLowerCase().trim();
+}
+
+/** Gate uploads before insertJob; HTTP maps UploadValidationError to 400. */
+export function validateUploadInput(input: Pick<OpenUploadJobInput, "mime" | "bytes">): void {
+  if (input.bytes.length > MAX_UPLOAD_BYTES) {
+    throw new UploadValidationError(`upload exceeds ${MAX_UPLOAD_BYTES} bytes`);
+  }
+  const mime = normalizeMime(input.mime);
+  if (!ALLOWED_IMAGE_MIMES.has(mime) && mime !== PDF_MIME) {
+    throw new UploadValidationError(`unsupported mime: ${input.mime}`);
+  }
+}
+
+function standardFitQueryFromFields(fields: Record<string, unknown>): string {
+  const parts: string[] = [];
+  for (const key of ["编号", "日期A", "日期B"]) {
+    const value = fields[key];
+    if (value === null || value === undefined) continue;
+    const text = String(value).trim();
+    if (text.length > 0) parts.push(text);
+  }
+  return parts.join(" ");
+}
+
+/**
+ * PDF text layer only — no Baidu quota. Scanned/image-only PDFs return null
+ * so openUploadJob can fail with ocr_error instead of silent garbage text.
+ */
+function extractPdfTextLayer(bytes: Uint8Array): string | null {
+  const raw = Buffer.from(bytes).toString("latin1");
+  const chunks: string[] = [];
+  const parenRe = /\(([^\\)]*(?:\\.[^\\)]*)*)\)/g;
+  let match: RegExpExecArray | null;
+  while ((match = parenRe.exec(raw)) !== null) {
+    const decoded = match[1]!
+      .replace(/\\n/g, "\n")
+      .replace(/\\r/g, "\r")
+      .replace(/\\t/g, "\t")
+      .replace(/\\\(/g, "(")
+      .replace(/\\\)/g, ")")
+      .replace(/\\\\/g, "\\");
+    if (decoded.trim().length > 0) {
+      chunks.push(decoded);
+    }
+  }
+  const text = chunks.join("\n").trim();
+  return text.length >= 3 ? text : null;
+}
+
+async function recognizeUploadText(
+  input: Pick<OpenUploadJobInput, "bytes" | "mime" | "fileName">,
+  ocr: OcrPort,
+): Promise<{ text: string; vendor: string }> {
+  const mime = normalizeMime(input.mime);
+  if (mime === PDF_MIME) {
+    const text = extractPdfTextLayer(input.bytes);
+    if (text === null) {
+      throw new Error("扫描件 PDF 无法本地抽字，请先导出首页为 JPEG 或 PNG");
+    }
+    return { text, vendor: "pdf-text" };
+  }
+  const result = await ocr.recognize({
+    bytes: input.bytes,
+    mime: input.mime,
+    fileName: input.fileName,
+  });
+  return { text: result.text, vendor: result.vendor };
 }
