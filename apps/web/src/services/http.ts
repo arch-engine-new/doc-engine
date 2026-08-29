@@ -1,6 +1,7 @@
 /** Fetch wrapper for live `/api/*` (Vite middleware → JobPipeline). */
 
 import type {
+  DocumentArtifactView,
   ExcelCellMappingView,
   ExcelCellMappingWrite,
   JobView,
@@ -117,6 +118,40 @@ export async function confirmSignatureTask(
     `/api/signature-tasks/${taskId}/confirm`,
     { method: "POST", body: JSON.stringify({ signerName }) },
   );
+}
+
+export interface GenerateDocumentInput {
+  docTypeId: string;
+  templateId?: string;
+  fieldValues?: Record<string, string | number | boolean | null>;
+  traceId?: string;
+}
+
+/** Generate an Excel document artifact for a project DocType. */
+export async function generateDocument(
+  projectId: string,
+  input: GenerateDocumentInput,
+): Promise<{ artifact: DocumentArtifactView }> {
+  return http<{ artifact: DocumentArtifactView }>(`/api/projects/${projectId}/documents/generate`, {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+
+/** Upload a generated artifact via the mock adapter and create signature tasks. */
+export async function uploadDocumentArtifact(
+  projectId: string,
+  artifactId: string,
+): Promise<{
+  artifact: DocumentArtifactView;
+  receipt: ReceiptView;
+  signatureTasks: SignatureTaskView[];
+}> {
+  return http<{
+    artifact: DocumentArtifactView;
+    receipt: ReceiptView;
+    signatureTasks: SignatureTaskView[];
+  }>(`/api/projects/${projectId}/documents/${artifactId}/upload`, { method: "POST" });
 }
 
 /** Multipart upload for POST /api/jobs/upload — no JSON Content-Type (browser sets boundary). */

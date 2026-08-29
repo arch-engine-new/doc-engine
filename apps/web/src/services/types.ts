@@ -44,6 +44,19 @@ export interface ReceiptView {
   status: string;
 }
 
+/** Generated Excel document artifact from document generate/upload APIs. */
+export interface DocumentArtifactView {
+  artifact_id: string;
+  project_id: string;
+  doc_type_id: string;
+  template_id: string;
+  file_uri: string;
+  adapter_document_id: string | null;
+  status: string;
+  trace_id: string;
+  receipt_id: string | null;
+}
+
 /** Pending signature task from GET /api/pending/signatures. */
 export interface SignatureTaskView {
   task_id: string;
