@@ -169,6 +169,14 @@ export { DEFAULT_BAIDU_OCR_API, readBaiduOcrEnv } from "./ocr/env.js";
 
 export { extractOcrByTemplate, parseOcrFields } from "./extract/ocr-fields.js";
 
+export { resolveEffectiveExcelMappings } from "./excel/effective-mappings.js";
+export type {
+  EffectiveExcelMapping,
+  ExcelMappingStore,
+} from "./excel/effective-mappings.js";
+export { ExcelFillService } from "./excel/fill-service.js";
+export type { ExcelFillInput, ExcelFillTemplate } from "./excel/fill-service.js";
+
 export {
   MAX_UPLOAD_BYTES,
   UploadValidationError,
