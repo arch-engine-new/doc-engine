@@ -1,77 +1,35 @@
-# Task 6 Report: ToolRuntime + Idempotency + Retry
+# Task 6 Report — pending_review 资料待签 Tab
 
 ## Status
-✅ **COMPLETED**
+DONE
 
-## Commit SHA
-`91dcd7c`
+## Plan
+`docs/apt/plans/2026-08-29-excel-gap-fill-plan.md` — Task 6
 
-## Summary
-Implemented the ToolRuntime system with full support for:
-- Tool registration with JSON schema validation
-- Input/output validation against schemas
-- Configurable timeout enforcement
-- Retry policy with exponential backoff and optional jitter
-- Idempotency key support with persistent storage (SQLite)
+## Changes
 
-## Files Created
-1. `packages/agent-runtime/src/tools/registry.ts` - ToolRegistry class
-2. `packages/agent-runtime/src/tools/runtime.ts` - ToolRuntime class with validation, timeout, retry, idempotency
-3. `packages/agent-runtime/test/tool-runtime.test.ts` - Comprehensive test suite (27 tests)
+### `apps/web/src/services/types.ts`
+- 新增 `SignatureTaskView`（`task_id`, `artifact_id`, `role`, `assignee_label`, `status`, `signer_name`, `trace_id`, `receipt_id`）
 
-## Files Modified
-1. `packages/agent-runtime/src/index.ts` - Added exports for new tools module
-2. `packages/agent-runtime/src/runtime/node-executors.ts` - Enhanced ToolExecutor to use ToolRuntime
-3. `packages/agent-runtime/src/runtime/state.ts` - Extended ExecutionContext with runId, threadId, nodeExecutionId, attempt
-4. `packages/agent-runtime/src/runtime/scheduler.ts` - Updated context creation and executeWithRetry to propagate attempt number
-5. `packages/agent-runtime/src/runtime/run-manager.ts` - Fixed context creation in resume path
+### `apps/web/src/services/http.ts`
+- `fetchPendingSignatures()` → `GET /api/pending/signatures`
+- `confirmSignatureTask(taskId, signerName)` → `POST /api/signature-tasks/:id/confirm`
 
-## Test Results
-All 86 tests pass (including 27 new tests for tool-runtime):
-- ✅ ToolRegistry: register, get, list, has, remove, clear, getAll
-- ✅ ToolRuntime basic execution: success, NOT_FOUND, input validation, output validation
-- ✅ Timeout: times out on slow handlers, completes on fast handlers
-- ✅ Retry: retries on transient failure, exhausts retries, no retry on validation error, retries on timeout, exponential backoff with jitter
-- ✅ Idempotency: cached results for same key, different keys not cached, no cache without store, failed attempts not cached, persists tool call records
-- ✅ AC-4: retry config + idempotency key persistence verified
+### `apps/web/src/views/pending_review/index.vue`
+- 顶栏 Tab：**措辞待审** / **资料待签**
+- 措辞待审：保留原 Proposal 表格、改措辞、确认 Receipt 流程
+- 资料待签：卡片展示 role、签认人（assignee_label）、资料 artifact_id + 审计链接、状态
+- 「确认签字」弹窗填写 `signerName` 后提交；成功后刷新待签列表并展示 Receipt
+- StepChat trace 随当前 Tab 切换（措辞→选中 Job；待签→首条任务 trace）
 
-## Key Features Implemented
-
-### ToolRegistry
-- `register(name, schema, handler, description?)` - Register tools with input/output JSON schemas
-- `get(name)` - Retrieve registered tool
-- `list()` - List all tool names
-- `has(name)` - Check if tool exists
-- `remove(name)` - Remove a tool
-- `getAll()` - Get all registered tools
-- `clear()` - Clear all tools
-- Default singleton registry via `getDefaultRegistry()` / `setDefaultRegistry()`
-
-### ToolRuntime
-- `execute(name, input, options)` - Execute tool with full validation, timeout, retry, idempotency
-- Options:
-  - `idempotencyKey` - Optional key for deduplication
-  - `timeoutMs` - Optional timeout (default 30000ms)
-  - `retryPolicy` - Optional RetryPolicy (maxAttempts, backoffMs, jitter)
-  - `runId` / `nodeExecutionId` - Required for idempotency persistence
-- Returns `ToolExecutionResult` with output, durationMs, attempts, fromCache
-- Throws `ToolExecutionError` with code: VALIDATION_ERROR, TIMEOUT, HANDLER_ERROR, NOT_FOUND
-
-### ToolExecutor (Enhanced)
-- Now uses ToolRuntime internally
-- Config options: toolName, inputChannels, outputChannel, idempotencyKey (with template substitution), retry, timeoutMs
-- Template variables: `{{runId}}`, `{{threadId}}`, `{{nodeId}}`, `{{attempt}}`
-
-### Idempotency Persistence
-- Uses SQLiteStateStore's `t_agent_tool_call` table
-- On first execution: creates tool call record with status "pending"
-- On success: updates with responseJson, status "success", durationMs
-- On failure: updates with errorJson, status "failed"
-- Subsequent calls with same idempotencyKey return cached result (fromCache: true)
-
-## Verification
-```bash
-npm test -w agent-runtime -- tool-runtime  # ✅ 27 tests pass
-npm test -w agent-runtime                   # ✅ All 86 tests pass
-npx tsc -p packages/agent-runtime --noEmit  # ✅ TypeScript compiles without errors
+## Verify
 ```
+npx tsc -p apps/web --noEmit
+```
+Exit code: 0
+
+## Commit
+`feat(web): pending_review signature tasks tab (task 6)`
+
+## Concerns
+- API 仅返回 `SignatureTaskRow`，artifact 摘要暂以 `artifact_id` 展示；项目/DocType/下载链接待 Task 7 生成入口完善后可增强。

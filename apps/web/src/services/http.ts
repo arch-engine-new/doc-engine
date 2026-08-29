@@ -1,6 +1,13 @@
 /** Fetch wrapper for live `/api/*` (Vite middleware → JobPipeline). */
 
-import type { ExcelCellMappingView, ExcelCellMappingWrite, JobView, TemplateView } from "./types";
+import type {
+  ExcelCellMappingView,
+  ExcelCellMappingWrite,
+  JobView,
+  ReceiptView,
+  SignatureTaskView,
+  TemplateView,
+} from "./types";
 
 /** Thrown when `/api/*` returns a non-2xx status so callers can branch on HTTP status. */
 export class HttpError extends Error {
@@ -93,6 +100,23 @@ export async function saveExcelMappings(
     { method: "PUT", body: JSON.stringify({ mappings }) },
   );
   return data.mappings;
+}
+
+/** Pending signature tasks for the 资料待签 tab. */
+export async function fetchPendingSignatures(): Promise<SignatureTaskView[]> {
+  const data = await http<{ tasks: SignatureTaskView[] }>("/api/pending/signatures");
+  return data.tasks;
+}
+
+/** Confirm a signature task and receive a Receipt. */
+export async function confirmSignatureTask(
+  taskId: string,
+  signerName: string,
+): Promise<{ task: SignatureTaskView; receipt: ReceiptView }> {
+  return http<{ task: SignatureTaskView; receipt: ReceiptView }>(
+    `/api/signature-tasks/${taskId}/confirm`,
+    { method: "POST", body: JSON.stringify({ signerName }) },
+  );
 }
 
 /** Multipart upload for POST /api/jobs/upload — no JSON Content-Type (browser sets boundary). */

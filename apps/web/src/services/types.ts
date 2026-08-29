@@ -44,6 +44,18 @@ export interface ReceiptView {
   status: string;
 }
 
+/** Pending signature task from GET /api/pending/signatures. */
+export interface SignatureTaskView {
+  task_id: string;
+  artifact_id: string;
+  role: string;
+  assignee_label: string | null;
+  status: string;
+  signer_name: string | null;
+  trace_id: string;
+  receipt_id: string | null;
+}
+
 /** HITL confirm-next machine. Submit is not a valid next status. */
 export const CONFIRM_NEXT: Record<string, string> = {
   uploaded: "inspecting",
