@@ -24,8 +24,14 @@ import {
   type SpecPackRow,
   type TemplateRow,
 } from "../index.js";
+import { blobObjectUri, safeName } from "../blob/minio.js";
+import type { LedgerStore } from "../persistence/ledger.js";
+import { DocumentPipeline } from "../pipeline/document-pipeline.js";
 import type { OpenUploadJobInput, OpenUploadJobResult } from "../pipeline/job-pipeline.js";
 import { resolveEngineMode, type LiveEngineMode } from "../persistence/live-env.js";
+import { StepChatBridge } from "../agent/step-chat-bridge.js";
+import { AgentRuntimeFactory } from "../agent/agent-runtime-factory.js";
+import type { JobStepOrchestrator } from "../agent/job-step-orchestrator.js";
 
 const DEMO_BOXES = [
   { field_key: "编号", value_type: "string", page: 1, x: "8", y: "8", w: "24", h: "8" },
@@ -63,6 +69,7 @@ export interface DemoHealth {
   neo4j: DemoHealthProbe;
   ocr: DemoHealthProbe;
   minio: DemoHealthProbe;
+  llm: DemoHealthProbe;
 }
 
 /**
@@ -82,6 +89,9 @@ export class DemoHttpSession {
   private liveConfig: LiveEngineMode | null;
   private memoryBlob: MemoryBlobStore | null = null;
   private memoryOcr: FakeOcr | null = null;
+  private stepChatBridge: StepChatBridge | null = null;
+  private agentFactory: AgentRuntimeFactory | null = null;
+  private documentPipeline: DocumentPipeline | null = null;
 
   /**
    * Tests construct this with no args so vitest stays sqlite+memory even if
@@ -114,6 +124,66 @@ export class DemoHttpSession {
     });
   }
 
+  async getAgentRuntimeFactory(): Promise<AgentRuntimeFactory> {
+    if (!this.agentFactory) {
+      this.agentFactory = await AgentRuntimeFactory.getOrCreate({
+        pipeline: this.pipeline,
+        forceFakeLlm: this.mode === "memory",
+      });
+      this.pipeline.stepOrchestrator = this.agentFactory.getJobStepOrchestrator();
+    }
+    return this.agentFactory;
+  }
+
+  async getJobStepOrchestrator(): Promise<JobStepOrchestrator> {
+    const factory = await this.getAgentRuntimeFactory();
+    return factory.getJobStepOrchestrator();
+  }
+
+  async getStepChatBridge(): Promise<StepChatBridge> {
+    if (!this.stepChatBridge) {
+      const factory = await this.getAgentRuntimeFactory();
+      this.stepChatBridge = factory.getStepChatBridge();
+    }
+    return this.stepChatBridge;
+  }
+
+  /** Ledger store shared with JobPipeline (sibling DocumentPipeline). */
+  ledger(): LedgerStore {
+    return (this.pipeline as unknown as { store: LedgerStore }).store;
+  }
+
+  getDocumentPipeline(): DocumentPipeline {
+    if (!this.documentPipeline) {
+      this.documentPipeline = new DocumentPipeline(this.ledger(), this.resolveUploadDeps().blob);
+    }
+    return this.documentPipeline;
+  }
+
+  async uploadExcelTemplate(
+    templateId: string,
+    file: { bytes: Uint8Array; fileName: string; mime: string },
+    excelSheetName?: string | null,
+  ): Promise<TemplateRow> {
+    const template = await this.pipeline.getTemplate(templateId);
+    if (!template) {
+      throw new Error(`template not found: ${templateId}`);
+    }
+    const { blob } = this.resolveUploadDeps();
+    const key = `templates/${templateId}/${safeName(file.fileName)}`;
+    const bucket =
+      typeof (blob as { bucket?: string }).bucket === "string"
+        ? (blob as { bucket: string }).bucket
+        : "docengine";
+    await blob.ensureBucket();
+    await blob.put({ key, bytes: file.bytes, mime: file.mime });
+    return this.ledger().updateTemplateExcel(templateId, {
+      layout_kind: "excel",
+      excel_template_uri: blobObjectUri(bucket, key),
+      excel_sheet_name: excelSheetName ?? template.excel_sheet_name,
+    });
+  }
+
   /**
    * Idempotent: replace the pipeline and re-seed fixture demo data.
    * Does not seed 公路/水利/房建 packs.
@@ -130,10 +200,14 @@ export class DemoHttpSession {
       resetAdapterWrites();
       this.pipeline = JobPipeline.openStandardLibrary();
     }
+    this.stepChatBridge = null;
+    this.agentFactory = null;
+    this.documentPipeline = null;
     return this.seedFixtures();
   }
 
   async health(): Promise<DemoHealth> {
+    const llm = StepChatBridge.probeLlmHealth();
     if (this.mode !== "live") {
       return {
         mode: "memory",
@@ -142,6 +216,7 @@ export class DemoHttpSession {
         neo4j: "skip",
         ocr: "skip",
         minio: "skip",
+        llm,
       };
     }
     const live = this.requireLiveConfig();
@@ -152,7 +227,7 @@ export class DemoHttpSession {
       probeMinio(),
       probeBaiduOcr(),
     ]);
-    return { mode: "live", postgres, qdrant, neo4j: neo4jStatus, minio, ocr };
+    return { mode: "live", postgres, qdrant, neo4j: neo4jStatus, minio, ocr, llm };
   }
 
   /**
@@ -221,12 +296,15 @@ export class DemoHttpSession {
   }
 
   private async seedFixtures(): Promise<DemoResetResult> {
+    await this.getAgentRuntimeFactory();
     const project = await this.pipeline.createProject("演示项目-夹具");
     await this.pipeline.setGroupKeys(PACK_ID, ["zone", "process"], "seq");
+    const sliceTypes = await this.pipeline.ensureDemoDocTypes(PACK_ID);
 
     const fixtureTemplate = await this.pipeline.createTemplate({
       packId: PACK_ID,
       name: "收货单夹具模板",
+      docTypeId: sliceTypes.childId,
     });
     await this.pipeline.saveFieldBoxes(fixtureTemplate.template_id, [...DEMO_BOXES]);
 
@@ -236,9 +314,11 @@ export class DemoHttpSession {
       version: "0",
     });
     await this.pipeline.setGroupKeys(pack.pack_id, ["zone", "process"], "seq");
+    const packTypes = await this.pipeline.ensureDemoDocTypes(pack.pack_id);
     const template = await this.pipeline.createTemplate({
       packId: pack.pack_id,
       name: "空包模板",
+      docTypeId: packTypes.childId,
     });
     await this.pipeline.saveFieldBoxes(template.template_id, [...DEMO_BOXES]);
 

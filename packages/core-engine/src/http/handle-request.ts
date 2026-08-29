@@ -5,7 +5,11 @@
  * Request bodies also accept camelCase aliases. Chat never confirms, publishes, or submits.
  */
 
-import { mockPendingMount, type FieldBoxWrite } from "../index.js";
+import { mockPendingMount, uploadDocument, type FieldBoxWrite } from "../index.js";
+import type {
+  ExcelCellMappingWrite,
+  FieldFillRuleWrite,
+} from "../persistence/store.js";
 import { NoOpenHitlError } from "../agent/job-step-orchestrator.js";
 import { LedgerConflictError, UploadValidationError } from "../pipeline/job-pipeline.js";
 import { createFetchHandler } from "agent-runtime";
@@ -36,6 +40,12 @@ export interface DemoHttpMultipartFields {
   templateId?: string;
   docTypeId?: string;
   projectId?: string;
+  excel_sheet_name?: string;
+  excelSheetName?: string;
+  trace_id?: string;
+  traceId?: string;
+  metadata?: string;
+  metadata_json?: string;
 }
 
 /**
@@ -181,18 +191,87 @@ function boxesFromBody(body: unknown): FieldBoxWrite[] {
   });
 }
 
-function fieldDefsFromBody(body: unknown): Array<{ field_key: string; value_type: string; required: number }> {
+function fieldDefsFromBody(body: unknown): Array<{
+  field_key: string;
+  value_type: string;
+  required?: number;
+}> {
   const rec = asRecord(body);
-  const raw = rec.defs;
-  if (!Array.isArray(raw)) throw new Error("defs array required");
+  const raw = Array.isArray(body) ? body : rec.fieldDefs ?? rec.field_defs ?? rec.defs;
+  if (!Array.isArray(raw)) throw new Error("field defs array required");
   return raw.map((item) => {
     const row = asRecord(item);
     return {
       field_key: String(row.field_key ?? row.fieldKey ?? ""),
       value_type: String(row.value_type ?? row.valueType ?? "string"),
-      required: Number(row.required ?? 0),
+      required: row.required === undefined ? 0 : Number(row.required),
     };
   });
+}
+
+function excelMappingsFromBody(body: unknown): ExcelCellMappingWrite[] {
+  const rec = asRecord(body);
+  const raw = Array.isArray(body) ? body : rec.mappings;
+  if (!Array.isArray(raw)) throw new Error("mappings array required");
+  return raw.map((item) => {
+    const row = asRecord(item);
+    const roleRaw = row.signature_role ?? row.signatureRole;
+    return {
+      sheet_name: String(row.sheet_name ?? row.sheetName ?? ""),
+      cell: String(row.cell ?? ""),
+      field_key: String(row.field_key ?? row.fieldKey ?? ""),
+      value_type: String(row.value_type ?? row.valueType ?? "string"),
+      signature_role:
+        roleRaw === undefined || roleRaw === null || roleRaw === "" ? null : String(roleRaw),
+    };
+  });
+}
+
+function fillRulesFromBody(body: unknown): FieldFillRuleWrite[] {
+  const rec = asRecord(body);
+  const raw = Array.isArray(body) ? body : rec.rules;
+  if (!Array.isArray(raw)) throw new Error("rules array required");
+  return raw.map((item) => {
+    const row = asRecord(item);
+    return {
+      field_key: String(row.field_key ?? row.fieldKey ?? ""),
+      required: row.required === undefined ? 0 : Number(row.required),
+      pattern: row.pattern == null || row.pattern === "" ? null : String(row.pattern),
+      min_num: row.min_num ?? row.minNum ?? null,
+      max_num: row.max_num ?? row.maxNum ?? null,
+      default_generator:
+        row.default_generator ?? row.defaultGenerator
+          ? String(row.default_generator ?? row.defaultGenerator)
+          : null,
+      default_literal:
+        row.default_literal ?? row.defaultLiteral
+          ? String(row.default_literal ?? row.defaultLiteral)
+          : null,
+    };
+  });
+}
+
+function fieldValuesFromBody(body: unknown): Record<string, string | number | boolean | null> {
+  const rec = asRecord(body);
+  const raw = pick(body, "fieldValues", "field_values");
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
+    return {};
+  }
+  const out: Record<string, string | number | boolean | null> = {};
+  for (const [key, value] of Object.entries(raw as Record<string, unknown>)) {
+    if (value === null) {
+      out[key] = null;
+    } else if (
+      typeof value === "string" ||
+      typeof value === "number" ||
+      typeof value === "boolean"
+    ) {
+      out[key] = value;
+    } else {
+      out[key] = String(value);
+    }
+  }
+  return out;
 }
 
 export async function handleDemoRequest(
@@ -278,12 +357,84 @@ export async function handleDemoRequest(
       if (!pack) return json(404, { error: `spec pack not found: ${packTemplates.id}` });
       return json(200, { templates: await p.listTemplates(packTemplates.id) });
     }
+
     const packDocTypes = match(pathname, "/api/packs/:packId/doc-types");
     if (method === "GET" && packDocTypes) {
       const pack = await p.getSpecPack(packDocTypes.packId);
       if (!pack) return json(404, { error: `spec pack not found: ${packDocTypes.packId}` });
-      return json(200, { docTypes: await p.listDocTypesByPack(packDocTypes.packId) });
+      const docTypes = await p.listDocTypes(packDocTypes.packId);
+      const byId = new Map(docTypes.map((dt) => [dt.doc_type_id, dt]));
+      const enriched = [];
+      for (const dt of docTypes) {
+        const templates = await p.listTemplatesByDocType(dt.doc_type_id);
+        enriched.push({
+          ...dt,
+          parent_name: dt.parent_doc_type_id
+            ? (byId.get(dt.parent_doc_type_id)?.name ?? null)
+            : null,
+          template_count: templates.length,
+        });
+      }
+      return json(200, { docTypes: enriched });
     }
+
+    if (method === "POST" && pathname === "/api/doc-types") {
+      const packId = requireStr(req.body, "packId", "pack_id");
+      if (!(await p.getSpecPack(packId))) return json(404, { error: `spec pack not found: ${packId}` });
+      const parentRaw = pick(req.body, "parentDocTypeId", "parent_doc_type_id");
+      const docType = await p.createDocType({
+        packId,
+        name: requireStr(req.body, "name"),
+        parentDocTypeId:
+          parentRaw === undefined || parentRaw === null || parentRaw === ""
+            ? null
+            : String(parentRaw),
+      });
+      return json(200, { docType });
+    }
+
+    const docTypeFieldDefs = match(pathname, "/api/doc-types/:id/field-defs");
+    if (docTypeFieldDefs) {
+      const docType = await p.getDocType(docTypeFieldDefs.id);
+      if (!docType) return json(404, { error: `doc type not found: ${docTypeFieldDefs.id}` });
+      if (method === "GET") {
+        return json(200, { fieldDefs: await p.listFieldDefs(docTypeFieldDefs.id) });
+      }
+      if (method === "PUT") {
+        return json(200, {
+          fieldDefs: await p.saveFieldDefs(docTypeFieldDefs.id, fieldDefsFromBody(req.body)),
+        });
+      }
+    }
+
+    const docTypeFillRules = match(pathname, "/api/doc-types/:id/fill-rules");
+    if (docTypeFillRules) {
+      const docType = await p.getDocType(docTypeFillRules.id);
+      if (!docType) return json(404, { error: `doc type not found: ${docTypeFillRules.id}` });
+      if (method === "GET") {
+        return json(200, { rules: await session.ledger().listFieldFillRules(docTypeFillRules.id) });
+      }
+      if (method === "PUT") {
+        return json(200, {
+          rules: await session.ledger().saveFieldFillRules(
+            docTypeFillRules.id,
+            fillRulesFromBody(req.body),
+          ),
+        });
+      }
+    }
+
+    const docTypeOne = match(pathname, "/api/doc-types/:id");
+    if (docTypeOne) {
+      if (method === "PATCH") {
+        const name = requireStr(req.body, "name");
+        return json(200, { docType: await p.updateDocType(docTypeOne.id, name) });
+      }
+      if (method === "DELETE") {
+        return json(200, { docType: await p.deleteDocType(docTypeOne.id) });
+      }
+    }
+
     const groupKeys = match(pathname, "/api/packs/:id/group-keys");
     if (method === "POST" && groupKeys) {
       const raw = pick(req.body, "groupKeys", "group_keys") ?? [];
@@ -316,56 +467,20 @@ export async function handleDemoRequest(
     if (method === "POST" && pathname === "/api/templates") {
       const packId = requireStr(req.body, "packId", "pack_id");
       if (!(await p.getSpecPack(packId))) return json(404, { error: `spec pack not found: ${packId}` });
-      const docTypeId = str(req.body, "docTypeId", "doc_type_id");
       const template = await p.createTemplate({
         packId,
         name: str(req.body, "name") ?? "空包模板",
         pageImageUri: str(req.body, "pageImageUri", "page_image_uri"),
-        docTypeId,
+        docTypeId: str(req.body, "docTypeId", "doc_type_id"),
       });
       return json(200, { template });
-    }
-
-    if (method === "POST" && pathname === "/api/doc-types") {
-      const packId = requireStr(req.body, "packId", "pack_id");
-      if (!(await p.getSpecPack(packId))) return json(404, { error: `spec pack not found: ${packId}` });
-      const parentDocTypeId = str(req.body, "parentDocTypeId", "parent_doc_type_id");
-      const docType = await p.createDocType({
-        packId,
-        name: requireStr(req.body, "name"),
-        parentDocTypeId: parentDocTypeId ?? null,
-      });
-      return json(200, { docType });
-    }
-
-    const docTypeFieldDefs = match(pathname, "/api/doc-types/:id/field-defs");
-    if (docTypeFieldDefs) {
-      if (method === "GET") {
-        return json(200, { defs: await p.listFieldDefs(docTypeFieldDefs.id) });
-      }
-      if (method === "PUT") {
-        return json(200, {
-          defs: await p.saveFieldDefs(docTypeFieldDefs.id, fieldDefsFromBody(req.body)),
-        });
-      }
-    }
-
-    const docTypeOne = match(pathname, "/api/doc-types/:id");
-    if (docTypeOne) {
-      if (method === "PATCH") {
-        const name = requireStr(req.body, "name");
-        return json(200, { docType: await p.updateDocType(docTypeOne.id, name) });
-      }
-      if (method === "DELETE") {
-        return json(200, { docType: await p.deleteDocType(docTypeOne.id) });
-      }
     }
 
     const effectiveBoxes = match(pathname, "/api/templates/:id/effective-boxes");
     if (method === "GET" && effectiveBoxes) {
       const template = await p.getTemplate(effectiveBoxes.id);
       if (!template) return json(404, { error: `template not found: ${effectiveBoxes.id}` });
-      return json(200, { boxes: await p.getEffectiveBoxes(effectiveBoxes.id) });
+      return json(200, { boxes: await p.listEffectiveBoxes(effectiveBoxes.id) });
     }
 
     const boxes = match(pathname, "/api/templates/:id/boxes");
@@ -375,6 +490,41 @@ export async function handleDemoRequest(
       if (method === "GET") return json(200, { boxes: await p.listFieldBoxes(boxes.id) });
       if (method === "PUT") {
         return json(200, { boxes: await p.saveFieldBoxes(boxes.id, boxesFromBody(req.body)) });
+      }
+    }
+
+    const excelTemplate = match(pathname, "/api/templates/:id/excel-template");
+    if (method === "POST" && excelTemplate) {
+      const mp = req.multipart;
+      if (!mp?.file) throw new Error("multipart file field required");
+      const sheetRaw = mp.fields.excel_sheet_name ?? mp.fields.excelSheetName;
+      const template = await session.uploadExcelTemplate(
+        excelTemplate.id,
+        mp.file,
+        sheetRaw ? String(sheetRaw) : undefined,
+      );
+      return json(200, { template });
+    }
+
+    const excelMappings = match(pathname, "/api/templates/:id/excel-mappings");
+    if (excelMappings) {
+      const template = await p.getTemplate(excelMappings.id);
+      if (!template) return json(404, { error: `template not found: ${excelMappings.id}` });
+      if (template.layout_kind !== "excel") {
+        return json(400, { error: `template ${excelMappings.id} layout_kind must be excel` });
+      }
+      if (method === "GET") {
+        return json(200, {
+          mappings: await session.ledger().listExcelCellMappings(excelMappings.id),
+        });
+      }
+      if (method === "PUT") {
+        return json(200, {
+          mappings: await session.ledger().saveExcelCellMappings(
+            excelMappings.id,
+            excelMappingsFromBody(req.body),
+          ),
+        });
       }
     }
 
@@ -461,16 +611,11 @@ export async function handleDemoRequest(
       const mp = req.multipart;
       if (!mp?.file) throw new Error("multipart file field required");
       const fields = mp.fields;
-      const doc_type_id = fields.doc_type_id ?? fields.docTypeId;
-      const template_id = fields.template_id ?? fields.templateId;
-      if (!doc_type_id && !template_id) {
-        throw new UploadValidationError("doc_type_id or template_id required");
-      }
       const result = await session.openUploadJob({
         projectId: fields.project_id ?? fields.projectId,
         packId: fields.pack_id ?? fields.packId,
-        template_id,
-        doc_type_id,
+        template_id: fields.template_id ?? fields.templateId,
+        doc_type_id: fields.doc_type_id ?? fields.docTypeId,
         fileName: mp.file.fileName,
         mime: mp.file.mime,
         bytes: mp.file.bytes,
@@ -567,6 +712,43 @@ export async function handleDemoRequest(
       const jobId = query.get("jobId") ?? query.get("job_id") ?? undefined;
       return json(200, { proposals: await p.listPending(jobId ?? undefined) });
     }
+
+    const generateDoc = match(pathname, "/api/projects/:projectId/documents/generate");
+    if (method === "POST" && generateDoc) {
+      const docPipeline = session.getDocumentPipeline();
+      const artifact = await docPipeline.generateArtifact({
+        projectId: generateDoc.projectId,
+        docTypeId: requireStr(req.body, "docTypeId", "doc_type_id"),
+        templateId: str(req.body, "templateId", "template_id"),
+        fieldValues: fieldValuesFromBody(req.body),
+        traceId: str(req.body, "traceId", "trace_id"),
+      });
+      return json(200, { artifact });
+    }
+
+    const uploadDoc = match(pathname, "/api/projects/:projectId/documents/:artifactId/upload");
+    if (method === "POST" && uploadDoc) {
+      const artifact = await session.ledger().getDocumentArtifact(uploadDoc.artifactId);
+      if (!artifact || artifact.project_id !== uploadDoc.projectId) {
+        return json(404, { error: `artifact not found: ${uploadDoc.artifactId}` });
+      }
+      const result = await session.getDocumentPipeline().uploadArtifact(uploadDoc.artifactId);
+      return json(200, result);
+    }
+
+    if (method === "GET" && pathname === "/api/pending/signatures") {
+      const tasks = await session.getDocumentPipeline().listPendingSignatures();
+      return json(200, { tasks });
+    }
+
+    const confirmSignature = match(pathname, "/api/signature-tasks/:id/confirm");
+    if (method === "POST" && confirmSignature) {
+      const signerName = requireStr(req.body, "signerName", "signer_name");
+      const result = await session
+        .getDocumentPipeline()
+        .confirmSignatureTask(confirmSignature.id, signerName);
+      return json(200, result);
+    }
     const confirmProposal = match(pathname, "/api/proposals/:id/confirm");
     if (method === "POST" && confirmProposal) {
       return json(200, await p.confirmProposal(confirmProposal.id));
@@ -590,6 +772,35 @@ export async function handleDemoRequest(
 
     if (method === "POST" && pathname === "/adapter/pending-mount") {
       return json(200, mockPendingMount());
+    }
+
+    if (method === "POST" && pathname === "/adapter/documents/upload") {
+      const mp = req.multipart;
+      if (!mp?.file) throw new Error("multipart file field required");
+      const fields = mp.fields;
+      const projectId = fields.project_id ?? fields.projectId;
+      const docTypeId = fields.doc_type_id ?? fields.docTypeId;
+      const traceId = fields.trace_id ?? fields.traceId;
+      if (!projectId || !docTypeId || !traceId) {
+        throw new Error("project_id, doc_type_id, and trace_id are required");
+      }
+      let metadata: unknown = undefined;
+      const metadataRaw = fields.metadata ?? fields.metadata_json;
+      if (metadataRaw) {
+        try {
+          metadata = JSON.parse(String(metadataRaw));
+        } catch {
+          metadata = metadataRaw;
+        }
+      }
+      const result = uploadDocument({
+        projectId: String(projectId),
+        docTypeId: String(docTypeId),
+        buffer: mp.file.bytes,
+        metadata,
+        traceId: String(traceId),
+      });
+      return json(200, result);
     }
 
     const dict = match(pathname, "/api/dict/:dictType");

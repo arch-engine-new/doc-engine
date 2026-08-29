@@ -1,0 +1,87 @@
+openapi: 3.0.3
+info:
+  title: Core Engine Adapter (mock)
+  version: 0.1.0
+  description: Mock pending-mount for C4. Writes without receipt_id must fail and not persist.
+paths:
+  /adapter/pending-mount:
+    post:
+      summary: Request a pending mount receipt
+      operationId: pendingMount
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+      responses:
+        "200":
+          description: Pending receipt issued
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdapterReceipt"
+  /adapter/documents/upload:
+    post:
+      summary: Upload a generated document to the mock 资料云
+      operationId: uploadDocument
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - project_id
+                - doc_type_id
+                - file
+                - trace_id
+              properties:
+                project_id:
+                  type: string
+                doc_type_id:
+                  type: string
+                trace_id:
+                  type: string
+                metadata:
+                  type: string
+                  description: JSON metadata snapshot
+                file:
+                  type: string
+                  format: binary
+      responses:
+        "200":
+          description: Upload accepted with receipt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UploadDocumentResult"
+components:
+  schemas:
+    AdapterReceipt:
+      type: object
+      required:
+        - receipt_id
+        - status
+      properties:
+        receipt_id:
+          type: string
+          minLength: 1
+        status:
+          type: string
+    UploadDocumentResult:
+      type: object
+      required:
+        - receipt_id
+        - document_id
+        - status
+      properties:
+        receipt_id:
+          type: string
+          minLength: 1
+        document_id:
+          type: string
+          minLength: 1
+        status:
+          type: string

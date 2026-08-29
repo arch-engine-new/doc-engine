@@ -106,8 +106,14 @@ export {
   commitAdapterWrite,
   listCommittedAdapterWrites,
   resetAdapterWrites,
+  uploadDocument,
 } from "./adapter/mock.js";
-export type { AdapterReceipt, CommittedAdapterWrite } from "./adapter/mock.js";
+export type {
+  AdapterReceipt,
+  CommittedAdapterWrite,
+  UploadDocumentInput,
+  UploadDocumentResult,
+} from "./adapter/mock.js";
 
 export {
   CHECK_WORDING_FIXTURE,
@@ -176,6 +182,13 @@ export type {
 } from "./excel/effective-mappings.js";
 export { ExcelFillService } from "./excel/fill-service.js";
 export type { ExcelFillInput, ExcelFillTemplate } from "./excel/fill-service.js";
+
+export { DocumentPipeline } from "./pipeline/document-pipeline.js";
+export type {
+  ConfirmSignatureResult,
+  GenerateArtifactInput,
+  UploadArtifactResult,
+} from "./pipeline/document-pipeline.js";
 
 export {
   MAX_UPLOAD_BYTES,

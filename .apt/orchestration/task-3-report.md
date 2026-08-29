@@ -1,50 +1,59 @@
-# Task 3 Report — DocType HTTP API + Adapter Tests
+# Task 3 Report — DocumentPipeline + Adapter mock + HTTP
 
 ## Status
-DONE
+**Completed**
 
-## What was implemented
+## Summary
+Implemented Excel document generation pipeline with mock adapter upload, signature task workflow, and REST/adapter HTTP routes. End-to-end integration test covers AC-4, AC-5, AC-7.
 
-### `job-pipeline.ts`
-- Public DocType/FieldDef API: `listDocTypesByPack`, `createDocType`, `updateDocType`, `deleteDocType`, `listFieldDefs`, `saveFieldDefs`.
-- `getEffectiveBoxes(templateId)` — ancestor FieldDef ∪ template FieldBox merge for HTTP preview.
-- `openUploadJob` requires `doc_type_id` or `template_id` (`UploadValidationError` → 400).
+## Changes
 
-### `handle-request.ts`
-- `GET /api/packs/:packId/doc-types` → `{ docTypes }`
-- `POST /api/doc-types` `{ packId, name, parentDocTypeId? }` → `{ docType }`
-- `PATCH /api/doc-types/:id` `{ name? }` → `{ docType }`
-- `DELETE /api/doc-types/:id` → `{ docType }` (409 via `LedgerConflictError` when children/templates/jobs)
-- `GET /api/doc-types/:id/field-defs` → `{ defs }`
-- `PUT /api/doc-types/:id/field-defs` `{ defs: [...] }` → `{ defs }`
-- `GET /api/templates/:id/effective-boxes` → `{ boxes }` (inherited flag)
-- `POST /api/jobs/upload` multipart accepts `doc_type_id` / `docTypeId`; 400 if neither doc_type nor template
-- `LedgerConflictError` → 409, `UploadValidationError` → 400 (existing `errorStatus`)
+### `packages/core-engine/src/adapter/mock.ts`
+- Added `uploadDocument(input)` returning `{ receipt_id, document_id, status }`
+- Uses `commitAdapterWrite`; persists upload payload for audit
 
-### `http-adapter.test.ts`
-- DocType CRUD + field-defs round-trip + delete-with-children 409
-- AC-2: child template `effective-boxes` returns 3 keys (`编号`, `日期A`, `特殊批号`)
-- AC-3: upload with `doc_type_id` binds child type; extraction `fields_json` has inherited + extension keys
-- Existing upload tests updated for required doc/template binding
+### `packages/core-engine/src/pipeline/document-pipeline.ts` (new)
+- `generateArtifact` — resolve excel template, `ExcelFillService.fill`, save xlsx to BlobStore, insert `DocumentArtifact`, audit `document_generated`
+- `uploadArtifact` — mock `uploadDocument`, insert Receipt (`payload_json.artifact_id`), update artifact `status=uploaded`, audit `document_uploaded`, auto `createSignatureTasks`
+- `createSignatureTasks` — from mappings with `signature_role`
+- `confirmSignatureTask` — Receipt + task `signed`, audit `signature_confirmed`
 
-### `upload-ocr.test.ts`
-- Regression: `baseInput` supplies `doc_type_id` for pipeline upload gate
+### `packages/core-engine/src/http/session.ts`
+- `ledger()`, `getDocumentPipeline()`, `uploadExcelTemplate()` wiring with shared MemoryBlobStore
 
-## Verify output
+### `packages/core-engine/src/http/handle-request.ts`
+- `POST /api/templates/:id/excel-template` (multipart)
+- `GET/PUT /api/templates/:id/excel-mappings`
+- `GET/PUT /api/doc-types/:id/fill-rules`
+- `POST /api/projects/:projectId/documents/generate`
+- `POST /api/projects/:projectId/documents/:artifactId/upload`
+- `GET /api/pending/signatures`
+- `POST /api/signature-tasks/:id/confirm`
+- `POST /adapter/documents/upload`
 
+### `docs/schema/generated/adapter-openapi.yaml`
+- Added `POST /adapter/documents/upload` + `UploadDocumentResult` schema
+
+### Tests
+- `http-adapter.test.ts` — full excel flow with concrete fixture xlsx
+- `adapter-mock.test.ts` — uploadDocument + OpenAPI path assertion
+
+### `packages/core-engine/src/index.ts`
+- Exported `DocumentPipeline`, `uploadDocument`, related types
+
+## Verify
+```bash
+npm test -w core-engine -- http-adapter   # 27 passed
+npm test -w core-engine                   # 92 passed, 4 skipped
 ```
-npm test -w core-engine -- http-adapter
-# 30 passed
 
-npm test -w core-engine
-# 89 passed | 4 skipped
-```
+## Acceptance
+| AC | Result |
+|----|--------|
+| AC-4 mock upload + Receipt | uploadArtifact creates Receipt with `payload_json.artifact_id` |
+| AC-5 pending signatures + confirm | `GET /api/pending/signatures`, `POST confirm` → signed + Receipt |
+| AC-7 trace events | `document_generated`, `document_uploaded`, `signature_confirmed` on trace |
 
-## Files changed
-- `packages/core-engine/src/pipeline/job-pipeline.ts`
-- `packages/core-engine/src/http/handle-request.ts`
-- `packages/core-engine/test/http-adapter.test.ts`
-- `packages/core-engine/test/upload-ocr.test.ts`
-
-## Concerns
-None. Vue pages unchanged (Task 4).
+## Notes
+- Artifact-only Receipts use `job_id=""`; artifact linkage via `payload_json`
+- Task 4 seed (混凝土演示数据) not included — per scope boundary
