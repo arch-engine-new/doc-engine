@@ -2,7 +2,7 @@
 
 > **Spec:** `docs/superpowers/specs/2026-08-29-doc-type-field-inheritance-design.md`
 > **Command:** `/plan-from-spec`
-> **Status:** draft
+> **Status:** approved
 > **projectType:** component
 
 **Goal:** 在冻结 9 页内引入 DocType + FieldDef 字段继承，抽取按「类型基字段 ∪ 模板扩展框」合并投影。
