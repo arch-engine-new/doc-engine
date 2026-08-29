@@ -76,6 +76,9 @@ CREATE TABLE IF NOT EXISTS t_template (
   doc_type_id VARCHAR(64) NOT NULL DEFAULT '',
   name VARCHAR(128) NOT NULL,
   page_image_uri VARCHAR(512) NULL,
+  layout_kind VARCHAR(16) NOT NULL DEFAULT 'raster',
+  excel_template_uri VARCHAR(512) NULL,
+  excel_sheet_name VARCHAR(128) NULL,
   created_at TEXT NOT NULL,
   updated_at TEXT NOT NULL,
   creator VARCHAR(64) NOT NULL DEFAULT 'system',
@@ -85,6 +88,103 @@ CREATE TABLE IF NOT EXISTS t_template (
 CREATE UNIQUE INDEX IF NOT EXISTS uk_t_template_template_id ON t_template(template_id);
 CREATE INDEX IF NOT EXISTS idx_t_template_pack_id ON t_template(pack_id);
 CREATE INDEX IF NOT EXISTS idx_t_template_doc_type_id ON t_template(doc_type_id);
+
+CREATE TABLE IF NOT EXISTS t_excel_cell_mapping (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  mapping_id VARCHAR(64) NOT NULL,
+  template_id VARCHAR(64) NOT NULL,
+  sheet_name VARCHAR(128) NOT NULL,
+  cell VARCHAR(16) NOT NULL,
+  field_key VARCHAR(64) NOT NULL,
+  value_type VARCHAR(32) NOT NULL,
+  signature_role VARCHAR(64) NULL,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL,
+  creator VARCHAR(64) NOT NULL DEFAULT 'system',
+  updater VARCHAR(64) NOT NULL DEFAULT 'system',
+  deleted INTEGER NOT NULL DEFAULT 0
+);
+CREATE UNIQUE INDEX IF NOT EXISTS uk_t_excel_cell_mapping_mapping_id ON t_excel_cell_mapping(mapping_id);
+CREATE INDEX IF NOT EXISTS idx_t_excel_cell_mapping_template_id ON t_excel_cell_mapping(template_id);
+CREATE UNIQUE INDEX IF NOT EXISTS uk_t_excel_cell_mapping_template_sheet_cell ON t_excel_cell_mapping(template_id, sheet_name, cell);
+
+CREATE TABLE IF NOT EXISTS t_field_fill_rule (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  doc_type_id VARCHAR(64) NOT NULL,
+  field_key VARCHAR(64) NOT NULL,
+  required INTEGER NOT NULL DEFAULT 0,
+  pattern VARCHAR(256) NULL,
+  min_num TEXT NULL,
+  max_num TEXT NULL,
+  default_generator VARCHAR(32) NULL,
+  default_literal TEXT NULL,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL,
+  creator VARCHAR(64) NOT NULL DEFAULT 'system',
+  updater VARCHAR(64) NOT NULL DEFAULT 'system',
+  deleted INTEGER NOT NULL DEFAULT 0
+);
+CREATE INDEX IF NOT EXISTS idx_t_field_fill_rule_doc_type_id ON t_field_fill_rule(doc_type_id);
+CREATE UNIQUE INDEX IF NOT EXISTS uk_t_field_fill_rule_doc_type_field ON t_field_fill_rule(doc_type_id, field_key);
+
+CREATE TABLE IF NOT EXISTS t_document_artifact (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  artifact_id VARCHAR(64) NOT NULL,
+  project_id VARCHAR(64) NOT NULL,
+  doc_type_id VARCHAR(64) NOT NULL,
+  template_id VARCHAR(64) NOT NULL,
+  file_uri VARCHAR(512) NOT NULL,
+  adapter_document_id VARCHAR(64) NULL,
+  status VARCHAR(32) NOT NULL,
+  trace_id VARCHAR(64) NOT NULL,
+  receipt_id VARCHAR(64) NULL,
+  metadata_json TEXT NULL,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL,
+  creator VARCHAR(64) NOT NULL DEFAULT 'system',
+  updater VARCHAR(64) NOT NULL DEFAULT 'system',
+  deleted INTEGER NOT NULL DEFAULT 0
+);
+CREATE UNIQUE INDEX IF NOT EXISTS uk_t_document_artifact_artifact_id ON t_document_artifact(artifact_id);
+CREATE INDEX IF NOT EXISTS idx_t_document_artifact_project_id ON t_document_artifact(project_id);
+CREATE INDEX IF NOT EXISTS idx_t_document_artifact_doc_type_id ON t_document_artifact(doc_type_id);
+CREATE INDEX IF NOT EXISTS idx_t_document_artifact_trace_id ON t_document_artifact(trace_id);
+
+CREATE TABLE IF NOT EXISTS t_signature_task (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  task_id VARCHAR(64) NOT NULL,
+  artifact_id VARCHAR(64) NOT NULL,
+  role VARCHAR(64) NOT NULL,
+  assignee_label VARCHAR(128) NULL,
+  status VARCHAR(32) NOT NULL,
+  signer_name VARCHAR(128) NULL,
+  trace_id VARCHAR(64) NOT NULL,
+  receipt_id VARCHAR(64) NULL,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL,
+  creator VARCHAR(64) NOT NULL DEFAULT 'system',
+  updater VARCHAR(64) NOT NULL DEFAULT 'system',
+  deleted INTEGER NOT NULL DEFAULT 0
+);
+CREATE UNIQUE INDEX IF NOT EXISTS uk_t_signature_task_task_id ON t_signature_task(task_id);
+CREATE INDEX IF NOT EXISTS idx_t_signature_task_artifact_id ON t_signature_task(artifact_id);
+CREATE INDEX IF NOT EXISTS idx_t_signature_task_trace_id ON t_signature_task(trace_id);
+
+CREATE TABLE IF NOT EXISTS t_completeness_rule (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  rule_id VARCHAR(64) NOT NULL,
+  pack_id VARCHAR(64) NOT NULL,
+  doc_type_id VARCHAR(64) NOT NULL,
+  label VARCHAR(128) NOT NULL,
+  required INTEGER NOT NULL DEFAULT 0,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL,
+  creator VARCHAR(64) NOT NULL DEFAULT 'system',
+  updater VARCHAR(64) NOT NULL DEFAULT 'system',
+  deleted INTEGER NOT NULL DEFAULT 0
+);
+CREATE UNIQUE INDEX IF NOT EXISTS uk_t_completeness_rule_rule_id ON t_completeness_rule(rule_id);
+CREATE INDEX IF NOT EXISTS idx_t_completeness_rule_pack_id ON t_completeness_rule(pack_id);
 
 CREATE TABLE IF NOT EXISTS t_field_box (
   id INTEGER PRIMARY KEY AUTOINCREMENT,

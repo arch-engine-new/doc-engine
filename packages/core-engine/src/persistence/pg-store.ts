@@ -10,13 +10,17 @@ import { newId, nowIso } from "../ids.js";
 import type {
   AuditEventRow,
   ClauseRow,
+  CompletenessRuleRow,
   ConversationMessageRow,
   ConversationThreadRow,
   DocTypeRow,
+  DocumentArtifactRow,
   DocumentRow,
+  ExcelCellMappingRow,
   ExtractionRow,
   FieldBoxRow,
   FieldDefRow,
+  FieldFillRuleRow,
   FindingRow,
   JobRow,
   ProjectRow,
@@ -25,6 +29,7 @@ import type {
   RuleFixtureRow,
   RuleRow,
   RuleVersionRow,
+  SignatureTaskRow,
   SpecPackRow,
   StandardDocRow,
   StandardEdgeRow,
@@ -34,8 +39,6 @@ import type {
 } from "../types.js";
 import { LedgerConflictError } from "../pipeline/job-pipeline.js";
 import {
-  DOC_TYPE_CHILD_ID,
-  DOC_TYPE_PARENT_ID,
   EMPTY_PACK_NAME,
   EMPTY_PACK_VERSION,
   PACK_ID,
@@ -46,11 +49,17 @@ import {
   RULE_R2_ID,
   RULE_R2_VERSION_ID,
   SEED_PACK_PROJECT_ID,
-  seedDemoDocTypes,
+  DOC_TYPE_CHILD_ID,
+  DOC_TYPE_PARENT_ID,
 } from "../pipeline/seed.js";
 import type { LedgerStore } from "./ledger.js";
 import { LEDGER_TABLES } from "./migrate.js";
-import type { FieldBoxWrite, FieldDefWrite } from "./store.js";
+import type {
+  CompletenessRuleWrite,
+  ExcelCellMappingWrite,
+  FieldBoxWrite,
+  FieldFillRuleWrite,
+} from "./store.js";
 
 const SYSTEM = "system";
 
@@ -89,6 +98,13 @@ function asCoord(value: unknown): string {
     return value;
   }
   return String(value);
+}
+
+function asDecimalOrNull(value: unknown): string | null {
+  if (value == null) {
+    return null;
+  }
+  return asCoord(value);
 }
 
 function mapAudit(row: QueryResultRow): {
@@ -138,7 +154,8 @@ function mapDocType(row: QueryResultRow): DocTypeRow {
     ...mapAudit(row),
     doc_type_id: String(row.doc_type_id),
     pack_id: String(row.pack_id),
-    parent_doc_type_id: row.parent_doc_type_id == null ? null : String(row.parent_doc_type_id),
+    parent_doc_type_id:
+      row.parent_doc_type_id == null ? null : String(row.parent_doc_type_id),
     name: String(row.name),
   };
 }
@@ -158,9 +175,80 @@ function mapTemplate(row: QueryResultRow): TemplateRow {
     ...mapAudit(row),
     template_id: String(row.template_id),
     pack_id: String(row.pack_id),
-    doc_type_id: String(row.doc_type_id),
+    doc_type_id: row.doc_type_id == null ? "" : String(row.doc_type_id),
     name: String(row.name),
     page_image_uri: row.page_image_uri == null ? null : String(row.page_image_uri),
+    layout_kind: row.layout_kind == null ? "raster" : String(row.layout_kind),
+    excel_template_uri: row.excel_template_uri == null ? null : String(row.excel_template_uri),
+    excel_sheet_name: row.excel_sheet_name == null ? null : String(row.excel_sheet_name),
+  };
+}
+
+function mapExcelCellMapping(row: QueryResultRow): ExcelCellMappingRow {
+  return {
+    ...mapAudit(row),
+    mapping_id: String(row.mapping_id),
+    template_id: String(row.template_id),
+    sheet_name: String(row.sheet_name),
+    cell: String(row.cell),
+    field_key: String(row.field_key),
+    value_type: String(row.value_type),
+    signature_role: row.signature_role == null ? null : String(row.signature_role),
+  };
+}
+
+function mapFieldFillRule(row: QueryResultRow): FieldFillRuleRow {
+  return {
+    ...mapAudit(row),
+    doc_type_id: String(row.doc_type_id),
+    field_key: String(row.field_key),
+    required: asNumber(row.required),
+    pattern: row.pattern == null ? null : String(row.pattern),
+    min_num: asDecimalOrNull(row.min_num),
+    max_num: asDecimalOrNull(row.max_num),
+    default_generator: row.default_generator == null ? null : String(row.default_generator),
+    default_literal: row.default_literal == null ? null : String(row.default_literal),
+  };
+}
+
+function mapDocumentArtifact(row: QueryResultRow): DocumentArtifactRow {
+  return {
+    ...mapAudit(row),
+    artifact_id: String(row.artifact_id),
+    project_id: String(row.project_id),
+    doc_type_id: String(row.doc_type_id),
+    template_id: String(row.template_id),
+    file_uri: String(row.file_uri),
+    adapter_document_id: row.adapter_document_id == null ? null : String(row.adapter_document_id),
+    status: String(row.status),
+    trace_id: String(row.trace_id),
+    receipt_id: row.receipt_id == null ? null : String(row.receipt_id),
+    metadata_json: asJsonStringOrNull(row.metadata_json),
+  };
+}
+
+function mapSignatureTask(row: QueryResultRow): SignatureTaskRow {
+  return {
+    ...mapAudit(row),
+    task_id: String(row.task_id),
+    artifact_id: String(row.artifact_id),
+    role: String(row.role),
+    assignee_label: row.assignee_label == null ? null : String(row.assignee_label),
+    status: String(row.status),
+    signer_name: row.signer_name == null ? null : String(row.signer_name),
+    trace_id: String(row.trace_id),
+    receipt_id: row.receipt_id == null ? null : String(row.receipt_id),
+  };
+}
+
+function mapCompletenessRule(row: QueryResultRow): CompletenessRuleRow {
+  return {
+    ...mapAudit(row),
+    rule_id: String(row.rule_id),
+    pack_id: String(row.pack_id),
+    doc_type_id: String(row.doc_type_id),
+    label: String(row.label),
+    required: asNumber(row.required),
   };
 }
 
@@ -386,7 +474,28 @@ export class PostgresLedger implements LedgerStore {
 
   async seedPublishedRules(): Promise<void> {
     await this.ensureEmptySpecPack();
-    await this.seedDemoDocTypes();
+    const existing = await this.getDocType(DOC_TYPE_PARENT_ID);
+    if (!existing) {
+      await this.insertDocType({
+        pack_id: PACK_ID,
+        doc_type_id: DOC_TYPE_PARENT_ID,
+        name: "夹具父类型",
+        parent_doc_type_id: null,
+      });
+      await this.saveFieldDefs(DOC_TYPE_PARENT_ID, [
+        { field_key: "编号", value_type: "string", required: 0 },
+        { field_key: "日期A", value_type: "date", required: 0 },
+      ]);
+      await this.insertDocType({
+        pack_id: PACK_ID,
+        doc_type_id: DOC_TYPE_CHILD_ID,
+        name: "夹具子类型",
+        parent_doc_type_id: DOC_TYPE_PARENT_ID,
+      });
+      await this.saveFieldDefs(DOC_TYPE_CHILD_ID, [
+        { field_key: "特殊批号", value_type: "string", required: 0 },
+      ]);
+    }
     const ts = nowIso();
     await this.q(
       `INSERT INTO t_rule
@@ -429,213 +538,6 @@ export class PostgresLedger implements LedgerStore {
        ON CONFLICT DO NOTHING`,
       [PACK_ID, SEED_PACK_PROJECT_ID, EMPTY_PACK_NAME, EMPTY_PACK_VERSION, ts, ts, SYSTEM, SYSTEM],
     );
-  }
-
-  private async seedDemoDocTypes(): Promise<void> {
-    seedDemoDocTypes(this, {
-      packId: PACK_ID,
-      parentId: DOC_TYPE_PARENT_ID,
-      childId: DOC_TYPE_CHILD_ID,
-    });
-  }
-
-  async insertDocType(input: {
-    pack_id: string;
-    name: string;
-    parent_doc_type_id?: string | null;
-    doc_type_id?: string;
-  }): Promise<DocTypeRow> {
-    const pack = await this.getSpecPack(input.pack_id);
-    if (!pack) {
-      throw new Error(`spec pack not found: ${input.pack_id}`);
-    }
-    if (input.parent_doc_type_id) {
-      const parent = await this.getDocType(input.parent_doc_type_id);
-      if (!parent) {
-        throw new Error(`parent doc type not found: ${input.parent_doc_type_id}`);
-      }
-      if (parent.pack_id !== input.pack_id) {
-        throw new Error(`parent doc type ${input.parent_doc_type_id} does not belong to pack ${input.pack_id}`);
-      }
-    }
-    const ts = nowIso();
-    const doc_type_id = input.doc_type_id ?? newId("dt");
-    const result = await this.q(
-      `INSERT INTO t_doc_type
-        (doc_type_id, pack_id, parent_doc_type_id, name, created_at, updated_at, creator, updater, deleted)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 0)
-       RETURNING *`,
-      [
-        doc_type_id,
-        input.pack_id,
-        input.parent_doc_type_id ?? null,
-        input.name,
-        ts,
-        ts,
-        SYSTEM,
-        SYSTEM,
-      ],
-    );
-    return mapDocType(result.rows[0]);
-  }
-
-  async getDocType(docTypeId: string): Promise<DocTypeRow | null> {
-    const result = await this.q(`SELECT * FROM t_doc_type WHERE doc_type_id = $1 AND deleted = 0`, [
-      docTypeId,
-    ]);
-    const row = result.rows[0];
-    return row ? mapDocType(row) : null;
-  }
-
-  async updateDocType(docTypeId: string, name: string): Promise<DocTypeRow> {
-    const docType = await this.getDocType(docTypeId);
-    if (!docType) {
-      throw new Error(`doc type not found: ${docTypeId}`);
-    }
-    const ts = nowIso();
-    await this.q(
-      `UPDATE t_doc_type SET name = $1, updated_at = $2, updater = $3 WHERE doc_type_id = $4 AND deleted = 0`,
-      [name, ts, SYSTEM, docTypeId],
-    );
-    return (await this.getDocType(docTypeId))!;
-  }
-
-  async softDeleteDocType(docTypeId: string): Promise<DocTypeRow> {
-    const docType = await this.getDocType(docTypeId);
-    if (!docType) {
-      throw new Error(`doc type not found: ${docTypeId}`);
-    }
-    const childResult = await this.q(
-      `SELECT COUNT(*)::int AS cnt FROM t_doc_type WHERE parent_doc_type_id = $1 AND deleted = 0`,
-      [docTypeId],
-    );
-    if (Number(childResult.rows[0]?.cnt ?? 0) > 0) {
-      throw new LedgerConflictError("doc type has children");
-    }
-    const templateResult = await this.q(
-      `SELECT COUNT(*)::int AS cnt FROM t_template WHERE doc_type_id = $1 AND deleted = 0`,
-      [docTypeId],
-    );
-    if (Number(templateResult.rows[0]?.cnt ?? 0) > 0) {
-      throw new LedgerConflictError("doc type has templates");
-    }
-    const jobResult = await this.q(
-      `SELECT COUNT(*)::int AS cnt FROM t_job WHERE doc_type_id = $1 AND deleted = 0`,
-      [docTypeId],
-    );
-    if (Number(jobResult.rows[0]?.cnt ?? 0) > 0) {
-      throw new LedgerConflictError("doc type has jobs");
-    }
-    const ts = nowIso();
-    const result = await this.q(
-      `UPDATE t_doc_type SET deleted = 1, updated_at = $1, updater = $2
-       WHERE doc_type_id = $3 AND deleted = 0
-       RETURNING *`,
-      [ts, SYSTEM, docTypeId],
-    );
-    return mapDocType(result.rows[0]);
-  }
-
-  async listDocTypesByPack(packId: string): Promise<DocTypeRow[]> {
-    const result = await this.q(
-      `SELECT * FROM t_doc_type WHERE pack_id = $1 AND deleted = 0 ORDER BY id ASC`,
-      [packId],
-    );
-    return result.rows.map(mapDocType);
-  }
-
-  async getDocTypeAncestors(docTypeId: string): Promise<DocTypeRow[]> {
-    const chain: DocTypeRow[] = [];
-    let current = await this.getDocType(docTypeId);
-    while (current) {
-      chain.unshift(current);
-      if (!current.parent_doc_type_id) {
-        break;
-      }
-      current = await this.getDocType(current.parent_doc_type_id);
-      if (chain.length > 32) {
-        throw new Error(`doc type ancestor cycle detected at ${docTypeId}`);
-      }
-    }
-    return chain;
-  }
-
-  async listFieldDefs(docTypeId: string): Promise<FieldDefRow[]> {
-    const result = await this.q(
-      `SELECT * FROM t_field_def WHERE doc_type_id = $1 AND deleted = 0 ORDER BY id ASC`,
-      [docTypeId],
-    );
-    return result.rows.map(mapFieldDef);
-  }
-
-  async saveFieldDefs(docTypeId: string, defs: FieldDefWrite[]): Promise<FieldDefRow[]> {
-    const docType = await this.getDocType(docTypeId);
-    if (!docType) {
-      throw new Error(`doc type not found: ${docTypeId}`);
-    }
-    const ts = nowIso();
-    const upsert = `INSERT INTO t_field_def
-        (doc_type_id, field_key, value_type, required, created_at, updated_at, creator, updater, deleted)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 0)
-       ON CONFLICT (doc_type_id, field_key) DO UPDATE SET
-         value_type = EXCLUDED.value_type,
-         required = EXCLUDED.required,
-         updated_at = EXCLUDED.updated_at,
-         updater = EXCLUDED.updater,
-         deleted = 0`;
-    if (this.db instanceof pg.Pool) {
-      const client = await this.db.connect();
-      try {
-        await client.query("BEGIN");
-        await client.query(
-          `UPDATE t_field_def SET deleted = 1, updated_at = $1, updater = $2 WHERE doc_type_id = $3`,
-          [ts, SYSTEM, docTypeId],
-        );
-        for (const def of defs) {
-          await client.query(upsert, [
-            docTypeId,
-            def.field_key,
-            def.value_type,
-            def.required ?? 0,
-            ts,
-            ts,
-            SYSTEM,
-            SYSTEM,
-          ]);
-        }
-        await client.query("COMMIT");
-      } catch (err) {
-        await client.query("ROLLBACK");
-        throw err;
-      } finally {
-        client.release();
-      }
-    } else {
-      try {
-        await this.db.query("BEGIN");
-        await this.db.query(
-          `UPDATE t_field_def SET deleted = 1, updated_at = $1, updater = $2 WHERE doc_type_id = $3`,
-          [ts, SYSTEM, docTypeId],
-        );
-        for (const def of defs) {
-          await this.db.query(upsert, [
-            docTypeId,
-            def.field_key,
-            def.value_type,
-            def.required ?? 0,
-            ts,
-            ts,
-            SYSTEM,
-            SYSTEM,
-          ]);
-        }
-        await this.db.query("COMMIT");
-      } catch (err) {
-        await this.db.query("ROLLBACK");
-        throw err;
-      }
-    }
-    return this.listFieldDefs(docTypeId);
   }
 
   async insertSpecPack(input: {
@@ -907,36 +809,277 @@ export class PostgresLedger implements LedgerStore {
     return result.rows.map(mapStandardEdge);
   }
 
-  async insertTemplate(input: {
+  async getDocType(docTypeId: string): Promise<DocTypeRow | null> {
+    const result = await this.q(
+      `SELECT * FROM t_doc_type WHERE doc_type_id = $1 AND deleted = 0`,
+      [docTypeId],
+    );
+    return result.rows[0] ? mapDocType(result.rows[0]) : null;
+  }
+
+  async listDocTypesByPack(packId: string): Promise<DocTypeRow[]> {
+    const result = await this.q(
+      `SELECT * FROM t_doc_type WHERE pack_id = $1 AND deleted = 0 ORDER BY id ASC`,
+      [packId],
+    );
+    return result.rows.map(mapDocType);
+  }
+
+  async insertDocType(input: {
     pack_id: string;
-    doc_type_id: string;
     name: string;
-    page_image_uri?: string | null;
-  }): Promise<TemplateRow> {
-    const docType = await this.getDocType(input.doc_type_id);
-    if (!docType) {
-      throw new Error(`doc type not found: ${input.doc_type_id}`);
+    parent_doc_type_id?: string | null;
+    doc_type_id?: string;
+  }): Promise<DocTypeRow> {
+    const ts = nowIso();
+    const doc_type_id = input.doc_type_id ?? newId("dt");
+    if (input.parent_doc_type_id) {
+      const parent = await this.getDocType(input.parent_doc_type_id);
+      if (!parent || parent.pack_id !== input.pack_id) {
+        throw new Error("parent doc type does not belong to pack");
+      }
     }
-    if (docType.pack_id !== input.pack_id) {
-      throw new Error(`doc type ${input.doc_type_id} does not belong to pack ${input.pack_id}`);
+    const result = await this.q(
+      `INSERT INTO t_doc_type
+        (doc_type_id, pack_id, parent_doc_type_id, name, created_at, updated_at, creator, updater, deleted)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 0)
+       RETURNING *`,
+      [
+        doc_type_id,
+        input.pack_id,
+        input.parent_doc_type_id ?? null,
+        input.name,
+        ts,
+        ts,
+        SYSTEM,
+        SYSTEM,
+      ],
+    );
+    return mapDocType(result.rows[0]);
+  }
+
+  async updateDocTypeName(docTypeId: string, name: string): Promise<DocTypeRow> {
+    const ts = nowIso();
+    await this.q(
+      `UPDATE t_doc_type SET name = $1, updated_at = $2, updater = $3 WHERE doc_type_id = $4 AND deleted = 0`,
+      [name, ts, SYSTEM, docTypeId],
+    );
+    const row = await this.getDocType(docTypeId);
+    if (!row) throw new Error(`doc type not found: ${docTypeId}`);
+    return row;
+  }
+
+  async countChildDocTypes(docTypeId: string): Promise<number> {
+    const result = await this.q(
+      `SELECT COUNT(*)::int AS c FROM t_doc_type WHERE parent_doc_type_id = $1 AND deleted = 0`,
+      [docTypeId],
+    );
+    return Number(result.rows[0]?.c ?? 0);
+  }
+
+  async countTemplatesByDocType(docTypeId: string): Promise<number> {
+    const result = await this.q(
+      `SELECT COUNT(*)::int AS c FROM t_template WHERE doc_type_id = $1 AND deleted = 0`,
+      [docTypeId],
+    );
+    return Number(result.rows[0]?.c ?? 0);
+  }
+
+  async countJobsByDocType(docTypeId: string): Promise<number> {
+    const result = await this.q(
+      `SELECT COUNT(*)::int AS c FROM t_job WHERE doc_type_id = $1 AND deleted = 0`,
+      [docTypeId],
+    );
+    return Number(result.rows[0]?.c ?? 0);
+  }
+
+  async softDeleteDocType(docTypeId: string): Promise<DocTypeRow> {
+    if ((await this.countChildDocTypes(docTypeId)) > 0) {
+      throw new LedgerConflictError("doc type has child types");
+    }
+    if ((await this.countTemplatesByDocType(docTypeId)) > 0) {
+      throw new LedgerConflictError("doc type has templates");
+    }
+    if ((await this.countJobsByDocType(docTypeId)) > 0) {
+      throw new LedgerConflictError("doc type has jobs");
     }
     const ts = nowIso();
+    await this.q(
+      `UPDATE t_doc_type SET deleted = 1, updated_at = $1, updater = $2 WHERE doc_type_id = $3 AND deleted = 0`,
+      [ts, SYSTEM, docTypeId],
+    );
+    const result = await this.q(`SELECT * FROM t_doc_type WHERE doc_type_id = $1`, [docTypeId]);
+    if (!result.rows[0]) throw new Error(`doc type not found: ${docTypeId}`);
+    return mapDocType(result.rows[0]);
+  }
+
+  async listFieldDefs(docTypeId: string): Promise<FieldDefRow[]> {
+    const result = await this.q(
+      `SELECT * FROM t_field_def WHERE doc_type_id = $1 AND deleted = 0 ORDER BY id ASC`,
+      [docTypeId],
+    );
+    return result.rows.map(mapFieldDef);
+  }
+
+  async saveFieldDefs(
+    docTypeId: string,
+    defs: Array<{ field_key: string; value_type: string; required?: number }>,
+  ): Promise<FieldDefRow[]> {
+    const ts = nowIso();
+    if (this.db instanceof pg.Pool) {
+      const client = await this.db.connect();
+      try {
+        await client.query("BEGIN");
+        await client.query(
+          `UPDATE t_field_def SET deleted = 1, updated_at = $1, updater = $2 WHERE doc_type_id = $3`,
+          [ts, SYSTEM, docTypeId],
+        );
+        for (const def of defs) {
+          await client.query(
+            `INSERT INTO t_field_def
+              (doc_type_id, field_key, value_type, required, created_at, updated_at, creator, updater, deleted)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 0)`,
+            [
+              docTypeId,
+              def.field_key,
+              def.value_type,
+              def.required ?? 0,
+              ts,
+              ts,
+              SYSTEM,
+              SYSTEM,
+            ],
+          );
+        }
+        await client.query("COMMIT");
+      } catch (err) {
+        await client.query("ROLLBACK");
+        throw err;
+      } finally {
+        client.release();
+      }
+    } else {
+      await this.q(
+        `UPDATE t_field_def SET deleted = 1, updated_at = $1, updater = $2 WHERE doc_type_id = $3`,
+        [ts, SYSTEM, docTypeId],
+      );
+      for (const def of defs) {
+        await this.q(
+          `INSERT INTO t_field_def
+            (doc_type_id, field_key, value_type, required, created_at, updated_at, creator, updater, deleted)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 0)`,
+          [
+            docTypeId,
+            def.field_key,
+            def.value_type,
+            def.required ?? 0,
+            ts,
+            ts,
+            SYSTEM,
+            SYSTEM,
+          ],
+        );
+      }
+    }
+    return this.listFieldDefs(docTypeId);
+  }
+
+  async listDocTypeAncestorChain(docTypeId: string): Promise<DocTypeRow[]> {
+    const chain: DocTypeRow[] = [];
+    let current: DocTypeRow | null = await this.getDocType(docTypeId);
+    while (current) {
+      chain.unshift(current);
+      current = current.parent_doc_type_id
+        ? await this.getDocType(current.parent_doc_type_id)
+        : null;
+    }
+    return chain;
+  }
+
+  async listEffectiveFieldDefs(docTypeId: string): Promise<FieldDefRow[]> {
+    const byKey = new Map<string, FieldDefRow>();
+    for (const dt of await this.listDocTypeAncestorChain(docTypeId)) {
+      for (const def of await this.listFieldDefs(dt.doc_type_id)) {
+        byKey.set(def.field_key, def);
+      }
+    }
+    return [...byKey.values()].sort((a, b) => a.field_key.localeCompare(b.field_key, "zh"));
+  }
+
+  async listTemplatesByDocType(docTypeId: string): Promise<TemplateRow[]> {
+    const result = await this.q(
+      `SELECT * FROM t_template WHERE doc_type_id = $1 AND deleted = 0 ORDER BY id ASC`,
+      [docTypeId],
+    );
+    return result.rows.map(mapTemplate);
+  }
+
+  async insertTemplate(input: {
+    pack_id: string;
+    name: string;
+    page_image_uri?: string | null;
+    doc_type_id?: string;
+    layout_kind?: string;
+    excel_template_uri?: string | null;
+    excel_sheet_name?: string | null;
+  }): Promise<TemplateRow> {
+    const ts = nowIso();
     const template_id = newId("tpl");
+    const doc_type_id = input.doc_type_id ?? "";
+    if (doc_type_id) {
+      const dt = await this.getDocType(doc_type_id);
+      if (!dt || dt.pack_id !== input.pack_id) {
+        throw new Error("doc type does not belong to pack");
+      }
+    }
     const result = await this.q(
       `INSERT INTO t_template
-        (template_id, pack_id, doc_type_id, name, page_image_uri, created_at, updated_at, creator, updater, deleted)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 0)
+        (template_id, pack_id, doc_type_id, name, page_image_uri, layout_kind, excel_template_uri, excel_sheet_name, created_at, updated_at, creator, updater, deleted)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, 0)
        RETURNING *`,
       [
         template_id,
         input.pack_id,
-        input.doc_type_id,
+        doc_type_id,
         input.name,
         input.page_image_uri ?? null,
+        input.layout_kind ?? "raster",
+        input.excel_template_uri ?? null,
+        input.excel_sheet_name ?? null,
         ts,
         ts,
         SYSTEM,
         SYSTEM,
+      ],
+    );
+    return mapTemplate(result.rows[0]);
+  }
+
+  async updateTemplateExcel(
+    templateId: string,
+    input: {
+      layout_kind?: string;
+      excel_template_uri?: string | null;
+      excel_sheet_name?: string | null;
+    },
+  ): Promise<TemplateRow> {
+    const ts = nowIso();
+    const current = await this.getTemplate(templateId);
+    if (!current) {
+      throw new Error("template not found");
+    }
+    const result = await this.q(
+      `UPDATE t_template
+       SET layout_kind = $1, excel_template_uri = $2, excel_sheet_name = $3, updated_at = $4, updater = $5
+       WHERE template_id = $6 AND deleted = 0
+       RETURNING *`,
+      [
+        input.layout_kind ?? current.layout_kind ?? "raster",
+        input.excel_template_uri !== undefined ? input.excel_template_uri : current.excel_template_uri,
+        input.excel_sheet_name !== undefined ? input.excel_sheet_name : current.excel_sheet_name,
+        ts,
+        SYSTEM,
+        templateId,
       ],
     );
     return mapTemplate(result.rows[0]);
@@ -1284,15 +1427,6 @@ export class PostgresLedger implements LedgerStore {
     template_id?: string | null;
     doc_type_id?: string | null;
   }): Promise<JobRow> {
-    if (input.doc_type_id && input.pack_id) {
-      const docType = await this.getDocType(input.doc_type_id);
-      if (!docType) {
-        throw new Error(`doc type not found: ${input.doc_type_id}`);
-      }
-      if (docType.pack_id !== input.pack_id) {
-        throw new Error(`doc type ${input.doc_type_id} does not belong to pack ${input.pack_id}`);
-      }
-    }
     const ts = nowIso();
     const job_id = newId("job");
     const trace_id = newId("trc");
@@ -1676,5 +1810,452 @@ export class PostgresLedger implements LedgerStore {
       [traceId, step],
     );
     return result.rows.map(mapConversationMessage);
+  }
+
+  async listExcelCellMappings(templateId: string): Promise<ExcelCellMappingRow[]> {
+    const result = await this.q(
+      `SELECT * FROM t_excel_cell_mapping WHERE template_id = $1 AND deleted = 0 ORDER BY id ASC`,
+      [templateId],
+    );
+    return result.rows.map(mapExcelCellMapping);
+  }
+
+  async getExcelCellMapping(mappingId: string): Promise<ExcelCellMappingRow | null> {
+    const result = await this.q(
+      `SELECT * FROM t_excel_cell_mapping WHERE mapping_id = $1 AND deleted = 0`,
+      [mappingId],
+    );
+    const row = result.rows[0];
+    return row ? mapExcelCellMapping(row) : null;
+  }
+
+  async saveExcelCellMappings(
+    templateId: string,
+    mappings: ExcelCellMappingWrite[],
+  ): Promise<ExcelCellMappingRow[]> {
+    const ts = nowIso();
+    if (this.db instanceof pg.Pool) {
+      const client = await this.db.connect();
+      try {
+        await client.query("BEGIN");
+        await client.query(
+          `UPDATE t_excel_cell_mapping SET deleted = 1, updated_at = $1, updater = $2 WHERE template_id = $3`,
+          [ts, SYSTEM, templateId],
+        );
+        for (const mapping of mappings) {
+          await client.query(
+            `INSERT INTO t_excel_cell_mapping
+              (mapping_id, template_id, sheet_name, cell, field_key, value_type, signature_role, created_at, updated_at, creator, updater, deleted)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, 0)`,
+            [
+              newId("map"),
+              templateId,
+              mapping.sheet_name,
+              mapping.cell,
+              mapping.field_key,
+              mapping.value_type,
+              mapping.signature_role ?? null,
+              ts,
+              ts,
+              SYSTEM,
+              SYSTEM,
+            ],
+          );
+        }
+        await client.query("COMMIT");
+      } catch (error) {
+        await client.query("ROLLBACK");
+        throw error;
+      } finally {
+        client.release();
+      }
+    } else {
+      await this.q(
+        `UPDATE t_excel_cell_mapping SET deleted = 1, updated_at = $1, updater = $2 WHERE template_id = $3`,
+        [ts, SYSTEM, templateId],
+      );
+      for (const mapping of mappings) {
+        await this.q(
+          `INSERT INTO t_excel_cell_mapping
+            (mapping_id, template_id, sheet_name, cell, field_key, value_type, signature_role, created_at, updated_at, creator, updater, deleted)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, 0)`,
+          [
+            newId("map"),
+            templateId,
+            mapping.sheet_name,
+            mapping.cell,
+            mapping.field_key,
+            mapping.value_type,
+            mapping.signature_role ?? null,
+            ts,
+            ts,
+            SYSTEM,
+            SYSTEM,
+          ],
+        );
+      }
+    }
+    return this.listExcelCellMappings(templateId);
+  }
+
+  async softDeleteExcelCellMapping(mappingId: string): Promise<ExcelCellMappingRow> {
+    const ts = nowIso();
+    await this.q(
+      `UPDATE t_excel_cell_mapping SET deleted = 1, updated_at = $1, updater = $2 WHERE mapping_id = $3 AND deleted = 0`,
+      [ts, SYSTEM, mappingId],
+    );
+    const result = await this.q(`SELECT * FROM t_excel_cell_mapping WHERE mapping_id = $1`, [mappingId]);
+    return mapExcelCellMapping(result.rows[0]);
+  }
+
+  async listFieldFillRules(docTypeId: string): Promise<FieldFillRuleRow[]> {
+    const result = await this.q(
+      `SELECT * FROM t_field_fill_rule WHERE doc_type_id = $1 AND deleted = 0 ORDER BY id ASC`,
+      [docTypeId],
+    );
+    return result.rows.map(mapFieldFillRule);
+  }
+
+  async getFieldFillRule(docTypeId: string, fieldKey: string): Promise<FieldFillRuleRow | null> {
+    const result = await this.q(
+      `SELECT * FROM t_field_fill_rule WHERE doc_type_id = $1 AND field_key = $2 AND deleted = 0`,
+      [docTypeId, fieldKey],
+    );
+    const row = result.rows[0];
+    return row ? mapFieldFillRule(row) : null;
+  }
+
+  async saveFieldFillRules(docTypeId: string, rules: FieldFillRuleWrite[]): Promise<FieldFillRuleRow[]> {
+    const ts = nowIso();
+    if (this.db instanceof pg.Pool) {
+      const client = await this.db.connect();
+      try {
+        await client.query("BEGIN");
+        await client.query(
+          `UPDATE t_field_fill_rule SET deleted = 1, updated_at = $1, updater = $2 WHERE doc_type_id = $3`,
+          [ts, SYSTEM, docTypeId],
+        );
+        for (const rule of rules) {
+          await client.query(
+            `INSERT INTO t_field_fill_rule
+              (doc_type_id, field_key, required, pattern, min_num, max_num, default_generator, default_literal, created_at, updated_at, creator, updater, deleted)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, 0)`,
+            [
+              docTypeId,
+              rule.field_key,
+              rule.required ?? 0,
+              rule.pattern ?? null,
+              rule.min_num ?? null,
+              rule.max_num ?? null,
+              rule.default_generator ?? null,
+              rule.default_literal ?? null,
+              ts,
+              ts,
+              SYSTEM,
+              SYSTEM,
+            ],
+          );
+        }
+        await client.query("COMMIT");
+      } catch (error) {
+        await client.query("ROLLBACK");
+        throw error;
+      } finally {
+        client.release();
+      }
+    } else {
+      await this.q(
+        `UPDATE t_field_fill_rule SET deleted = 1, updated_at = $1, updater = $2 WHERE doc_type_id = $3`,
+        [ts, SYSTEM, docTypeId],
+      );
+      for (const rule of rules) {
+        await this.q(
+          `INSERT INTO t_field_fill_rule
+            (doc_type_id, field_key, required, pattern, min_num, max_num, default_generator, default_literal, created_at, updated_at, creator, updater, deleted)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, 0)`,
+          [
+            docTypeId,
+            rule.field_key,
+            rule.required ?? 0,
+            rule.pattern ?? null,
+            rule.min_num ?? null,
+            rule.max_num ?? null,
+            rule.default_generator ?? null,
+            rule.default_literal ?? null,
+            ts,
+            ts,
+            SYSTEM,
+            SYSTEM,
+          ],
+        );
+      }
+    }
+    return this.listFieldFillRules(docTypeId);
+  }
+
+  async insertDocumentArtifact(input: {
+    project_id: string;
+    doc_type_id: string;
+    template_id: string;
+    file_uri: string;
+    status?: string;
+    trace_id: string;
+    metadata?: unknown;
+    artifact_id?: string;
+  }): Promise<DocumentArtifactRow> {
+    const ts = nowIso();
+    const artifact_id = input.artifact_id ?? newId("art");
+    const result = await this.q(
+      `INSERT INTO t_document_artifact
+        (artifact_id, project_id, doc_type_id, template_id, file_uri, adapter_document_id, status, trace_id, receipt_id, metadata_json, created_at, updated_at, creator, updater, deleted)
+       VALUES ($1, $2, $3, $4, $5, NULL, $6, $7, NULL, $8, $9, $10, $11, $12, 0)
+       RETURNING *`,
+      [
+        artifact_id,
+        input.project_id,
+        input.doc_type_id,
+        input.template_id,
+        input.file_uri,
+        input.status ?? "generated",
+        input.trace_id,
+        input.metadata === undefined ? null : JSON.stringify(input.metadata),
+        ts,
+        ts,
+        SYSTEM,
+        SYSTEM,
+      ],
+    );
+    return mapDocumentArtifact(result.rows[0]);
+  }
+
+  async getDocumentArtifact(artifactId: string): Promise<DocumentArtifactRow | null> {
+    const result = await this.q(
+      `SELECT * FROM t_document_artifact WHERE artifact_id = $1 AND deleted = 0`,
+      [artifactId],
+    );
+    const row = result.rows[0];
+    return row ? mapDocumentArtifact(row) : null;
+  }
+
+  async listDocumentArtifacts(projectId: string, docTypeId?: string): Promise<DocumentArtifactRow[]> {
+    const result = docTypeId
+      ? await this.q(
+          `SELECT * FROM t_document_artifact WHERE project_id = $1 AND doc_type_id = $2 AND deleted = 0 ORDER BY id ASC`,
+          [projectId, docTypeId],
+        )
+      : await this.q(
+          `SELECT * FROM t_document_artifact WHERE project_id = $1 AND deleted = 0 ORDER BY id ASC`,
+          [projectId],
+        );
+    return result.rows.map(mapDocumentArtifact);
+  }
+
+  async updateDocumentArtifact(
+    artifactId: string,
+    input: {
+      adapter_document_id?: string | null;
+      status?: string;
+      receipt_id?: string | null;
+      metadata?: unknown;
+    },
+  ): Promise<DocumentArtifactRow> {
+    const ts = nowIso();
+    const current = await this.getDocumentArtifact(artifactId);
+    if (!current) {
+      throw new Error("artifact not found");
+    }
+    const result = await this.q(
+      `UPDATE t_document_artifact
+       SET adapter_document_id = $1, status = $2, receipt_id = $3, metadata_json = $4, updated_at = $5, updater = $6
+       WHERE artifact_id = $7 AND deleted = 0
+       RETURNING *`,
+      [
+        input.adapter_document_id !== undefined ? input.adapter_document_id : current.adapter_document_id,
+        input.status ?? current.status,
+        input.receipt_id !== undefined ? input.receipt_id : current.receipt_id,
+        input.metadata === undefined ? current.metadata_json : JSON.stringify(input.metadata),
+        ts,
+        SYSTEM,
+        artifactId,
+      ],
+    );
+    return mapDocumentArtifact(result.rows[0]);
+  }
+
+  async insertSignatureTask(input: {
+    artifact_id: string;
+    role: string;
+    assignee_label?: string | null;
+    status?: string;
+    trace_id: string;
+    task_id?: string;
+  }): Promise<SignatureTaskRow> {
+    const ts = nowIso();
+    const task_id = input.task_id ?? newId("sig");
+    const result = await this.q(
+      `INSERT INTO t_signature_task
+        (task_id, artifact_id, role, assignee_label, status, signer_name, trace_id, receipt_id, created_at, updated_at, creator, updater, deleted)
+       VALUES ($1, $2, $3, $4, $5, NULL, $6, NULL, $7, $8, $9, $10, 0)
+       RETURNING *`,
+      [
+        task_id,
+        input.artifact_id,
+        input.role,
+        input.assignee_label ?? null,
+        input.status ?? "pending",
+        input.trace_id,
+        ts,
+        ts,
+        SYSTEM,
+        SYSTEM,
+      ],
+    );
+    return mapSignatureTask(result.rows[0]);
+  }
+
+  async getSignatureTask(taskId: string): Promise<SignatureTaskRow | null> {
+    const result = await this.q(
+      `SELECT * FROM t_signature_task WHERE task_id = $1 AND deleted = 0`,
+      [taskId],
+    );
+    const row = result.rows[0];
+    return row ? mapSignatureTask(row) : null;
+  }
+
+  async listSignatureTasksByArtifact(artifactId: string): Promise<SignatureTaskRow[]> {
+    const result = await this.q(
+      `SELECT * FROM t_signature_task WHERE artifact_id = $1 AND deleted = 0 ORDER BY id ASC`,
+      [artifactId],
+    );
+    return result.rows.map(mapSignatureTask);
+  }
+
+  async listPendingSignatureTasks(): Promise<SignatureTaskRow[]> {
+    const result = await this.q(
+      `SELECT * FROM t_signature_task WHERE status = 'pending' AND deleted = 0 ORDER BY id ASC`,
+    );
+    return result.rows.map(mapSignatureTask);
+  }
+
+  async updateSignatureTask(
+    taskId: string,
+    input: {
+      status?: string;
+      signer_name?: string | null;
+      receipt_id?: string | null;
+    },
+  ): Promise<SignatureTaskRow> {
+    const ts = nowIso();
+    const current = await this.getSignatureTask(taskId);
+    if (!current) {
+      throw new Error("signature task not found");
+    }
+    const result = await this.q(
+      `UPDATE t_signature_task
+       SET status = $1, signer_name = $2, receipt_id = $3, updated_at = $4, updater = $5
+       WHERE task_id = $6 AND deleted = 0
+       RETURNING *`,
+      [
+        input.status ?? current.status,
+        input.signer_name !== undefined ? input.signer_name : current.signer_name,
+        input.receipt_id !== undefined ? input.receipt_id : current.receipt_id,
+        ts,
+        SYSTEM,
+        taskId,
+      ],
+    );
+    return mapSignatureTask(result.rows[0]);
+  }
+
+  async listCompletenessRules(packId: string): Promise<CompletenessRuleRow[]> {
+    const result = await this.q(
+      `SELECT * FROM t_completeness_rule WHERE pack_id = $1 AND deleted = 0 ORDER BY id ASC`,
+      [packId],
+    );
+    return result.rows.map(mapCompletenessRule);
+  }
+
+  async getCompletenessRule(ruleId: string): Promise<CompletenessRuleRow | null> {
+    const result = await this.q(
+      `SELECT * FROM t_completeness_rule WHERE rule_id = $1 AND deleted = 0`,
+      [ruleId],
+    );
+    const row = result.rows[0];
+    return row ? mapCompletenessRule(row) : null;
+  }
+
+  async saveCompletenessRules(
+    packId: string,
+    rules: CompletenessRuleWrite[],
+  ): Promise<CompletenessRuleRow[]> {
+    const ts = nowIso();
+    if (this.db instanceof pg.Pool) {
+      const client = await this.db.connect();
+      try {
+        await client.query("BEGIN");
+        await client.query(
+          `UPDATE t_completeness_rule SET deleted = 1, updated_at = $1, updater = $2 WHERE pack_id = $3`,
+          [ts, SYSTEM, packId],
+        );
+        for (const rule of rules) {
+          await client.query(
+            `INSERT INTO t_completeness_rule
+              (rule_id, pack_id, doc_type_id, label, required, created_at, updated_at, creator, updater, deleted)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 0)`,
+            [
+              rule.rule_id ?? newId("cr"),
+              packId,
+              rule.doc_type_id,
+              rule.label,
+              rule.required ?? 0,
+              ts,
+              ts,
+              SYSTEM,
+              SYSTEM,
+            ],
+          );
+        }
+        await client.query("COMMIT");
+      } catch (error) {
+        await client.query("ROLLBACK");
+        throw error;
+      } finally {
+        client.release();
+      }
+    } else {
+      await this.q(
+        `UPDATE t_completeness_rule SET deleted = 1, updated_at = $1, updater = $2 WHERE pack_id = $3`,
+        [ts, SYSTEM, packId],
+      );
+      for (const rule of rules) {
+        await this.q(
+          `INSERT INTO t_completeness_rule
+            (rule_id, pack_id, doc_type_id, label, required, created_at, updated_at, creator, updater, deleted)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 0)`,
+          [
+            rule.rule_id ?? newId("cr"),
+            packId,
+            rule.doc_type_id,
+            rule.label,
+            rule.required ?? 0,
+            ts,
+            ts,
+            SYSTEM,
+            SYSTEM,
+          ],
+        );
+      }
+    }
+    return this.listCompletenessRules(packId);
+  }
+
+  async softDeleteCompletenessRule(ruleId: string): Promise<CompletenessRuleRow> {
+    const ts = nowIso();
+    await this.q(
+      `UPDATE t_completeness_rule SET deleted = 1, updated_at = $1, updater = $2 WHERE rule_id = $3 AND deleted = 0`,
+      [ts, SYSTEM, ruleId],
+    );
+    const result = await this.q(`SELECT * FROM t_completeness_rule WHERE rule_id = $1`, [ruleId]);
+    return mapCompletenessRule(result.rows[0]);
   }
 }

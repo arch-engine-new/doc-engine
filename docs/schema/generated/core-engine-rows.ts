@@ -46,6 +46,62 @@ export interface TemplateRow extends AuditColumns {
   doc_type_id: string;
   name: string;
   page_image_uri: string | null;
+  layout_kind: string;
+  excel_template_uri: string | null;
+  excel_sheet_name: string | null;
+}
+
+export interface ExcelCellMappingRow extends AuditColumns {
+  mapping_id: string;
+  template_id: string;
+  sheet_name: string;
+  cell: string;
+  field_key: string;
+  value_type: string;
+  signature_role: string | null;
+}
+
+export interface FieldFillRuleRow extends AuditColumns {
+  doc_type_id: string;
+  field_key: string;
+  required: number;
+  pattern: string | null;
+  min_num: string | null;
+  max_num: string | null;
+  default_generator: string | null;
+  default_literal: string | null;
+}
+
+export interface DocumentArtifactRow extends AuditColumns {
+  artifact_id: string;
+  project_id: string;
+  doc_type_id: string;
+  template_id: string;
+  file_uri: string;
+  adapter_document_id: string | null;
+  status: string;
+  trace_id: string;
+  receipt_id: string | null;
+  metadata_json: JsonValue | null;
+}
+
+export interface SignatureTaskRow extends AuditColumns {
+  task_id: string;
+  artifact_id: string;
+  role: string;
+  assignee_label: string | null;
+  status: string;
+  signer_name: string | null;
+  trace_id: string;
+  receipt_id: string | null;
+}
+
+export interface CompletenessRuleRow extends AuditColumns {
+  rule_id: string;
+  pack_id: string;
+  doc_type_id: string;
+  label: string;
+  required: number;
 }
 
 export interface FieldBoxRow extends AuditColumns {

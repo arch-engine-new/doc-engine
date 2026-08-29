@@ -8,13 +8,17 @@
 import type {
   AuditEventRow,
   ClauseRow,
+  CompletenessRuleRow,
   ConversationMessageRow,
   ConversationThreadRow,
   DocTypeRow,
+  DocumentArtifactRow,
   DocumentRow,
+  ExcelCellMappingRow,
   ExtractionRow,
   FieldBoxRow,
   FieldDefRow,
+  FieldFillRuleRow,
   FindingRow,
   JobRow,
   ProjectRow,
@@ -23,6 +27,7 @@ import type {
   RuleFixtureRow,
   RuleRow,
   RuleVersionRow,
+  SignatureTaskRow,
   SpecPackRow,
   StandardDocRow,
   StandardEdgeRow,
@@ -31,7 +36,13 @@ import type {
   VolumePreviewRow,
 } from "../types.js";
 import { LEDGER_TABLES } from "./migrate.js";
-import { CoreEngineStore, type FieldBoxWrite, type FieldDefWrite } from "./store.js";
+import {
+  CoreEngineStore,
+  type CompletenessRuleWrite,
+  type ExcelCellMappingWrite,
+  type FieldBoxWrite,
+  type FieldFillRuleWrite,
+} from "./store.js";
 
 export interface LedgerStore {
   close(): Promise<void>;
@@ -86,25 +97,40 @@ export interface LedgerStore {
     kind: string;
   }): Promise<StandardEdgeRow>;
   listStandardEdges(fromClauseId?: string): Promise<StandardEdgeRow[]>;
+  getDocType(docTypeId: string): Promise<DocTypeRow | null>;
+  listDocTypesByPack(packId: string): Promise<DocTypeRow[]>;
   insertDocType(input: {
     pack_id: string;
     name: string;
     parent_doc_type_id?: string | null;
     doc_type_id?: string;
   }): Promise<DocTypeRow>;
-  getDocType(docTypeId: string): Promise<DocTypeRow | null>;
-  updateDocType(docTypeId: string, name: string): Promise<DocTypeRow>;
+  updateDocTypeName(docTypeId: string, name: string): Promise<DocTypeRow>;
   softDeleteDocType(docTypeId: string): Promise<DocTypeRow>;
-  listDocTypesByPack(packId: string): Promise<DocTypeRow[]>;
-  getDocTypeAncestors(docTypeId: string): Promise<DocTypeRow[]>;
   listFieldDefs(docTypeId: string): Promise<FieldDefRow[]>;
-  saveFieldDefs(docTypeId: string, defs: FieldDefWrite[]): Promise<FieldDefRow[]>;
+  saveFieldDefs(
+    docTypeId: string,
+    defs: Array<{ field_key: string; value_type: string; required?: number }>,
+  ): Promise<FieldDefRow[]>;
+  listEffectiveFieldDefs(docTypeId: string): Promise<FieldDefRow[]>;
+  listTemplatesByDocType(docTypeId: string): Promise<TemplateRow[]>;
   insertTemplate(input: {
     pack_id: string;
-    doc_type_id: string;
     name: string;
     page_image_uri?: string | null;
+    doc_type_id?: string;
+    layout_kind?: string;
+    excel_template_uri?: string | null;
+    excel_sheet_name?: string | null;
   }): Promise<TemplateRow>;
+  updateTemplateExcel(
+    templateId: string,
+    input: {
+      layout_kind?: string;
+      excel_template_uri?: string | null;
+      excel_sheet_name?: string | null;
+    },
+  ): Promise<TemplateRow>;
   saveFieldBoxes(templateId: string, boxes: FieldBoxWrite[]): Promise<FieldBoxRow[]>;
   listFieldBoxes(templateId: string): Promise<FieldBoxRow[]>;
   listPublishedRuleVersions(): Promise<RuleVersionRow[]>;
@@ -214,6 +240,63 @@ export interface LedgerStore {
     body: string;
   }): Promise<ConversationMessageRow>;
   listMessages(traceId: string, step: string): Promise<ConversationMessageRow[]>;
+  listExcelCellMappings(templateId: string): Promise<ExcelCellMappingRow[]>;
+  getExcelCellMapping(mappingId: string): Promise<ExcelCellMappingRow | null>;
+  saveExcelCellMappings(
+    templateId: string,
+    mappings: ExcelCellMappingWrite[],
+  ): Promise<ExcelCellMappingRow[]>;
+  softDeleteExcelCellMapping(mappingId: string): Promise<ExcelCellMappingRow>;
+  listFieldFillRules(docTypeId: string): Promise<FieldFillRuleRow[]>;
+  getFieldFillRule(docTypeId: string, fieldKey: string): Promise<FieldFillRuleRow | null>;
+  saveFieldFillRules(docTypeId: string, rules: FieldFillRuleWrite[]): Promise<FieldFillRuleRow[]>;
+  insertDocumentArtifact(input: {
+    project_id: string;
+    doc_type_id: string;
+    template_id: string;
+    file_uri: string;
+    status?: string;
+    trace_id: string;
+    metadata?: unknown;
+    artifact_id?: string;
+  }): Promise<DocumentArtifactRow>;
+  getDocumentArtifact(artifactId: string): Promise<DocumentArtifactRow | null>;
+  listDocumentArtifacts(projectId: string, docTypeId?: string): Promise<DocumentArtifactRow[]>;
+  updateDocumentArtifact(
+    artifactId: string,
+    input: {
+      adapter_document_id?: string | null;
+      status?: string;
+      receipt_id?: string | null;
+      metadata?: unknown;
+    },
+  ): Promise<DocumentArtifactRow>;
+  insertSignatureTask(input: {
+    artifact_id: string;
+    role: string;
+    assignee_label?: string | null;
+    status?: string;
+    trace_id: string;
+    task_id?: string;
+  }): Promise<SignatureTaskRow>;
+  getSignatureTask(taskId: string): Promise<SignatureTaskRow | null>;
+  listSignatureTasksByArtifact(artifactId: string): Promise<SignatureTaskRow[]>;
+  listPendingSignatureTasks(): Promise<SignatureTaskRow[]>;
+  updateSignatureTask(
+    taskId: string,
+    input: {
+      status?: string;
+      signer_name?: string | null;
+      receipt_id?: string | null;
+    },
+  ): Promise<SignatureTaskRow>;
+  listCompletenessRules(packId: string): Promise<CompletenessRuleRow[]>;
+  getCompletenessRule(ruleId: string): Promise<CompletenessRuleRow | null>;
+  saveCompletenessRules(
+    packId: string,
+    rules: CompletenessRuleWrite[],
+  ): Promise<CompletenessRuleRow[]>;
+  softDeleteCompletenessRule(ruleId: string): Promise<CompletenessRuleRow>;
 }
 
 export class SqliteLedger implements LedgerStore {
@@ -336,6 +419,14 @@ export class SqliteLedger implements LedgerStore {
     return Promise.resolve(this.inner.listStandardEdges(fromClauseId));
   }
 
+  getDocType(docTypeId: string): Promise<DocTypeRow | null> {
+    return Promise.resolve(this.inner.getDocType(docTypeId));
+  }
+
+  listDocTypesByPack(packId: string): Promise<DocTypeRow[]> {
+    return Promise.resolve(this.inner.listDocTypesByPack(packId));
+  }
+
   insertDocType(input: {
     pack_id: string;
     name: string;
@@ -345,41 +436,54 @@ export class SqliteLedger implements LedgerStore {
     return Promise.resolve(this.inner.insertDocType(input));
   }
 
-  getDocType(docTypeId: string): Promise<DocTypeRow | null> {
-    return Promise.resolve(this.inner.getDocType(docTypeId));
-  }
-
-  updateDocType(docTypeId: string, name: string): Promise<DocTypeRow> {
-    return Promise.resolve(this.inner.updateDocType(docTypeId, name));
+  updateDocTypeName(docTypeId: string, name: string): Promise<DocTypeRow> {
+    return Promise.resolve(this.inner.updateDocTypeName(docTypeId, name));
   }
 
   softDeleteDocType(docTypeId: string): Promise<DocTypeRow> {
     return Promise.resolve(this.inner.softDeleteDocType(docTypeId));
   }
 
-  listDocTypesByPack(packId: string): Promise<DocTypeRow[]> {
-    return Promise.resolve(this.inner.listDocTypesByPack(packId));
-  }
-
-  getDocTypeAncestors(docTypeId: string): Promise<DocTypeRow[]> {
-    return Promise.resolve(this.inner.getDocTypeAncestors(docTypeId));
-  }
-
   listFieldDefs(docTypeId: string): Promise<FieldDefRow[]> {
     return Promise.resolve(this.inner.listFieldDefs(docTypeId));
   }
 
-  saveFieldDefs(docTypeId: string, defs: FieldDefWrite[]): Promise<FieldDefRow[]> {
+  saveFieldDefs(
+    docTypeId: string,
+    defs: Array<{ field_key: string; value_type: string; required?: number }>,
+  ): Promise<FieldDefRow[]> {
     return Promise.resolve(this.inner.saveFieldDefs(docTypeId, defs));
+  }
+
+  listEffectiveFieldDefs(docTypeId: string): Promise<FieldDefRow[]> {
+    return Promise.resolve(this.inner.listEffectiveFieldDefs(docTypeId));
+  }
+
+  listTemplatesByDocType(docTypeId: string): Promise<TemplateRow[]> {
+    return Promise.resolve(this.inner.listTemplatesByDocType(docTypeId));
   }
 
   insertTemplate(input: {
     pack_id: string;
-    doc_type_id: string;
     name: string;
     page_image_uri?: string | null;
+    doc_type_id?: string;
+    layout_kind?: string;
+    excel_template_uri?: string | null;
+    excel_sheet_name?: string | null;
   }): Promise<TemplateRow> {
     return Promise.resolve(this.inner.insertTemplate(input));
+  }
+
+  updateTemplateExcel(
+    templateId: string,
+    input: {
+      layout_kind?: string;
+      excel_template_uri?: string | null;
+      excel_sheet_name?: string | null;
+    },
+  ): Promise<TemplateRow> {
+    return Promise.resolve(this.inner.updateTemplateExcel(templateId, input));
   }
 
   saveFieldBoxes(templateId: string, boxes: FieldBoxWrite[]): Promise<FieldBoxRow[]> {
@@ -650,5 +754,122 @@ export class SqliteLedger implements LedgerStore {
 
   listMessages(traceId: string, step: string): Promise<ConversationMessageRow[]> {
     return Promise.resolve(this.inner.listMessages(traceId, step));
+  }
+
+  listExcelCellMappings(templateId: string): Promise<ExcelCellMappingRow[]> {
+    return Promise.resolve(this.inner.listExcelCellMappings(templateId));
+  }
+
+  getExcelCellMapping(mappingId: string): Promise<ExcelCellMappingRow | null> {
+    return Promise.resolve(this.inner.getExcelCellMapping(mappingId));
+  }
+
+  saveExcelCellMappings(
+    templateId: string,
+    mappings: ExcelCellMappingWrite[],
+  ): Promise<ExcelCellMappingRow[]> {
+    return Promise.resolve(this.inner.saveExcelCellMappings(templateId, mappings));
+  }
+
+  softDeleteExcelCellMapping(mappingId: string): Promise<ExcelCellMappingRow> {
+    return Promise.resolve(this.inner.softDeleteExcelCellMapping(mappingId));
+  }
+
+  listFieldFillRules(docTypeId: string): Promise<FieldFillRuleRow[]> {
+    return Promise.resolve(this.inner.listFieldFillRules(docTypeId));
+  }
+
+  getFieldFillRule(docTypeId: string, fieldKey: string): Promise<FieldFillRuleRow | null> {
+    return Promise.resolve(this.inner.getFieldFillRule(docTypeId, fieldKey));
+  }
+
+  saveFieldFillRules(docTypeId: string, rules: FieldFillRuleWrite[]): Promise<FieldFillRuleRow[]> {
+    return Promise.resolve(this.inner.saveFieldFillRules(docTypeId, rules));
+  }
+
+  insertDocumentArtifact(input: {
+    project_id: string;
+    doc_type_id: string;
+    template_id: string;
+    file_uri: string;
+    status?: string;
+    trace_id: string;
+    metadata?: unknown;
+    artifact_id?: string;
+  }): Promise<DocumentArtifactRow> {
+    return Promise.resolve(this.inner.insertDocumentArtifact(input));
+  }
+
+  getDocumentArtifact(artifactId: string): Promise<DocumentArtifactRow | null> {
+    return Promise.resolve(this.inner.getDocumentArtifact(artifactId));
+  }
+
+  listDocumentArtifacts(projectId: string, docTypeId?: string): Promise<DocumentArtifactRow[]> {
+    return Promise.resolve(this.inner.listDocumentArtifacts(projectId, docTypeId));
+  }
+
+  updateDocumentArtifact(
+    artifactId: string,
+    input: {
+      adapter_document_id?: string | null;
+      status?: string;
+      receipt_id?: string | null;
+      metadata?: unknown;
+    },
+  ): Promise<DocumentArtifactRow> {
+    return Promise.resolve(this.inner.updateDocumentArtifact(artifactId, input));
+  }
+
+  insertSignatureTask(input: {
+    artifact_id: string;
+    role: string;
+    assignee_label?: string | null;
+    status?: string;
+    trace_id: string;
+    task_id?: string;
+  }): Promise<SignatureTaskRow> {
+    return Promise.resolve(this.inner.insertSignatureTask(input));
+  }
+
+  getSignatureTask(taskId: string): Promise<SignatureTaskRow | null> {
+    return Promise.resolve(this.inner.getSignatureTask(taskId));
+  }
+
+  listSignatureTasksByArtifact(artifactId: string): Promise<SignatureTaskRow[]> {
+    return Promise.resolve(this.inner.listSignatureTasksByArtifact(artifactId));
+  }
+
+  listPendingSignatureTasks(): Promise<SignatureTaskRow[]> {
+    return Promise.resolve(this.inner.listPendingSignatureTasks());
+  }
+
+  updateSignatureTask(
+    taskId: string,
+    input: {
+      status?: string;
+      signer_name?: string | null;
+      receipt_id?: string | null;
+    },
+  ): Promise<SignatureTaskRow> {
+    return Promise.resolve(this.inner.updateSignatureTask(taskId, input));
+  }
+
+  listCompletenessRules(packId: string): Promise<CompletenessRuleRow[]> {
+    return Promise.resolve(this.inner.listCompletenessRules(packId));
+  }
+
+  getCompletenessRule(ruleId: string): Promise<CompletenessRuleRow | null> {
+    return Promise.resolve(this.inner.getCompletenessRule(ruleId));
+  }
+
+  saveCompletenessRules(
+    packId: string,
+    rules: CompletenessRuleWrite[],
+  ): Promise<CompletenessRuleRow[]> {
+    return Promise.resolve(this.inner.saveCompletenessRules(packId, rules));
+  }
+
+  softDeleteCompletenessRule(ruleId: string): Promise<CompletenessRuleRow> {
+    return Promise.resolve(this.inner.softDeleteCompletenessRule(ruleId));
   }
 }

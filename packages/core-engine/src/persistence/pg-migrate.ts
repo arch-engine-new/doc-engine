@@ -31,6 +31,44 @@ function splitStatements(sql: string): string[] {
     .map((chunk) => `${chunk};`);
 }
 
+async function tableExists(client: pg.Client, table: string): Promise<boolean> {
+  const result = await client.query(`SELECT to_regclass($1) AS reg`, [`public.${table}`]);
+  return result.rows[0]?.reg != null;
+}
+
+/** Add doc_type columns on legacy Postgres ledgers created before DocType slice. */
+async function ensureDocTypeColumns(client: pg.Client): Promise<void> {
+  if (await tableExists(client, "t_template")) {
+    await client.query(
+      `ALTER TABLE t_template ADD COLUMN IF NOT EXISTS doc_type_id VARCHAR(64) NOT NULL DEFAULT ''`,
+    );
+    await client.query(
+      `CREATE INDEX IF NOT EXISTS idx_t_template_doc_type_id ON t_template(doc_type_id)`,
+    );
+  }
+  if (await tableExists(client, "t_job")) {
+    await client.query(
+      `ALTER TABLE t_job ADD COLUMN IF NOT EXISTS doc_type_id VARCHAR(64) NULL`,
+    );
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_t_job_doc_type_id ON t_job(doc_type_id)`);
+  }
+}
+
+/** Add Excel gap-fill columns on legacy Postgres ledgers created before Task 1. */
+async function ensureExcelGapFillColumns(client: pg.Client): Promise<void> {
+  if (await tableExists(client, "t_template")) {
+    await client.query(
+      `ALTER TABLE t_template ADD COLUMN IF NOT EXISTS layout_kind VARCHAR(16) NOT NULL DEFAULT 'raster'`,
+    );
+    await client.query(
+      `ALTER TABLE t_template ADD COLUMN IF NOT EXISTS excel_template_uri VARCHAR(512) NULL`,
+    );
+    await client.query(
+      `ALTER TABLE t_template ADD COLUMN IF NOT EXISTS excel_sheet_name VARCHAR(128) NULL`,
+    );
+  }
+}
+
 /** Apply generated IF NOT EXISTS DDL instead of a hand-written live schema. */
 export async function runPgMigration(databaseUrl: string): Promise<void> {
   const sql = readFileSync(MIGRATION_FILE, "utf-8");
@@ -38,6 +76,9 @@ export async function runPgMigration(databaseUrl: string): Promise<void> {
   const client = new pg.Client({ connectionString: databaseUrl });
   await client.connect();
   try {
+    // Legacy ledgers may lack doc_type_id before new tables/indexes are applied.
+    await ensureDocTypeColumns(client);
+    await ensureExcelGapFillColumns(client);
     for (const statement of statements) {
       await client.query(statement);
     }

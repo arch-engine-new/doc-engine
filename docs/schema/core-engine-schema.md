@@ -8,10 +8,10 @@
 
 ## 变更摘要
 
-- 新建表：`t_project`, `t_spec_pack`, `t_doc_type`, `t_field_def`, `t_template`, `t_field_box`, `t_rule`, `t_rule_version`, `t_rule_fixture`, `t_standard_doc`, `t_standard_version`, `t_clause`, `t_standard_edge`, `t_job`, `t_document`, `t_extraction`, `t_finding`, `t_proposal`, `t_receipt`, `t_volume_preview`, `t_audit_event`, `t_conversation_thread`, `t_conversation_message`
-- 变更表：`t_template` 增 `doc_type_id`；`t_job` 增 `doc_type_id`
+- 新建表：`t_project`, `t_spec_pack`, `t_doc_type`, `t_field_def`, `t_template`, `t_excel_cell_mapping`, `t_field_fill_rule`, `t_document_artifact`, `t_signature_task`, `t_completeness_rule`, `t_field_box`, `t_rule`, `t_rule_version`, `t_rule_fixture`, `t_standard_doc`, `t_standard_version`, `t_clause`, `t_standard_edge`, `t_job`, `t_document`, `t_extraction`, `t_finding`, `t_proposal`, `t_receipt`, `t_volume_preview`, `t_audit_event`, `t_conversation_thread`, `t_conversation_message`
+- 变更表：`t_template` 增 `doc_type_id`、`layout_kind`、`excel_template_uri`、`excel_sheet_name`；`t_job` 增 `doc_type_id`
 - 复用表：`t_agent_graph`, `t_agent_run`, `t_agent_node_execution`, `t_agent_checkpoint`, `t_agent_tool_call`, `t_agent_run_event`, `t_agent_hitl_interrupt`（见 `docs/schema/agent-runtime-schema.md`）
-- 实体处置：`Project/SpecPack/Template/FieldBox/Rule/RuleVersion/StandardDoc/Clause/Job/Document/Extraction/Finding/Proposal/Receipt/VolumePreview/AuditEvent/ConversationThread=create`；`AgentRun/HitlInterrupt=reuse`
+- 实体处置：`Project/SpecPack/DocType/FieldDef/Template/FieldBox/Rule/RuleVersion/StandardDoc/Clause/Job/Document/Extraction/Finding/Proposal/Receipt/VolumePreview/AuditEvent/ConversationThread=create`；`AgentRun/HitlInterrupt=reuse`
 
 SLICE-1 先 apply：`t_project`, `t_job`, `t_document`, `t_extraction`, `t_rule`, `t_rule_version`, `t_finding`, `t_audit_event`, `t_conversation_thread`, `t_conversation_message`。其余随 SLICE-2～6 同一份设计落库，不另开 schema 文件。
 
@@ -67,8 +67,8 @@ SLICE-1 先 apply：`t_project`, `t_job`, `t_document`, `t_extraction`, `t_rule`
 | id | BIGINT | NO | 主键 |
 | doc_type_id | VARCHAR(64) | NO | 对外文档类型标识 |
 | pack_id | VARCHAR(64) | NO | 所属规范包 |
-| parent_doc_type_id | VARCHAR(64) | YES | 父类型（可空，根类型无父） |
-| name | VARCHAR(128) | NO | 类型名 |
+| parent_doc_type_id | VARCHAR(64) | YES | 父类型（可空，支持继承链） |
+| name | VARCHAR(128) | NO | 类型名称 |
 | created_at | DATETIME | NO | 创建时间 |
 | updated_at | DATETIME | NO | 更新时间 |
 | creator | VARCHAR(64) | NO | 创建人 |
@@ -85,9 +85,9 @@ SLICE-1 先 apply：`t_project`, `t_job`, `t_document`, `t_extraction`, `t_rule`
 |--------|------|------|------|
 | id | BIGINT | NO | 主键 |
 | doc_type_id | VARCHAR(64) | NO | 所属文档类型 |
-| field_key | VARCHAR(64) | NO | 字段名，如 编号/日期A |
+| field_key | VARCHAR(64) | NO | 字段名（无坐标） |
 | value_type | VARCHAR(32) | NO | string/date/number |
-| required | TINYINT(1) | NO | 是否必填，默认 0 |
+| required | TINYINT(1) | NO | 是否必填 0/1 |
 | created_at | DATETIME | NO | 创建时间 |
 | updated_at | DATETIME | NO | 更新时间 |
 | creator | VARCHAR(64) | NO | 创建人 |
@@ -105,9 +105,125 @@ SLICE-1 先 apply：`t_project`, `t_job`, `t_document`, `t_extraction`, `t_rule`
 | id | BIGINT | NO | 主键 |
 | template_id | VARCHAR(64) | NO | 对外模板标识 |
 | pack_id | VARCHAR(64) | NO | 所属规范包 |
-| doc_type_id | VARCHAR(64) | NO | 所属文档类型 |
+| doc_type_id | VARCHAR(64) | NO | 绑定文档类型 |
 | name | VARCHAR(128) | NO | 模板名 |
 | page_image_uri | VARCHAR(512) | YES | 页图存储 URI |
+| layout_kind | VARCHAR(16) | NO | 布局模式：`raster` / `excel`，默认 `raster` |
+| excel_template_uri | VARCHAR(512) | YES | Excel 模板 Blob URI |
+| excel_sheet_name | VARCHAR(128) | YES | 默认业务 sheet 名 |
+| created_at | DATETIME | NO | 创建时间 |
+| updated_at | DATETIME | NO | 更新时间 |
+| creator | VARCHAR(64) | NO | 创建人 |
+| updater | VARCHAR(64) | NO | 更新人 |
+| deleted | TINYINT(1) | NO | 逻辑删除 0/1 |
+
+### 表 `t_excel_cell_mapping`
+- 表名：`t_excel_cell_mapping`
+- 处置：create
+- 主键：`id`
+- 索引：`uk_t_excel_cell_mapping_mapping_id` / `idx_t_excel_cell_mapping_template_id` / `uk_t_excel_cell_mapping_template_sheet_cell`
+
+| 字段名 | 类型 | 可空 | 说明 |
+|--------|------|------|------|
+| id | BIGINT | NO | 主键 |
+| mapping_id | VARCHAR(64) | NO | 对外映射标识 |
+| template_id | VARCHAR(64) | NO | 所属模板 |
+| sheet_name | VARCHAR(128) | NO | Sheet 名 |
+| cell | VARCHAR(16) | NO | 单元格地址，如 `B4` |
+| field_key | VARCHAR(64) | NO | 绑定字段 |
+| value_type | VARCHAR(32) | NO | string/text/date/signature |
+| signature_role | VARCHAR(64) | YES | 签字角色 |
+| created_at | DATETIME | NO | 创建时间 |
+| updated_at | DATETIME | NO | 更新时间 |
+| creator | VARCHAR(64) | NO | 创建人 |
+| updater | VARCHAR(64) | NO | 更新人 |
+| deleted | TINYINT(1) | NO | 逻辑删除 0/1 |
+
+### 表 `t_field_fill_rule`
+- 表名：`t_field_fill_rule`
+- 处置：create
+- 主键：`id`
+- 索引：`idx_t_field_fill_rule_doc_type_id` / `uk_t_field_fill_rule_doc_type_field`
+
+| 字段名 | 类型 | 可空 | 说明 |
+|--------|------|------|------|
+| id | BIGINT | NO | 主键 |
+| doc_type_id | VARCHAR(64) | NO | 所属文档类型 |
+| field_key | VARCHAR(64) | NO | 字段名 |
+| required | TINYINT(1) | NO | 是否必填 0/1 |
+| pattern | VARCHAR(256) | YES | 正则校验 |
+| min_num | DECIMAL | YES | 数值下限 |
+| max_num | DECIMAL | YES | 数值上限 |
+| default_generator | VARCHAR(32) | YES | literal/project_field/compliance_sample |
+| default_literal | TEXT | YES | 字面量默认值 |
+| created_at | DATETIME | NO | 创建时间 |
+| updated_at | DATETIME | NO | 更新时间 |
+| creator | VARCHAR(64) | NO | 创建人 |
+| updater | VARCHAR(64) | NO | 更新人 |
+| deleted | TINYINT(1) | NO | 逻辑删除 0/1 |
+
+### 表 `t_document_artifact`
+- 表名：`t_document_artifact`
+- 处置：create
+- 主键：`id`
+- 索引：`uk_t_document_artifact_artifact_id` / `idx_t_document_artifact_project_id` / `idx_t_document_artifact_doc_type_id` / `idx_t_document_artifact_trace_id`
+
+| 字段名 | 类型 | 可空 | 说明 |
+|--------|------|------|------|
+| id | BIGINT | NO | 主键 |
+| artifact_id | VARCHAR(64) | NO | 对外产物标识 |
+| project_id | VARCHAR(64) | NO | 所属项目 |
+| doc_type_id | VARCHAR(64) | NO | 文档类型 |
+| template_id | VARCHAR(64) | NO | 所用模板 |
+| file_uri | VARCHAR(512) | NO | 生成 xlsx URI |
+| adapter_document_id | VARCHAR(64) | YES | 中台文档 ID |
+| status | VARCHAR(32) | NO | generated/uploaded/failed |
+| trace_id | VARCHAR(64) | NO | 审计 trace |
+| receipt_id | VARCHAR(64) | YES | 上传回执 |
+| metadata_json | TEXT | YES | fieldValues 快照 |
+| created_at | DATETIME | NO | 创建时间 |
+| updated_at | DATETIME | NO | 更新时间 |
+| creator | VARCHAR(64) | NO | 创建人 |
+| updater | VARCHAR(64) | NO | 更新人 |
+| deleted | TINYINT(1) | NO | 逻辑删除 0/1 |
+
+### 表 `t_signature_task`
+- 表名：`t_signature_task`
+- 处置：create
+- 主键：`id`
+- 索引：`uk_t_signature_task_task_id` / `idx_t_signature_task_artifact_id` / `idx_t_signature_task_trace_id`
+
+| 字段名 | 类型 | 可空 | 说明 |
+|--------|------|------|------|
+| id | BIGINT | NO | 主键 |
+| task_id | VARCHAR(64) | NO | 对外待签任务标识 |
+| artifact_id | VARCHAR(64) | NO | 所属产物 |
+| role | VARCHAR(64) | NO | 签字角色 |
+| assignee_label | VARCHAR(128) | YES | 展示用指派人 |
+| status | VARCHAR(32) | NO | pending/signed/rejected |
+| signer_name | VARCHAR(128) | YES | 确认时填写 |
+| trace_id | VARCHAR(64) | NO | 审计 trace |
+| receipt_id | VARCHAR(64) | YES | 签字回执 |
+| created_at | DATETIME | NO | 创建时间 |
+| updated_at | DATETIME | NO | 更新时间 |
+| creator | VARCHAR(64) | NO | 创建人 |
+| updater | VARCHAR(64) | NO | 更新人 |
+| deleted | TINYINT(1) | NO | 逻辑删除 0/1 |
+
+### 表 `t_completeness_rule`
+- 表名：`t_completeness_rule`
+- 处置：create
+- 主键：`id`
+- 索引：`uk_t_completeness_rule_rule_id` / `idx_t_completeness_rule_pack_id`
+
+| 字段名 | 类型 | 可空 | 说明 |
+|--------|------|------|------|
+| id | BIGINT | NO | 主键 |
+| rule_id | VARCHAR(64) | NO | 对外规则标识 |
+| pack_id | VARCHAR(64) | NO | 所属规范包 |
+| doc_type_id | VARCHAR(64) | NO | 应备文档类型 |
+| label | VARCHAR(128) | NO | 展示名 |
+| required | TINYINT(1) | NO | 是否必備 0/1 |
 | created_at | DATETIME | NO | 创建时间 |
 | updated_at | DATETIME | NO | 更新时间 |
 | creator | VARCHAR(64) | NO | 创建人 |
@@ -286,7 +402,7 @@ SLICE-1 先 apply：`t_project`, `t_job`, `t_document`, `t_extraction`, `t_rule`
 | trace_id | VARCHAR(64) | NO | 全链路对账键 |
 | status | VARCHAR(32) | NO | uploaded/inspecting/extracting/checking/pending/previewed/failed |
 | template_id | VARCHAR(64) | YES | 抽取所用模板 |
-| doc_type_id | VARCHAR(64) | YES | 文档类型（上传后写入） |
+| doc_type_id | VARCHAR(64) | YES | 上传绑定的文档类型 |
 | agent_run_id | VARCHAR(64) | YES | 关联 t_agent_run.run_id |
 | created_at | DATETIME | NO | 创建时间 |
 | updated_at | DATETIME | NO | 更新时间 |
@@ -483,6 +599,14 @@ SLICE-1 先 apply：`t_project`, `t_job`, `t_document`, `t_extraction`, `t_rule`
 | t_field_def | t_doc_type | many-to-one |
 | t_template | t_spec_pack | many-to-one |
 | t_template | t_doc_type | many-to-one |
+| t_excel_cell_mapping | t_template | many-to-one |
+| t_field_fill_rule | t_doc_type | many-to-one |
+| t_document_artifact | t_project | many-to-one |
+| t_document_artifact | t_doc_type | many-to-one |
+| t_document_artifact | t_template | many-to-one |
+| t_signature_task | t_document_artifact | many-to-one |
+| t_completeness_rule | t_spec_pack | many-to-one |
+| t_completeness_rule | t_doc_type | many-to-one |
 | t_field_box | t_template | many-to-one |
 | t_rule | t_spec_pack | many-to-one |
 | t_rule_version | t_rule | many-to-one |
@@ -514,9 +638,14 @@ erDiagram
   t_project ||--o{ t_spec_pack : has
   t_spec_pack ||--o{ t_doc_type : has
   t_doc_type ||--o{ t_doc_type : parent
-  t_doc_type ||--o{ t_field_def : base_fields
+  t_doc_type ||--o{ t_field_def : defs
   t_spec_pack ||--o{ t_template : has
-  t_doc_type ||--o{ t_template : layouts
+  t_doc_type ||--o{ t_template : binds
+  t_template ||--o{ t_excel_cell_mapping : excel_cells
+  t_doc_type ||--o{ t_field_fill_rule : fill_rules
+  t_project ||--o{ t_document_artifact : artifacts
+  t_document_artifact ||--o{ t_signature_task : signatures
+  t_spec_pack ||--o{ t_completeness_rule : completeness
   t_template ||--o{ t_field_box : has
   t_spec_pack ||--o{ t_rule : has
   t_rule ||--o{ t_rule_version : versions

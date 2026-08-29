@@ -19,6 +19,11 @@ const LEDGER_TABLES = [
   "t_doc_type",
   "t_field_def",
   "t_template",
+  "t_excel_cell_mapping",
+  "t_field_fill_rule",
+  "t_document_artifact",
+  "t_signature_task",
+  "t_completeness_rule",
   "t_field_box",
   "t_job",
   "t_document",
@@ -57,11 +62,25 @@ function ensureDocTypeColumns(db: Database.Database): void {
   }
 }
 
+/** Add Excel gap-fill columns on legacy SQLite ledgers created before Task 1. */
+function ensureExcelGapFillColumns(db: Database.Database): void {
+  if (tableHasColumn(db, "t_template", "template_id") && !tableHasColumn(db, "t_template", "layout_kind")) {
+    db.exec(`ALTER TABLE t_template ADD COLUMN layout_kind VARCHAR(16) NOT NULL DEFAULT 'raster'`);
+  }
+  if (tableHasColumn(db, "t_template", "template_id") && !tableHasColumn(db, "t_template", "excel_template_uri")) {
+    db.exec(`ALTER TABLE t_template ADD COLUMN excel_template_uri VARCHAR(512) NULL`);
+  }
+  if (tableHasColumn(db, "t_template", "template_id") && !tableHasColumn(db, "t_template", "excel_sheet_name")) {
+    db.exec(`ALTER TABLE t_template ADD COLUMN excel_sheet_name VARCHAR(128) NULL`);
+  }
+}
+
 export function runMigrationOnDb(db: Database.Database): void {
   const sql = readFileSync(MIGRATION_FILE, "utf-8");
   db.pragma("foreign_keys = ON");
   db.exec(sql);
   ensureDocTypeColumns(db);
+  ensureExcelGapFillColumns(db);
 }
 
 export async function runMigration(dbPath: string): Promise<void> {

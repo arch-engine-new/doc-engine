@@ -11,13 +11,17 @@ import { newId, nowIso } from "../ids.js";
 import type {
   AuditEventRow,
   ClauseRow,
+  CompletenessRuleRow,
   ConversationMessageRow,
   ConversationThreadRow,
   DocTypeRow,
+  DocumentArtifactRow,
   DocumentRow,
+  ExcelCellMappingRow,
   ExtractionRow,
   FieldBoxRow,
   FieldDefRow,
+  FieldFillRuleRow,
   FindingRow,
   JobRow,
   ProjectRow,
@@ -26,6 +30,7 @@ import type {
   RuleFixtureRow,
   RuleRow,
   RuleVersionRow,
+  SignatureTaskRow,
   SpecPackRow,
   StandardDocRow,
   StandardEdgeRow,
@@ -34,8 +39,6 @@ import type {
   VolumePreviewRow,
 } from "../types.js";
 import {
-  DOC_TYPE_CHILD_ID,
-  DOC_TYPE_PARENT_ID,
   EMPTY_PACK_NAME,
   EMPTY_PACK_VERSION,
   PACK_ID,
@@ -46,6 +49,8 @@ import {
   RULE_R2_ID,
   RULE_R2_VERSION_ID,
   SEED_PACK_PROJECT_ID,
+  DOC_TYPE_CHILD_ID,
+  DOC_TYPE_PARENT_ID,
   seedDemoDocTypes,
 } from "../pipeline/seed.js";
 import { LedgerConflictError } from "../pipeline/job-pipeline.js";
@@ -56,8 +61,29 @@ export type FieldBoxWrite = Pick<
   "field_key" | "value_type" | "page" | "x" | "y" | "w" | "h"
 >;
 
-/** Writable FieldDef columns for saveFieldDefs. */
-export type FieldDefWrite = Pick<FieldDefRow, "field_key" | "value_type" | "required">;
+/** Writable Excel cell mapping columns for bulk replace. */
+export type ExcelCellMappingWrite = Pick<
+  ExcelCellMappingRow,
+  "sheet_name" | "cell" | "field_key" | "value_type" | "signature_role"
+>;
+
+/** Writable field fill rule columns for bulk replace. */
+export type FieldFillRuleWrite = Pick<
+  FieldFillRuleRow,
+  | "field_key"
+  | "required"
+  | "pattern"
+  | "min_num"
+  | "max_num"
+  | "default_generator"
+  | "default_literal"
+>;
+
+/** Writable completeness rule columns for bulk replace. */
+export type CompletenessRuleWrite = Pick<
+  CompletenessRuleRow,
+  "doc_type_id" | "label" | "required"
+> & { rule_id?: string };
 
 const SYSTEM = "system";
 
@@ -70,7 +96,11 @@ export class CoreEngineStore {
 
   seedPublishedRules(): void {
     this.ensureEmptySpecPack();
-    this.seedDemoDocTypes();
+    seedDemoDocTypes(this, {
+      packId: PACK_ID,
+      parentId: DOC_TYPE_PARENT_ID,
+      childId: DOC_TYPE_CHILD_ID,
+    });
     const ts = nowIso();
     this.db
       .prepare(
@@ -370,27 +400,35 @@ export class CoreEngineStore {
       .all() as StandardEdgeRow[];
   }
 
+  getDocType(docTypeId: string): DocTypeRow | null {
+    const row = this.db
+      .prepare(`SELECT * FROM t_doc_type WHERE doc_type_id = ? AND deleted = 0`)
+      .get(docTypeId) as DocTypeRow | undefined;
+    return row ?? null;
+  }
+
+  listDocTypesByPack(packId: string): DocTypeRow[] {
+    return this.db
+      .prepare(
+        `SELECT * FROM t_doc_type WHERE pack_id = ? AND deleted = 0 ORDER BY id ASC`,
+      )
+      .all(packId) as DocTypeRow[];
+  }
+
   insertDocType(input: {
     pack_id: string;
     name: string;
     parent_doc_type_id?: string | null;
     doc_type_id?: string;
   }): DocTypeRow {
-    const pack = this.getSpecPack(input.pack_id);
-    if (!pack) {
-      throw new Error(`spec pack not found: ${input.pack_id}`);
-    }
-    if (input.parent_doc_type_id) {
-      const parent = this.getDocType(input.parent_doc_type_id);
-      if (!parent) {
-        throw new Error(`parent doc type not found: ${input.parent_doc_type_id}`);
-      }
-      if (parent.pack_id !== input.pack_id) {
-        throw new Error(`parent doc type ${input.parent_doc_type_id} does not belong to pack ${input.pack_id}`);
-      }
-    }
     const ts = nowIso();
     const doc_type_id = input.doc_type_id ?? newId("dt");
+    if (input.parent_doc_type_id) {
+      const parent = this.getDocType(input.parent_doc_type_id);
+      if (!parent || parent.pack_id !== input.pack_id) {
+        throw new Error("parent doc type does not belong to pack");
+      }
+    }
     this.db
       .prepare(
         `INSERT INTO t_doc_type
@@ -410,50 +448,49 @@ export class CoreEngineStore {
     return this.getDocType(doc_type_id)!;
   }
 
-  getDocType(docTypeId: string): DocTypeRow | null {
-    const row = this.db
-      .prepare(`SELECT * FROM t_doc_type WHERE doc_type_id = ? AND deleted = 0`)
-      .get(docTypeId) as DocTypeRow | undefined;
-    return row ?? null;
-  }
-
-  updateDocType(docTypeId: string, name: string): DocTypeRow {
-    const docType = this.getDocType(docTypeId);
-    if (!docType) {
-      throw new Error(`doc type not found: ${docTypeId}`);
-    }
+  updateDocTypeName(docTypeId: string, name: string): DocTypeRow {
     const ts = nowIso();
     this.db
       .prepare(
         `UPDATE t_doc_type SET name = ?, updated_at = ?, updater = ? WHERE doc_type_id = ? AND deleted = 0`,
       )
       .run(name, ts, SYSTEM, docTypeId);
-    return this.getDocType(docTypeId)!;
+    const row = this.getDocType(docTypeId);
+    if (!row) throw new Error(`doc type not found: ${docTypeId}`);
+    return row;
+  }
+
+  countChildDocTypes(docTypeId: string): number {
+    const row = this.db
+      .prepare(
+        `SELECT COUNT(*) AS c FROM t_doc_type WHERE parent_doc_type_id = ? AND deleted = 0`,
+      )
+      .get(docTypeId) as { c: number };
+    return Number(row.c);
+  }
+
+  countTemplatesByDocType(docTypeId: string): number {
+    const row = this.db
+      .prepare(`SELECT COUNT(*) AS c FROM t_template WHERE doc_type_id = ? AND deleted = 0`)
+      .get(docTypeId) as { c: number };
+    return Number(row.c);
+  }
+
+  countJobsByDocType(docTypeId: string): number {
+    const row = this.db
+      .prepare(`SELECT COUNT(*) AS c FROM t_job WHERE doc_type_id = ? AND deleted = 0`)
+      .get(docTypeId) as { c: number };
+    return Number(row.c);
   }
 
   softDeleteDocType(docTypeId: string): DocTypeRow {
-    const docType = this.getDocType(docTypeId);
-    if (!docType) {
-      throw new Error(`doc type not found: ${docTypeId}`);
+    if (this.countChildDocTypes(docTypeId) > 0) {
+      throw new LedgerConflictError("doc type has child types");
     }
-    const child = this.db
-      .prepare(
-        `SELECT COUNT(*) AS cnt FROM t_doc_type WHERE parent_doc_type_id = ? AND deleted = 0`,
-      )
-      .get(docTypeId) as { cnt: number };
-    if (Number(child.cnt) > 0) {
-      throw new LedgerConflictError("doc type has children");
-    }
-    const templates = this.db
-      .prepare(`SELECT COUNT(*) AS cnt FROM t_template WHERE doc_type_id = ? AND deleted = 0`)
-      .get(docTypeId) as { cnt: number };
-    if (Number(templates.cnt) > 0) {
+    if (this.countTemplatesByDocType(docTypeId) > 0) {
       throw new LedgerConflictError("doc type has templates");
     }
-    const jobs = this.db
-      .prepare(`SELECT COUNT(*) AS cnt FROM t_job WHERE doc_type_id = ? AND deleted = 0`)
-      .get(docTypeId) as { cnt: number };
-    if (Number(jobs.cnt) > 0) {
+    if (this.countJobsByDocType(docTypeId) > 0) {
       throw new LedgerConflictError("doc type has jobs");
     }
     const ts = nowIso();
@@ -462,30 +499,11 @@ export class CoreEngineStore {
         `UPDATE t_doc_type SET deleted = 1, updated_at = ?, updater = ? WHERE doc_type_id = ? AND deleted = 0`,
       )
       .run(ts, SYSTEM, docTypeId);
-    return this.db.prepare(`SELECT * FROM t_doc_type WHERE doc_type_id = ?`).get(docTypeId) as DocTypeRow;
-  }
-
-  listDocTypesByPack(packId: string): DocTypeRow[] {
-    return this.db
-      .prepare(`SELECT * FROM t_doc_type WHERE pack_id = ? AND deleted = 0 ORDER BY id ASC`)
-      .all(packId) as DocTypeRow[];
-  }
-
-  /** Root-first chain including docTypeId; used to flatten FieldDef with child winning duplicate keys. */
-  getDocTypeAncestors(docTypeId: string): DocTypeRow[] {
-    const chain: DocTypeRow[] = [];
-    let current = this.getDocType(docTypeId);
-    while (current) {
-      chain.unshift(current);
-      if (!current.parent_doc_type_id) {
-        break;
-      }
-      current = this.getDocType(current.parent_doc_type_id);
-      if (chain.length > 32) {
-        throw new Error(`doc type ancestor cycle detected at ${docTypeId}`);
-      }
-    }
-    return chain;
+    const row = this.db
+      .prepare(`SELECT * FROM t_doc_type WHERE doc_type_id = ?`)
+      .get(docTypeId) as DocTypeRow | undefined;
+    if (!row) throw new Error(`doc type not found: ${docTypeId}`);
+    return row;
   }
 
   listFieldDefs(docTypeId: string): FieldDefRow[] {
@@ -496,29 +514,22 @@ export class CoreEngineStore {
       .all(docTypeId) as FieldDefRow[];
   }
 
-  saveFieldDefs(docTypeId: string, defs: FieldDefWrite[]): FieldDefRow[] {
-    const docType = this.getDocType(docTypeId);
-    if (!docType) {
-      throw new Error(`doc type not found: ${docTypeId}`);
-    }
+  saveFieldDefs(
+    docTypeId: string,
+    defs: Array<{ field_key: string; value_type: string; required?: number }>,
+  ): FieldDefRow[] {
     const ts = nowIso();
-    const upsert = this.db.prepare(
-      `INSERT INTO t_field_def
-        (doc_type_id, field_key, value_type, required, created_at, updated_at, creator, updater, deleted)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0)
-       ON CONFLICT(doc_type_id, field_key) DO UPDATE SET
-         value_type = excluded.value_type,
-         required = excluded.required,
-         updated_at = excluded.updated_at,
-         updater = excluded.updater,
-         deleted = 0`,
-    );
     const tx = this.db.transaction(() => {
       this.db
         .prepare(`UPDATE t_field_def SET deleted = 1, updated_at = ?, updater = ? WHERE doc_type_id = ?`)
         .run(ts, SYSTEM, docTypeId);
+      const insert = this.db.prepare(
+        `INSERT INTO t_field_def
+          (doc_type_id, field_key, value_type, required, created_at, updated_at, creator, updater, deleted)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0)`,
+      );
       for (const def of defs) {
-        upsert.run(
+        insert.run(
           docTypeId,
           def.field_key,
           def.value_type,
@@ -534,48 +545,106 @@ export class CoreEngineStore {
     return this.listFieldDefs(docTypeId);
   }
 
-  /** Demo parent/child DocType tree on PACK_ID for fixture extraction regression. */
-  private seedDemoDocTypes(): void {
-    seedDemoDocTypes(this, {
-      packId: PACK_ID,
-      parentId: DOC_TYPE_PARENT_ID,
-      childId: DOC_TYPE_CHILD_ID,
-    });
+  /** Ancestor chain root → leaf; includes docTypeId. */
+  listDocTypeAncestorChain(docTypeId: string): DocTypeRow[] {
+    const chain: DocTypeRow[] = [];
+    let current: DocTypeRow | null = this.getDocType(docTypeId);
+    while (current) {
+      chain.unshift(current);
+      current = current.parent_doc_type_id ? this.getDocType(current.parent_doc_type_id) : null;
+    }
+    return chain;
+  }
+
+  /** Child field defs override parent keys along the ancestor chain. */
+  listEffectiveFieldDefs(docTypeId: string): FieldDefRow[] {
+    const byKey = new Map<string, FieldDefRow>();
+    for (const dt of this.listDocTypeAncestorChain(docTypeId)) {
+      for (const def of this.listFieldDefs(dt.doc_type_id)) {
+        byKey.set(def.field_key, def);
+      }
+    }
+    return [...byKey.values()].sort((a, b) => a.field_key.localeCompare(b.field_key, "zh"));
+  }
+
+  listTemplatesByDocType(docTypeId: string): TemplateRow[] {
+    return this.db
+      .prepare(
+        `SELECT * FROM t_template WHERE doc_type_id = ? AND deleted = 0 ORDER BY id ASC`,
+      )
+      .all(docTypeId) as TemplateRow[];
   }
 
   insertTemplate(input: {
     pack_id: string;
-    doc_type_id: string;
     name: string;
     page_image_uri?: string | null;
+    doc_type_id?: string;
+    layout_kind?: string;
+    excel_template_uri?: string | null;
+    excel_sheet_name?: string | null;
   }): TemplateRow {
-    const docType = this.getDocType(input.doc_type_id);
-    if (!docType) {
-      throw new Error(`doc type not found: ${input.doc_type_id}`);
-    }
-    if (docType.pack_id !== input.pack_id) {
-      throw new Error(`doc type ${input.doc_type_id} does not belong to pack ${input.pack_id}`);
-    }
     const ts = nowIso();
     const template_id = newId("tpl");
+    const doc_type_id = input.doc_type_id ?? "";
+    if (doc_type_id) {
+      const dt = this.getDocType(doc_type_id);
+      if (!dt || dt.pack_id !== input.pack_id) {
+        throw new Error("doc type does not belong to pack");
+      }
+    }
     this.db
       .prepare(
         `INSERT INTO t_template
-          (template_id, pack_id, doc_type_id, name, page_image_uri, created_at, updated_at, creator, updater, deleted)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0)`,
+          (template_id, pack_id, doc_type_id, name, page_image_uri, layout_kind, excel_template_uri, excel_sheet_name, created_at, updated_at, creator, updater, deleted)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0)`,
       )
       .run(
         template_id,
         input.pack_id,
-        input.doc_type_id,
+        doc_type_id,
         input.name,
         input.page_image_uri ?? null,
+        input.layout_kind ?? "raster",
+        input.excel_template_uri ?? null,
+        input.excel_sheet_name ?? null,
         ts,
         ts,
         SYSTEM,
         SYSTEM,
       );
     return this.db.prepare(`SELECT * FROM t_template WHERE template_id = ?`).get(template_id) as TemplateRow;
+  }
+
+  /** Update Excel layout fields on an existing template. */
+  updateTemplateExcel(
+    templateId: string,
+    input: {
+      layout_kind?: string;
+      excel_template_uri?: string | null;
+      excel_sheet_name?: string | null;
+    },
+  ): TemplateRow {
+    const ts = nowIso();
+    const current = this.getTemplate(templateId);
+    if (!current) {
+      throw new Error("template not found");
+    }
+    this.db
+      .prepare(
+        `UPDATE t_template
+         SET layout_kind = ?, excel_template_uri = ?, excel_sheet_name = ?, updated_at = ?, updater = ?
+         WHERE template_id = ? AND deleted = 0`,
+      )
+      .run(
+        input.layout_kind ?? current.layout_kind ?? "raster",
+        input.excel_template_uri !== undefined ? input.excel_template_uri : current.excel_template_uri,
+        input.excel_sheet_name !== undefined ? input.excel_sheet_name : current.excel_sheet_name,
+        ts,
+        SYSTEM,
+        templateId,
+      );
+    return this.getTemplate(templateId)!;
   }
 
   /** Upsert boxes by (template_id, field_key) so re-save replaces coords without duplicate keys. */
@@ -892,15 +961,6 @@ export class CoreEngineStore {
     template_id?: string | null;
     doc_type_id?: string | null;
   }): JobRow {
-    if (input.doc_type_id && input.pack_id) {
-      const docType = this.getDocType(input.doc_type_id);
-      if (!docType) {
-        throw new Error(`doc type not found: ${input.doc_type_id}`);
-      }
-      if (docType.pack_id !== input.pack_id) {
-        throw new Error(`doc type ${input.doc_type_id} does not belong to pack ${input.pack_id}`);
-      }
-    }
     const ts = nowIso();
     const job_id = newId("job");
     const trace_id = newId("trc");
@@ -1278,5 +1338,345 @@ export class CoreEngineStore {
          ORDER BY m.id ASC`,
       )
       .all(traceId, step) as ConversationMessageRow[];
+  }
+
+  listExcelCellMappings(templateId: string): ExcelCellMappingRow[] {
+    return this.db
+      .prepare(
+        `SELECT * FROM t_excel_cell_mapping WHERE template_id = ? AND deleted = 0 ORDER BY id ASC`,
+      )
+      .all(templateId) as ExcelCellMappingRow[];
+  }
+
+  getExcelCellMapping(mappingId: string): ExcelCellMappingRow | null {
+    const row = this.db
+      .prepare(`SELECT * FROM t_excel_cell_mapping WHERE mapping_id = ? AND deleted = 0`)
+      .get(mappingId) as ExcelCellMappingRow | undefined;
+    return row ?? null;
+  }
+
+  saveExcelCellMappings(templateId: string, mappings: ExcelCellMappingWrite[]): ExcelCellMappingRow[] {
+    const ts = nowIso();
+    const tx = this.db.transaction(() => {
+      this.db
+        .prepare(
+          `UPDATE t_excel_cell_mapping SET deleted = 1, updated_at = ?, updater = ? WHERE template_id = ?`,
+        )
+        .run(ts, SYSTEM, templateId);
+      const insert = this.db.prepare(
+        `INSERT INTO t_excel_cell_mapping
+          (mapping_id, template_id, sheet_name, cell, field_key, value_type, signature_role, created_at, updated_at, creator, updater, deleted)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0)`,
+      );
+      for (const mapping of mappings) {
+        insert.run(
+          newId("map"),
+          templateId,
+          mapping.sheet_name,
+          mapping.cell,
+          mapping.field_key,
+          mapping.value_type,
+          mapping.signature_role ?? null,
+          ts,
+          ts,
+          SYSTEM,
+          SYSTEM,
+        );
+      }
+    });
+    tx();
+    return this.listExcelCellMappings(templateId);
+  }
+
+  softDeleteExcelCellMapping(mappingId: string): ExcelCellMappingRow {
+    const ts = nowIso();
+    this.db
+      .prepare(
+        `UPDATE t_excel_cell_mapping SET deleted = 1, updated_at = ?, updater = ? WHERE mapping_id = ? AND deleted = 0`,
+      )
+      .run(ts, SYSTEM, mappingId);
+    const row = this.db
+      .prepare(`SELECT * FROM t_excel_cell_mapping WHERE mapping_id = ?`)
+      .get(mappingId) as ExcelCellMappingRow;
+    return row;
+  }
+
+  listFieldFillRules(docTypeId: string): FieldFillRuleRow[] {
+    return this.db
+      .prepare(
+        `SELECT * FROM t_field_fill_rule WHERE doc_type_id = ? AND deleted = 0 ORDER BY id ASC`,
+      )
+      .all(docTypeId) as FieldFillRuleRow[];
+  }
+
+  getFieldFillRule(docTypeId: string, fieldKey: string): FieldFillRuleRow | null {
+    const row = this.db
+      .prepare(
+        `SELECT * FROM t_field_fill_rule WHERE doc_type_id = ? AND field_key = ? AND deleted = 0`,
+      )
+      .get(docTypeId, fieldKey) as FieldFillRuleRow | undefined;
+    return row ?? null;
+  }
+
+  saveFieldFillRules(docTypeId: string, rules: FieldFillRuleWrite[]): FieldFillRuleRow[] {
+    const ts = nowIso();
+    const tx = this.db.transaction(() => {
+      this.db
+        .prepare(`UPDATE t_field_fill_rule SET deleted = 1, updated_at = ?, updater = ? WHERE doc_type_id = ?`)
+        .run(ts, SYSTEM, docTypeId);
+      const insert = this.db.prepare(
+        `INSERT INTO t_field_fill_rule
+          (doc_type_id, field_key, required, pattern, min_num, max_num, default_generator, default_literal, created_at, updated_at, creator, updater, deleted)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0)`,
+      );
+      for (const rule of rules) {
+        insert.run(
+          docTypeId,
+          rule.field_key,
+          rule.required ?? 0,
+          rule.pattern ?? null,
+          rule.min_num ?? null,
+          rule.max_num ?? null,
+          rule.default_generator ?? null,
+          rule.default_literal ?? null,
+          ts,
+          ts,
+          SYSTEM,
+          SYSTEM,
+        );
+      }
+    });
+    tx();
+    return this.listFieldFillRules(docTypeId);
+  }
+
+  insertDocumentArtifact(input: {
+    project_id: string;
+    doc_type_id: string;
+    template_id: string;
+    file_uri: string;
+    status?: string;
+    trace_id: string;
+    metadata?: unknown;
+    artifact_id?: string;
+  }): DocumentArtifactRow {
+    const ts = nowIso();
+    const artifact_id = input.artifact_id ?? newId("art");
+    this.db
+      .prepare(
+        `INSERT INTO t_document_artifact
+          (artifact_id, project_id, doc_type_id, template_id, file_uri, adapter_document_id, status, trace_id, receipt_id, metadata_json, created_at, updated_at, creator, updater, deleted)
+         VALUES (?, ?, ?, ?, ?, NULL, ?, ?, NULL, ?, ?, ?, ?, ?, 0)`,
+      )
+      .run(
+        artifact_id,
+        input.project_id,
+        input.doc_type_id,
+        input.template_id,
+        input.file_uri,
+        input.status ?? "generated",
+        input.trace_id,
+        input.metadata === undefined ? null : JSON.stringify(input.metadata),
+        ts,
+        ts,
+        SYSTEM,
+        SYSTEM,
+      );
+    return this.getDocumentArtifact(artifact_id)!;
+  }
+
+  getDocumentArtifact(artifactId: string): DocumentArtifactRow | null {
+    const row = this.db
+      .prepare(`SELECT * FROM t_document_artifact WHERE artifact_id = ? AND deleted = 0`)
+      .get(artifactId) as DocumentArtifactRow | undefined;
+    return row ?? null;
+  }
+
+  listDocumentArtifacts(projectId: string, docTypeId?: string): DocumentArtifactRow[] {
+    if (docTypeId) {
+      return this.db
+        .prepare(
+          `SELECT * FROM t_document_artifact WHERE project_id = ? AND doc_type_id = ? AND deleted = 0 ORDER BY id ASC`,
+        )
+        .all(projectId, docTypeId) as DocumentArtifactRow[];
+    }
+    return this.db
+      .prepare(
+        `SELECT * FROM t_document_artifact WHERE project_id = ? AND deleted = 0 ORDER BY id ASC`,
+      )
+      .all(projectId) as DocumentArtifactRow[];
+  }
+
+  updateDocumentArtifact(
+    artifactId: string,
+    input: {
+      adapter_document_id?: string | null;
+      status?: string;
+      receipt_id?: string | null;
+      metadata?: unknown;
+    },
+  ): DocumentArtifactRow {
+    const ts = nowIso();
+    const current = this.getDocumentArtifact(artifactId);
+    if (!current) {
+      throw new Error("artifact not found");
+    }
+    this.db
+      .prepare(
+        `UPDATE t_document_artifact
+         SET adapter_document_id = ?, status = ?, receipt_id = ?, metadata_json = ?, updated_at = ?, updater = ?
+         WHERE artifact_id = ? AND deleted = 0`,
+      )
+      .run(
+        input.adapter_document_id !== undefined ? input.adapter_document_id : current.adapter_document_id,
+        input.status ?? current.status,
+        input.receipt_id !== undefined ? input.receipt_id : current.receipt_id,
+        input.metadata === undefined ? current.metadata_json : JSON.stringify(input.metadata),
+        ts,
+        SYSTEM,
+        artifactId,
+      );
+    return this.getDocumentArtifact(artifactId)!;
+  }
+
+  insertSignatureTask(input: {
+    artifact_id: string;
+    role: string;
+    assignee_label?: string | null;
+    status?: string;
+    trace_id: string;
+    task_id?: string;
+  }): SignatureTaskRow {
+    const ts = nowIso();
+    const task_id = input.task_id ?? newId("sig");
+    this.db
+      .prepare(
+        `INSERT INTO t_signature_task
+          (task_id, artifact_id, role, assignee_label, status, signer_name, trace_id, receipt_id, created_at, updated_at, creator, updater, deleted)
+         VALUES (?, ?, ?, ?, ?, NULL, ?, NULL, ?, ?, ?, ?, 0)`,
+      )
+      .run(
+        task_id,
+        input.artifact_id,
+        input.role,
+        input.assignee_label ?? null,
+        input.status ?? "pending",
+        input.trace_id,
+        ts,
+        ts,
+        SYSTEM,
+        SYSTEM,
+      );
+    return this.getSignatureTask(task_id)!;
+  }
+
+  getSignatureTask(taskId: string): SignatureTaskRow | null {
+    const row = this.db
+      .prepare(`SELECT * FROM t_signature_task WHERE task_id = ? AND deleted = 0`)
+      .get(taskId) as SignatureTaskRow | undefined;
+    return row ?? null;
+  }
+
+  listSignatureTasksByArtifact(artifactId: string): SignatureTaskRow[] {
+    return this.db
+      .prepare(
+        `SELECT * FROM t_signature_task WHERE artifact_id = ? AND deleted = 0 ORDER BY id ASC`,
+      )
+      .all(artifactId) as SignatureTaskRow[];
+  }
+
+  listPendingSignatureTasks(): SignatureTaskRow[] {
+    return this.db
+      .prepare(
+        `SELECT * FROM t_signature_task WHERE status = 'pending' AND deleted = 0 ORDER BY id ASC`,
+      )
+      .all() as SignatureTaskRow[];
+  }
+
+  updateSignatureTask(
+    taskId: string,
+    input: {
+      status?: string;
+      signer_name?: string | null;
+      receipt_id?: string | null;
+    },
+  ): SignatureTaskRow {
+    const ts = nowIso();
+    const current = this.getSignatureTask(taskId);
+    if (!current) {
+      throw new Error("signature task not found");
+    }
+    this.db
+      .prepare(
+        `UPDATE t_signature_task
+         SET status = ?, signer_name = ?, receipt_id = ?, updated_at = ?, updater = ?
+         WHERE task_id = ? AND deleted = 0`,
+      )
+      .run(
+        input.status ?? current.status,
+        input.signer_name !== undefined ? input.signer_name : current.signer_name,
+        input.receipt_id !== undefined ? input.receipt_id : current.receipt_id,
+        ts,
+        SYSTEM,
+        taskId,
+      );
+    return this.getSignatureTask(taskId)!;
+  }
+
+  listCompletenessRules(packId: string): CompletenessRuleRow[] {
+    return this.db
+      .prepare(
+        `SELECT * FROM t_completeness_rule WHERE pack_id = ? AND deleted = 0 ORDER BY id ASC`,
+      )
+      .all(packId) as CompletenessRuleRow[];
+  }
+
+  getCompletenessRule(ruleId: string): CompletenessRuleRow | null {
+    const row = this.db
+      .prepare(`SELECT * FROM t_completeness_rule WHERE rule_id = ? AND deleted = 0`)
+      .get(ruleId) as CompletenessRuleRow | undefined;
+    return row ?? null;
+  }
+
+  saveCompletenessRules(packId: string, rules: CompletenessRuleWrite[]): CompletenessRuleRow[] {
+    const ts = nowIso();
+    const tx = this.db.transaction(() => {
+      this.db
+        .prepare(`UPDATE t_completeness_rule SET deleted = 1, updated_at = ?, updater = ? WHERE pack_id = ?`)
+        .run(ts, SYSTEM, packId);
+      const insert = this.db.prepare(
+        `INSERT INTO t_completeness_rule
+          (rule_id, pack_id, doc_type_id, label, required, created_at, updated_at, creator, updater, deleted)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0)`,
+      );
+      for (const rule of rules) {
+        insert.run(
+          rule.rule_id ?? newId("cr"),
+          packId,
+          rule.doc_type_id,
+          rule.label,
+          rule.required ?? 0,
+          ts,
+          ts,
+          SYSTEM,
+          SYSTEM,
+        );
+      }
+    });
+    tx();
+    return this.listCompletenessRules(packId);
+  }
+
+  softDeleteCompletenessRule(ruleId: string): CompletenessRuleRow {
+    const ts = nowIso();
+    this.db
+      .prepare(
+        `UPDATE t_completeness_rule SET deleted = 1, updated_at = ?, updater = ? WHERE rule_id = ? AND deleted = 0`,
+      )
+      .run(ts, SYSTEM, ruleId);
+    const row = this.db
+      .prepare(`SELECT * FROM t_completeness_rule WHERE rule_id = ?`)
+      .get(ruleId) as CompletenessRuleRow;
+    return row;
   }
 }
