@@ -6,7 +6,9 @@
  */
 
 import { mockPendingMount, type FieldBoxWrite } from "../index.js";
-import { UploadValidationError } from "../pipeline/job-pipeline.js";
+import { NoOpenHitlError } from "../agent/job-step-orchestrator.js";
+import { LedgerConflictError, UploadValidationError } from "../pipeline/job-pipeline.js";
+import { createFetchHandler } from "agent-runtime";
 import { DEMO_DICTS } from "./dicts.js";
 import type { DemoHttpSession } from "./session.js";
 import { UploadServiceUnavailableError } from "./session.js";
@@ -28,9 +30,11 @@ export interface DemoHttpMultipartFile {
 export interface DemoHttpMultipartFields {
   pack_id?: string;
   template_id?: string;
+  doc_type_id?: string;
   project_id?: string;
   packId?: string;
   templateId?: string;
+  docTypeId?: string;
   projectId?: string;
 }
 
@@ -77,10 +81,14 @@ function errorStatus(err: unknown): DemoHttpResponse {
   const message = err instanceof Error ? err.message : String(err);
   const lower = message.toLowerCase();
   if (err instanceof UploadValidationError) return json(400, { error: message });
+  if (err instanceof LedgerConflictError) return json(409, { error: message });
   if (err instanceof UploadServiceUnavailableError) return json(503, { error: message });
   if (lower.includes("not found")) return json(404, { error: message });
   if (lower.includes("cannot confirm-next") || lower.includes("submit is not allowed")) {
     return json(409, { error: message });
+  }
+  if (lower.includes("no_open_hitl")) {
+    return json(409, { error: "no_open_hitl" });
   }
   if (
     lower.includes("must be") ||
@@ -173,6 +181,20 @@ function boxesFromBody(body: unknown): FieldBoxWrite[] {
   });
 }
 
+function fieldDefsFromBody(body: unknown): Array<{ field_key: string; value_type: string; required: number }> {
+  const rec = asRecord(body);
+  const raw = rec.defs;
+  if (!Array.isArray(raw)) throw new Error("defs array required");
+  return raw.map((item) => {
+    const row = asRecord(item);
+    return {
+      field_key: String(row.field_key ?? row.fieldKey ?? ""),
+      value_type: String(row.value_type ?? row.valueType ?? "string"),
+      required: Number(row.required ?? 0),
+    };
+  });
+}
+
 export async function handleDemoRequest(
   session: DemoHttpSession,
   req: DemoHttpRequest,
@@ -190,12 +212,43 @@ export async function handleDemoRequest(
       return json(200, await session.reset());
     }
 
+    if (pathname.startsWith("/api/agent")) {
+      const factory = await session.getAgentRuntimeFactory();
+      const handler = createFetchHandler(factory.plane, { basePath: "/api/agent" });
+      const url = new URL(req.url, "http://demo.local");
+      const headers = new Headers({ "content-type": "application/json" });
+      const init: RequestInit = { method, headers };
+      if (method !== "GET" && method !== "HEAD" && req.body !== undefined) {
+        init.body = JSON.stringify(req.body ?? {});
+      }
+      const response = await handler(new Request(url.toString(), init));
+      const text = await response.text();
+      let body: unknown = text;
+      try {
+        body = text ? JSON.parse(text) : null;
+      } catch {
+        body = text;
+      }
+      return json(response.status, body);
+    }
+
     if (method === "GET" && pathname === "/api/projects") {
       return json(200, { projects: await p.listProjects() });
     }
     if (method === "POST" && pathname === "/api/projects") {
       const name = str(req.body, "name") ?? "演示项目-夹具";
       return json(200, { project: await p.createProject(name) });
+    }
+
+    const projectOne = match(pathname, "/api/projects/:projectId");
+    if (projectOne) {
+      if (method === "PATCH") {
+        const name = requireStr(req.body, "name");
+        return json(200, { project: await p.updateProject(projectOne.projectId, name) });
+      }
+      if (method === "DELETE") {
+        return json(200, { project: await p.deleteProject(projectOne.projectId) });
+      }
     }
 
     const packs = match(pathname, "/api/projects/:projectId/packs");
@@ -225,6 +278,12 @@ export async function handleDemoRequest(
       if (!pack) return json(404, { error: `spec pack not found: ${packTemplates.id}` });
       return json(200, { templates: await p.listTemplates(packTemplates.id) });
     }
+    const packDocTypes = match(pathname, "/api/packs/:packId/doc-types");
+    if (method === "GET" && packDocTypes) {
+      const pack = await p.getSpecPack(packDocTypes.packId);
+      if (!pack) return json(404, { error: `spec pack not found: ${packDocTypes.packId}` });
+      return json(200, { docTypes: await p.listDocTypesByPack(packDocTypes.packId) });
+    }
     const groupKeys = match(pathname, "/api/packs/:id/group-keys");
     if (method === "POST" && groupKeys) {
       const raw = pick(req.body, "groupKeys", "group_keys") ?? [];
@@ -240,20 +299,73 @@ export async function handleDemoRequest(
       return json(200, { pack: await p.setGroupKeys(groupKeys.id, keys, orderKey) });
     }
     const packOne = match(pathname, "/api/packs/:id");
-    if (method === "GET" && packOne) {
-      const pack = await p.getSpecPack(packOne.id);
-      if (!pack) return json(404, { error: `spec pack not found: ${packOne.id}` });
-      return json(200, { pack, templates: await p.listTemplates(packOne.id) });
+    if (packOne) {
+      if (method === "GET") {
+        const pack = await p.getSpecPack(packOne.id);
+        if (!pack) return json(404, { error: `spec pack not found: ${packOne.id}` });
+        return json(200, { pack, templates: await p.listTemplates(packOne.id) });
+      }
+      if (method === "PATCH") {
+        const name = requireStr(req.body, "name");
+        return json(200, { pack: await p.updateSpecPack(packOne.id, name) });
+      }
+      if (method === "DELETE") {
+        return json(200, { pack: await p.deleteSpecPack(packOne.id) });
+      }
     }
     if (method === "POST" && pathname === "/api/templates") {
       const packId = requireStr(req.body, "packId", "pack_id");
       if (!(await p.getSpecPack(packId))) return json(404, { error: `spec pack not found: ${packId}` });
+      const docTypeId = str(req.body, "docTypeId", "doc_type_id");
       const template = await p.createTemplate({
         packId,
         name: str(req.body, "name") ?? "空包模板",
         pageImageUri: str(req.body, "pageImageUri", "page_image_uri"),
+        docTypeId,
       });
       return json(200, { template });
+    }
+
+    if (method === "POST" && pathname === "/api/doc-types") {
+      const packId = requireStr(req.body, "packId", "pack_id");
+      if (!(await p.getSpecPack(packId))) return json(404, { error: `spec pack not found: ${packId}` });
+      const parentDocTypeId = str(req.body, "parentDocTypeId", "parent_doc_type_id");
+      const docType = await p.createDocType({
+        packId,
+        name: requireStr(req.body, "name"),
+        parentDocTypeId: parentDocTypeId ?? null,
+      });
+      return json(200, { docType });
+    }
+
+    const docTypeFieldDefs = match(pathname, "/api/doc-types/:id/field-defs");
+    if (docTypeFieldDefs) {
+      if (method === "GET") {
+        return json(200, { defs: await p.listFieldDefs(docTypeFieldDefs.id) });
+      }
+      if (method === "PUT") {
+        return json(200, {
+          defs: await p.saveFieldDefs(docTypeFieldDefs.id, fieldDefsFromBody(req.body)),
+        });
+      }
+    }
+
+    const docTypeOne = match(pathname, "/api/doc-types/:id");
+    if (docTypeOne) {
+      if (method === "PATCH") {
+        const name = requireStr(req.body, "name");
+        return json(200, { docType: await p.updateDocType(docTypeOne.id, name) });
+      }
+      if (method === "DELETE") {
+        return json(200, { docType: await p.deleteDocType(docTypeOne.id) });
+      }
+    }
+
+    const effectiveBoxes = match(pathname, "/api/templates/:id/effective-boxes");
+    if (method === "GET" && effectiveBoxes) {
+      const template = await p.getTemplate(effectiveBoxes.id);
+      if (!template) return json(404, { error: `template not found: ${effectiveBoxes.id}` });
+      return json(200, { boxes: await p.getEffectiveBoxes(effectiveBoxes.id) });
     }
 
     const boxes = match(pathname, "/api/templates/:id/boxes");
@@ -349,10 +461,16 @@ export async function handleDemoRequest(
       const mp = req.multipart;
       if (!mp?.file) throw new Error("multipart file field required");
       const fields = mp.fields;
+      const doc_type_id = fields.doc_type_id ?? fields.docTypeId;
+      const template_id = fields.template_id ?? fields.templateId;
+      if (!doc_type_id && !template_id) {
+        throw new UploadValidationError("doc_type_id or template_id required");
+      }
       const result = await session.openUploadJob({
         projectId: fields.project_id ?? fields.projectId,
         packId: fields.pack_id ?? fields.packId,
-        template_id: fields.template_id ?? fields.templateId,
+        template_id,
+        doc_type_id,
         fileName: mp.file.fileName,
         mime: mp.file.mime,
         bytes: mp.file.bytes,
@@ -380,18 +498,44 @@ export async function handleDemoRequest(
     }
 
     if (method === "POST" && pathname === "/api/chat") {
-      const result = await p.appendChat({
-        traceId: requireStr(req.body, "traceId", "trace_id"),
-        step: requireStr(req.body, "step"),
-        body: requireStr(req.body, "body"),
-        role: str(req.body, "role"),
+      const traceId = requireStr(req.body, "traceId", "trace_id");
+      const step = requireStr(req.body, "step");
+      const body = requireStr(req.body, "body");
+      const userResult = await p.appendChat({
+        traceId,
+        step,
+        body,
+        role: str(req.body, "role") ?? "operator",
       });
-      return json(200, result);
+      const bridge = await session.getStepChatBridge();
+      const agent = await bridge.reply({ traceId, step, userMessage: body });
+      const assistantStored = await p.appendChat({
+        traceId,
+        step,
+        body: agent.reply,
+        role: "assistant",
+      });
+      return json(200, {
+        ...userResult,
+        assistant_reply: agent.reply,
+        agent_run_id: agent.agentRunId,
+        proposal_id: agent.proposalId ?? null,
+        assistant_message: assistantStored.message,
+      });
     }
 
     const confirm = match(pathname, "/api/jobs/:id/confirm-next");
     if (method === "POST" && confirm) {
-      return json(200, { job: await p.confirmNext(confirm.id) });
+      try {
+        const orchestrator = await session.getJobStepOrchestrator();
+        const job = await orchestrator.resumeConfirm(confirm.id);
+        return json(200, { job });
+      } catch (err) {
+        if (err instanceof NoOpenHitlError) {
+          return json(409, { error: "no_open_hitl" });
+        }
+        throw err;
+      }
     }
 
     const findings = match(pathname, "/api/jobs/:id/findings");

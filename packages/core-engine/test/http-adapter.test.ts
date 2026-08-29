@@ -5,6 +5,10 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { DemoHttpSession } from "../src/http/session.js";
 import { handleDemoRequest } from "../src/http/handle-request.js";
+import {
+  DOC_TYPE_CHILD_ID,
+  PACK_ID,
+} from "../src/pipeline/seed.js";
 
 async function call(
   session: DemoHttpSession,
@@ -29,7 +33,7 @@ describe("core-engine HTTP adapter", () => {
   it("GET /api/health on memory session returns mode memory", async () => {
     const res = await call(session, "GET", "/api/health");
     expect(res.status).toBe(200);
-    expect(res.body).toEqual({
+    expect(res.body).toMatchObject({
       mode: "memory",
       postgres: "skip",
       qdrant: "skip",
@@ -37,12 +41,17 @@ describe("core-engine HTTP adapter", () => {
       ocr: "skip",
       minio: "skip",
     });
+    expect(["ok", "skip"]).toContain((res.body as { llm: string }).llm);
   });
 
   it("POST /api/jobs/upload with multipart file creates a checking job", async () => {
     const reset = await call(session, "POST", "/api/demo/reset");
     expect(reset.status).toBe(200);
-    const projectId = (reset.body as { project: { project_id: string } }).project.project_id;
+    const resetBody = reset.body as {
+      project: { project_id: string };
+      pack: { pack_id: string };
+      template: { template_id: string };
+    };
     const JPEG_BYTES = new Uint8Array([0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10]);
 
     const res = await handleDemoRequest(session, {
@@ -51,7 +60,11 @@ describe("core-engine HTTP adapter", () => {
       body: {},
       multipart: {
         file: { bytes: JPEG_BYTES, fileName: "form.jpg", mime: "image/jpeg" },
-        fields: { project_id: projectId },
+        fields: {
+          project_id: resetBody.project.project_id,
+          pack_id: resetBody.pack.pack_id,
+          template_id: resetBody.template.template_id,
+        },
       },
     });
     expect(res.status).toBe(200);
@@ -63,7 +76,7 @@ describe("core-engine HTTP adapter", () => {
     expect(jobs.some((j) => j.job_id === body.job.job_id)).toBe(true);
   });
 
-  it("POST /api/jobs/upload maps UploadValidationError to 400", async () => {
+  it("POST /api/jobs/upload without doc_type_id or template_id returns 400", async () => {
     await call(session, "POST", "/api/demo/reset");
     const JPEG_BYTES = new Uint8Array([0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10]);
 
@@ -72,8 +85,34 @@ describe("core-engine HTTP adapter", () => {
       url: "/api/jobs/upload",
       body: {},
       multipart: {
-        file: { bytes: JPEG_BYTES, fileName: "notes.txt", mime: "text/plain" },
+        file: { bytes: JPEG_BYTES, fileName: "form.jpg", mime: "image/jpeg" },
         fields: {},
+      },
+    });
+    expect(res.status).toBe(400);
+    expect((res.body as { error: string }).error).toMatch(/doc_type_id or template_id required/i);
+  });
+
+  it("POST /api/jobs/upload maps UploadValidationError to 400", async () => {
+    const reset = await call(session, "POST", "/api/demo/reset");
+    const resetBody = reset.body as {
+      project: { project_id: string };
+      pack: { pack_id: string };
+      template: { template_id: string };
+    };
+    const JPEG_BYTES = new Uint8Array([0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10]);
+
+    const res = await handleDemoRequest(session, {
+      method: "POST",
+      url: "/api/jobs/upload",
+      body: {},
+      multipart: {
+        file: { bytes: JPEG_BYTES, fileName: "notes.txt", mime: "text/plain" },
+        fields: {
+          project_id: resetBody.project.project_id,
+          pack_id: resetBody.pack.pack_id,
+          template_id: resetBody.template.template_id,
+        },
       },
     });
     expect(res.status).toBe(400);
@@ -116,6 +155,8 @@ describe("core-engine HTTP adapter", () => {
       body: "请确认并提交",
     });
     expect(chat.status).toBe(200);
+    const chatBody = chat.body as { assistant_reply?: string };
+    expect(chatBody.assistant_reply?.length).toBeGreaterThan(0);
 
     const after = await session.pipeline.getJob(checking!.job_id);
     expect(after?.status).toBe("checking");
@@ -132,6 +173,67 @@ describe("core-engine HTTP adapter", () => {
     const res = await call(session, "POST", `/api/jobs/${checking!.job_id}/confirm-next`);
     expect(res.status).toBe(200);
     expect((res.body as { job: { status: string } }).job.status).toBe("pending");
+  });
+
+  it("GET /api/agent/runs lists job-step runs after demo reset", async () => {
+    await call(session, "POST", "/api/demo/reset");
+    const res = await call(session, "GET", "/api/agent/runs");
+    expect(res.status).toBe(200);
+    const runs = (res.body as { runs: Array<{ metadata: { graphId: string } }> }).runs;
+    expect(runs.some((r) => r.metadata.graphId === "job-step-v1")).toBe(true);
+  });
+
+  it("GET /api/agent/runs/:id/trace returns run_started (T2)", async () => {
+    await call(session, "POST", "/api/demo/reset");
+    const listed = await call(session, "GET", "/api/agent/runs");
+    const runs = (listed.body as { runs: Array<{ metadata: { runId: string; graphId: string } }> }).runs;
+    const jobStep = runs.find((r) => r.metadata.graphId === "job-step-v1");
+    expect(jobStep).toBeTruthy();
+
+    const traceRes = await call(session, "GET", `/api/agent/runs/${jobStep!.metadata.runId}/trace`);
+    expect(traceRes.status).toBe(200);
+    const trace = (traceRes.body as { trace: { eventType: string }[] }).trace;
+    expect(trace.length).toBeGreaterThan(0);
+    expect(trace.some((e) => e.eventType === "run_started")).toBe(true);
+  });
+
+  it("POST /api/agent/runs/:id/resume advances waiting_hitl run (T3)", async () => {
+    await call(session, "POST", "/api/demo/reset");
+    const jobsRes = await call(session, "GET", "/api/jobs");
+    const checking = (jobsRes.body as { jobs: { job_id: string; status: string }[] }).jobs.find(
+      (j) => j.status === "checking",
+    );
+    expect(checking).toBeTruthy();
+
+    const orchestrator = await session.getJobStepOrchestrator();
+    const open = await orchestrator.getOpenHitl(checking!.job_id);
+    expect(open?.runId).toBeTruthy();
+    expect(open?.token).toBeTruthy();
+
+    const before = await call(session, "GET", `/api/agent/runs/${open!.runId}`);
+    expect((before.body as { metadata: { status: string } }).metadata.status).toBe("waiting_hitl");
+
+    const resumeRes = await call(session, "POST", `/api/agent/runs/${open!.runId}/resume`, {
+      token: open!.token,
+      decision: { action: "approve", decidedAt: new Date().toISOString() },
+    });
+    expect(resumeRes.status).toBe(200);
+    expect((resumeRes.body as { status: string }).status).toBe("completed");
+
+    const afterJob = await session.pipeline.getJob(checking!.job_id);
+    expect(afterJob?.status).toBe("pending");
+  });
+
+  it("POST confirm-next without open HITL returns 409", async () => {
+    await call(session, "POST", "/api/demo/reset");
+    const listed = await call(session, "GET", "/api/jobs");
+    const job = (listed.body as { jobs: { job_id: string; status: string }[] }).jobs.find(
+      (j) => j.status === "checking",
+    )!;
+    await call(session, "POST", `/api/jobs/${job.job_id}/confirm-next`);
+    const again = await call(session, "POST", `/api/jobs/${job.job_id}/confirm-next`);
+    expect(again.status).toBe(409);
+    expect((again.body as { error: string }).error).toBe("no_open_hitl");
   });
 
   it("volume preview tree.submitted is always false; POST does not submit", async () => {
@@ -230,6 +332,85 @@ describe("core-engine HTTP adapter", () => {
     expect((volume.body as { tree: { submitted: boolean } }).tree.submitted).toBe(false);
   });
 
+  describe("PATCH/DELETE /api/projects and /api/packs", () => {
+    it("renames and deletes an empty project", async () => {
+      const created = await call(session, "POST", "/api/projects", { name: "原名称" });
+      const projectId = (created.body as { project: { project_id: string } }).project.project_id;
+
+      const renamed = await call(session, "PATCH", `/api/projects/${projectId}`, { name: "新名称" });
+      expect(renamed.status).toBe(200);
+      expect((renamed.body as { project: { name: string } }).project.name).toBe("新名称");
+
+      const deleted = await call(session, "DELETE", `/api/projects/${projectId}`);
+      expect(deleted.status).toBe(200);
+      expect((deleted.body as { project: { project_id: string; deleted: number } }).project).toMatchObject({
+        project_id: projectId,
+        deleted: 1,
+      });
+
+      const listed = await call(session, "GET", "/api/projects");
+      const projects = (listed.body as { projects: { project_id: string }[] }).projects;
+      expect(projects.some((p) => p.project_id === projectId)).toBe(false);
+    });
+
+    it("renames and deletes an empty spec pack", async () => {
+      const created = await call(session, "POST", "/api/projects", { name: "规范包项目" });
+      const projectId = (created.body as { project: { project_id: string } }).project.project_id;
+      const packRes = await call(session, "POST", "/api/packs", {
+        projectId,
+        name: "原规范包",
+      });
+      const packId = (packRes.body as { pack: { pack_id: string } }).pack.pack_id;
+
+      const renamed = await call(session, "PATCH", `/api/packs/${packId}`, { name: "新规范包" });
+      expect(renamed.status).toBe(200);
+      expect((renamed.body as { pack: { name: string } }).pack.name).toBe("新规范包");
+
+      const deleted = await call(session, "DELETE", `/api/packs/${packId}`);
+      expect(deleted.status).toBe(200);
+      expect((deleted.body as { pack: { pack_id: string; deleted: number } }).pack).toMatchObject({
+        pack_id: packId,
+        deleted: 1,
+      });
+
+      const listed = await call(session, "GET", `/api/projects/${projectId}/packs`);
+      expect((listed.body as { packs: unknown[] }).packs).toHaveLength(0);
+    });
+
+    it("DELETE /api/projects/:id returns 409 when project has spec packs", async () => {
+      const created = await call(session, "POST", "/api/projects", { name: "有包项目" });
+      const projectId = (created.body as { project: { project_id: string } }).project.project_id;
+      await call(session, "POST", "/api/packs", { projectId, name: "空规范包" });
+
+      const res = await call(session, "DELETE", `/api/projects/${projectId}`);
+      expect(res.status).toBe(409);
+      expect((res.body as { error: string }).error).toBe("project has spec packs");
+    });
+
+    it("DELETE /api/packs/:id returns 409 when pack has jobs", async () => {
+      const reset = await call(session, "POST", "/api/demo/reset");
+      const projectId = (reset.body as { project: { project_id: string } }).project.project_id;
+      const packId = (reset.body as { pack: { pack_id: string } }).pack.pack_id;
+      const templateId = (reset.body as { template: { template_id: string } }).template.template_id;
+      const JPEG_BYTES = new Uint8Array([0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10]);
+
+      const upload = await handleDemoRequest(session, {
+        method: "POST",
+        url: "/api/jobs/upload",
+        body: {},
+        multipart: {
+          file: { bytes: JPEG_BYTES, fileName: "form.jpg", mime: "image/jpeg" },
+          fields: { project_id: projectId, pack_id: packId, template_id: templateId },
+        },
+      });
+      expect(upload.status).toBe(200);
+
+      const res = await call(session, "DELETE", `/api/packs/${packId}`);
+      expect(res.status).toBe(409);
+      expect((res.body as { error: string }).error).toBe("spec pack has jobs");
+    });
+  });
+
   it("POST /api/packs/:id/group-keys and GET /api/packs/:id", async () => {
     await call(session, "POST", "/api/demo/reset");
     const created = await call(session, "POST", "/api/projects", { name: "分组项目" });
@@ -284,5 +465,165 @@ describe("core-engine HTTP adapter", () => {
     };
     const notFound = await call(session, "GET", "/api/projects");
     expect(notFound.status).toBe(404);
+  });
+
+  describe("DocType HTTP API", () => {
+    it("CRUD doc-types under a pack", async () => {
+      const created = await call(session, "POST", "/api/projects", { name: "DocType 项目" });
+      const projectId = (created.body as { project: { project_id: string } }).project.project_id;
+      const packRes = await call(session, "POST", "/api/packs", {
+        projectId,
+        name: "DocType 规范包",
+      });
+      const packId = (packRes.body as { pack: { pack_id: string } }).pack.pack_id;
+
+      const parent = await call(session, "POST", "/api/doc-types", {
+        packId,
+        name: "父类型",
+      });
+      expect(parent.status).toBe(200);
+      const parentId = (parent.body as { docType: { doc_type_id: string } }).docType.doc_type_id;
+
+      const child = await call(session, "POST", "/api/doc-types", {
+        packId,
+        name: "子类型",
+        parentDocTypeId: parentId,
+      });
+      expect(child.status).toBe(200);
+
+      const listed = await call(session, "GET", `/api/packs/${packId}/doc-types`);
+      expect(listed.status).toBe(200);
+      expect((listed.body as { docTypes: { doc_type_id: string }[] }).docTypes).toHaveLength(2);
+
+      const renamed = await call(session, "PATCH", `/api/doc-types/${parentId}`, { name: "父类型-改" });
+      expect(renamed.status).toBe(200);
+      expect((renamed.body as { docType: { name: string } }).docType.name).toBe("父类型-改");
+
+      const childId = (child.body as { docType: { doc_type_id: string } }).docType.doc_type_id;
+      const deletedChild = await call(session, "DELETE", `/api/doc-types/${childId}`);
+      expect(deletedChild.status).toBe(200);
+
+      const deleteParent = await call(session, "DELETE", `/api/doc-types/${parentId}`);
+      expect(deleteParent.status).toBe(200);
+    });
+
+    it("DELETE doc-type with children returns 409", async () => {
+      const created = await call(session, "POST", "/api/projects", { name: "冲突项目" });
+      const projectId = (created.body as { project: { project_id: string } }).project.project_id;
+      const packRes = await call(session, "POST", "/api/packs", { projectId, name: "冲突包" });
+      const packId = (packRes.body as { pack: { pack_id: string } }).pack.pack_id;
+
+      const parent = await call(session, "POST", "/api/doc-types", { packId, name: "父" });
+      const parentId = (parent.body as { docType: { doc_type_id: string } }).docType.doc_type_id;
+      await call(session, "POST", "/api/doc-types", { packId, name: "子", parentDocTypeId: parentId });
+
+      const res = await call(session, "DELETE", `/api/doc-types/${parentId}`);
+      expect(res.status).toBe(409);
+      expect((res.body as { error: string }).error).toBe("doc type has children");
+    });
+
+    it("field-defs GET/PUT round-trip", async () => {
+      const created = await call(session, "POST", "/api/projects", { name: "字段项目" });
+      const projectId = (created.body as { project: { project_id: string } }).project.project_id;
+      const packRes = await call(session, "POST", "/api/packs", { projectId, name: "字段包" });
+      const packId = (packRes.body as { pack: { pack_id: string } }).pack.pack_id;
+      const docType = await call(session, "POST", "/api/doc-types", { packId, name: "类型A" });
+      const docTypeId = (docType.body as { docType: { doc_type_id: string } }).docType.doc_type_id;
+
+      const saved = await call(session, "PUT", `/api/doc-types/${docTypeId}/field-defs`, {
+        defs: [
+          { field_key: "编号", value_type: "string", required: 1 },
+          { field_key: "日期A", value_type: "date", required: 0 },
+        ],
+      });
+      expect(saved.status).toBe(200);
+      expect((saved.body as { defs: { field_key: string }[] }).defs).toHaveLength(2);
+
+      const got = await call(session, "GET", `/api/doc-types/${docTypeId}/field-defs`);
+      expect(got.status).toBe(200);
+      const keys = (got.body as { defs: { field_key: string }[] }).defs.map((d) => d.field_key);
+      expect(keys.sort()).toEqual(["日期A", "编号"]);
+    });
+
+    it("AC-2 effective-boxes returns 3 keys for child type scenario", async () => {
+      const tpl = await call(session, "POST", "/api/templates", {
+        packId: PACK_ID,
+        docTypeId: DOC_TYPE_CHILD_ID,
+        name: "子类型模板",
+      });
+      expect(tpl.status).toBe(200);
+      const templateId = (tpl.body as { template: { template_id: string } }).template.template_id;
+
+      const saved = await call(session, "PUT", `/api/templates/${templateId}/boxes`, {
+        boxes: [
+          {
+            field_key: "特殊批号",
+            value_type: "string",
+            page: 1,
+            x: "10",
+            y: "20",
+            w: "80",
+            h: "12",
+          },
+        ],
+      });
+      expect(saved.status).toBe(200);
+
+      const res = await call(session, "GET", `/api/templates/${templateId}/effective-boxes`);
+      expect(res.status).toBe(200);
+      const keys = (res.body as { boxes: { field_key: string }[] }).boxes.map((b) => b.field_key).sort();
+      expect(keys).toEqual(["日期A", "特殊批号", "编号"]);
+    });
+
+    it("AC-3 upload with doc_type_id binds child type and extracts inherited keys", async () => {
+      const reset = await call(session, "POST", "/api/demo/reset");
+      const projectId = (reset.body as { project: { project_id: string } }).project.project_id;
+
+      const tpl = await call(session, "POST", "/api/templates", {
+        packId: PACK_ID,
+        docTypeId: DOC_TYPE_CHILD_ID,
+        name: "上传子类型模板",
+      });
+      const templateId = (tpl.body as { template: { template_id: string } }).template.template_id;
+      await call(session, "PUT", `/api/templates/${templateId}/boxes`, {
+        boxes: [
+          {
+            field_key: "特殊批号",
+            value_type: "string",
+            page: 1,
+            x: "10",
+            y: "20",
+            w: "80",
+            h: "12",
+          },
+        ],
+      });
+
+      const JPEG_BYTES = new Uint8Array([0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10]);
+      const res = await handleDemoRequest(session, {
+        method: "POST",
+        url: "/api/jobs/upload",
+        body: {},
+        multipart: {
+          file: { bytes: JPEG_BYTES, fileName: "form.jpg", mime: "image/jpeg" },
+          fields: {
+            project_id: projectId,
+            pack_id: PACK_ID,
+            doc_type_id: DOC_TYPE_CHILD_ID,
+            template_id: templateId,
+          },
+        },
+      });
+      expect(res.status).toBe(200);
+      const body = res.body as {
+        job: { doc_type_id: string; status: string };
+        extraction: { fields_json: string };
+      };
+      expect(body.job.doc_type_id).toBe(DOC_TYPE_CHILD_ID);
+      expect(body.job.status).toBe("checking");
+      const fields = JSON.parse(body.extraction.fields_json) as Record<string, unknown>;
+      expect(Object.keys(fields).sort()).toEqual(["日期A", "特殊批号", "编号"]);
+      expect(fields["特殊批号"]).toBeNull();
+    });
   });
 });

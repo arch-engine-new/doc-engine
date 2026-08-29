@@ -1,29 +1,50 @@
-# Task 3 Report
+# Task 3 Report — DocType HTTP API + Adapter Tests
 
 ## Status
 DONE
 
-## Commit
-`95c5c88ec2619c057953f8cf270292d9becba4a4`  
-`feat(agent-runtime): in-memory scheduler and run manager (task 3)`
+## What was implemented
 
-## Deliverables
-- `packages/agent-runtime/src/runtime/state.ts` — channel/reducer model, merge, serialize
-- `packages/agent-runtime/src/runtime/node-executors.ts` — fn/branch (+ start/end); llm/tool/hitl stubs
-- `packages/agent-runtime/src/runtime/scheduler.ts` — serial Kahn scheduler, retry, onError edges
-- `packages/agent-runtime/src/runtime/run-manager.ts` — run lifecycle created→running→completed/failed/cancelled
-- `packages/agent-runtime/test/scheduler.test.ts` — AC-1 style coverage (>=5 nodes, branch, cancel)
-- `packages/agent-runtime/src/index.ts` — public exports with JSDoc
+### `job-pipeline.ts`
+- Public DocType/FieldDef API: `listDocTypesByPack`, `createDocType`, `updateDocType`, `deleteDocType`, `listFieldDefs`, `saveFieldDefs`.
+- `getEffectiveBoxes(templateId)` — ancestor FieldDef ∪ template FieldBox merge for HTTP preview.
+- `openUploadJob` requires `doc_type_id` or `template_id` (`UploadValidationError` → 400).
 
-## Verify
+### `handle-request.ts`
+- `GET /api/packs/:packId/doc-types` → `{ docTypes }`
+- `POST /api/doc-types` `{ packId, name, parentDocTypeId? }` → `{ docType }`
+- `PATCH /api/doc-types/:id` `{ name? }` → `{ docType }`
+- `DELETE /api/doc-types/:id` → `{ docType }` (409 via `LedgerConflictError` when children/templates/jobs)
+- `GET /api/doc-types/:id/field-defs` → `{ defs }`
+- `PUT /api/doc-types/:id/field-defs` `{ defs: [...] }` → `{ defs }`
+- `GET /api/templates/:id/effective-boxes` → `{ boxes }` (inherited flag)
+- `POST /api/jobs/upload` multipart accepts `doc_type_id` / `docTypeId`; 400 if neither doc_type nor template
+- `LedgerConflictError` → 409, `UploadValidationError` → 400 (existing `errorStatus`)
+
+### `http-adapter.test.ts`
+- DocType CRUD + field-defs round-trip + delete-with-children 409
+- AC-2: child template `effective-boxes` returns 3 keys (`编号`, `日期A`, `特殊批号`)
+- AC-3: upload with `doc_type_id` binds child type; extraction `fields_json` has inherited + extension keys
+- Existing upload tests updated for required doc/template binding
+
+### `upload-ocr.test.ts`
+- Regression: `baseInput` supplies `doc_type_id` for pipeline upload gate
+
+## Verify output
+
 ```
-npm test -w agent-runtime -- scheduler
-# Test Files  1 passed
-# Tests       24 passed
+npm test -w core-engine -- http-adapter
+# 30 passed
 
-npx tsc -p packages/agent-runtime --noEmit
-# exit 0
+npm test -w core-engine
+# 89 passed | 4 skipped
 ```
 
-## Notes
-In-memory path only (no persistence). Branch routing and onError edges covered. Cancellation via AbortSignal.
+## Files changed
+- `packages/core-engine/src/pipeline/job-pipeline.ts`
+- `packages/core-engine/src/http/handle-request.ts`
+- `packages/core-engine/test/http-adapter.test.ts`
+- `packages/core-engine/test/upload-ocr.test.ts`
+
+## Concerns
+None. Vue pages unchanged (Task 4).

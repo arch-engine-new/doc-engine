@@ -12,7 +12,7 @@ import {
   MAX_UPLOAD_BYTES,
   UploadValidationError,
 } from "../src/pipeline/job-pipeline.js";
-import { PACK_ID, RULE_R2_VERSION_ID } from "../src/pipeline/seed.js";
+import { DOC_TYPE_PARENT_ID, PACK_ID, RULE_R2_VERSION_ID } from "../src/pipeline/seed.js";
 
 const JPEG_BYTES = new Uint8Array([0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10]);
 
@@ -36,6 +36,7 @@ describe("openUploadJob", () => {
     return {
       projectId: project.project_id,
       packId: PACK_ID,
+      doc_type_id: DOC_TYPE_PARENT_ID,
       fileName: "form.jpg",
       mime: "image/jpeg",
       bytes: JPEG_BYTES,
@@ -95,9 +96,11 @@ describe("openUploadJob", () => {
       name: "无标准包",
       version: "1",
     });
+    const docType = await pipeline.createDocType({ packId: pack.pack_id, name: "默认类型" });
     const input = {
       projectId: project.project_id,
       packId: pack.pack_id,
+      doc_type_id: docType.doc_type_id,
       fileName: "form.png",
       mime: "image/png",
       bytes: JPEG_BYTES,

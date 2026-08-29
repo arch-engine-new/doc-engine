@@ -7,7 +7,7 @@ import Database from "better-sqlite3";
 import type { BlobStore } from "../blob/port.js";
 import { blobObjectUri, uploadObjectKey } from "../blob/minio.js";
 import { extractByTemplate } from "../extract/field-box.js";
-import { resolveEffectiveBoxes } from "../extract/effective-boxes.js";
+import { resolveEffectiveBoxes, type EffectiveFieldBox } from "../extract/effective-boxes.js";
 import { extractOcrByTemplate, parseOcrFields } from "../extract/ocr-fields.js";
 import type { OcrPort } from "../ocr/port.js";
 import { SqliteLedger, type LedgerStore } from "../persistence/ledger.js";
@@ -15,7 +15,7 @@ import { resolveEngineMode } from "../persistence/live-env.js";
 import { runMigrationOnDb } from "../persistence/migrate.js";
 import { runPgMigration } from "../persistence/pg-migrate.js";
 import { PostgresLedger } from "../persistence/pg-store.js";
-import { CoreEngineStore, type FieldBoxWrite } from "../persistence/store.js";
+import { CoreEngineStore, type FieldBoxWrite, type FieldDefWrite } from "../persistence/store.js";
 import { evaluate, RuleInterpreter } from "../rules/interpreter.js";
 import {
   RulePublisher,
@@ -444,6 +444,9 @@ export class JobPipeline {
     deps: OpenUploadJobDeps,
   ): Promise<OpenUploadJobResult> {
     validateUploadInput(input);
+    if (!input.doc_type_id && !input.template_id) {
+      throw new UploadValidationError("doc_type_id or template_id required");
+    }
 
     const project = await this.resolveProjectForUpload(input.projectId);
     const packId = input.packId ?? PACK_ID;
@@ -650,10 +653,11 @@ export class JobPipeline {
     return extractByTemplate(fixtureFields, effective);
   }
 
-  private async loadEffectiveBoxes(templateId: string) {
+  /** Merge ancestor FieldDefs with template FieldBoxes for extraction / HTTP preview. */
+  async getEffectiveBoxes(templateId: string): Promise<EffectiveFieldBox[]> {
     const template = await this.store.getTemplate(templateId);
     if (!template) {
-      return [];
+      throw new Error(`template not found: ${templateId}`);
     }
     const ancestors = await this.store.getDocTypeAncestors(template.doc_type_id);
     const defByKey = new Map<string, FieldDefRow>();
@@ -664,6 +668,14 @@ export class JobPipeline {
     }
     const templateBoxes = await this.store.listFieldBoxes(templateId);
     return resolveEffectiveBoxes([...defByKey.values()], templateBoxes);
+  }
+
+  private async loadEffectiveBoxes(templateId: string): Promise<EffectiveFieldBox[]> {
+    try {
+      return await this.getEffectiveBoxes(templateId);
+    } catch {
+      return [];
+    }
   }
 
   private async resolveDocTypeIdForTemplate(packId: string, docTypeId?: string): Promise<string> {
@@ -851,6 +863,42 @@ export class JobPipeline {
 
   async deleteSpecPack(packId: string): Promise<SpecPackRow> {
     return this.store.softDeleteSpecPack(packId);
+  }
+
+  async listDocTypesByPack(packId: string): Promise<DocTypeRow[]> {
+    return this.store.listDocTypesByPack(packId);
+  }
+
+  async createDocType(input: {
+    packId: string;
+    name: string;
+    parentDocTypeId?: string | null;
+  }): Promise<DocTypeRow> {
+    return this.store.insertDocType({
+      pack_id: input.packId,
+      name: input.name,
+      parent_doc_type_id: input.parentDocTypeId ?? null,
+    });
+  }
+
+  async updateDocType(docTypeId: string, name: string): Promise<DocTypeRow> {
+    return this.store.updateDocType(docTypeId, name);
+  }
+
+  async deleteDocType(docTypeId: string): Promise<DocTypeRow> {
+    return this.store.softDeleteDocType(docTypeId);
+  }
+
+  async listFieldDefs(docTypeId: string): Promise<FieldDefRow[]> {
+    const docType = await this.store.getDocType(docTypeId);
+    if (!docType) {
+      throw new Error(`doc type not found: ${docTypeId}`);
+    }
+    return this.store.listFieldDefs(docTypeId);
+  }
+
+  async saveFieldDefs(docTypeId: string, defs: FieldDefWrite[]): Promise<FieldDefRow[]> {
+    return this.store.saveFieldDefs(docTypeId, defs);
   }
 
   async listJobs(): Promise<JobRow[]> {
