@@ -1,10 +1,10 @@
 ---
-status: draft
+status: approved
 risk: high
 topic: doc-type-field-inheritance
 pages: project_home, template_annotate, job_upload
 feature: core-engine
-approved: false
+approved: true
 ---
 
 # Design — 文档类型（DocType）与字段继承
