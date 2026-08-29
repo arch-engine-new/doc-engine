@@ -10,9 +10,11 @@ import type {
   ClauseRow,
   ConversationMessageRow,
   ConversationThreadRow,
+  DocTypeRow,
   DocumentRow,
   ExtractionRow,
   FieldBoxRow,
+  FieldDefRow,
   FindingRow,
   JobRow,
   ProjectRow,
@@ -29,7 +31,7 @@ import type {
   VolumePreviewRow,
 } from "../types.js";
 import { LEDGER_TABLES } from "./migrate.js";
-import { CoreEngineStore, type FieldBoxWrite } from "./store.js";
+import { CoreEngineStore, type FieldBoxWrite, type FieldDefWrite } from "./store.js";
 
 export interface LedgerStore {
   close(): Promise<void>;
@@ -84,8 +86,22 @@ export interface LedgerStore {
     kind: string;
   }): Promise<StandardEdgeRow>;
   listStandardEdges(fromClauseId?: string): Promise<StandardEdgeRow[]>;
+  insertDocType(input: {
+    pack_id: string;
+    name: string;
+    parent_doc_type_id?: string | null;
+    doc_type_id?: string;
+  }): Promise<DocTypeRow>;
+  getDocType(docTypeId: string): Promise<DocTypeRow | null>;
+  updateDocType(docTypeId: string, name: string): Promise<DocTypeRow>;
+  softDeleteDocType(docTypeId: string): Promise<DocTypeRow>;
+  listDocTypesByPack(packId: string): Promise<DocTypeRow[]>;
+  getDocTypeAncestors(docTypeId: string): Promise<DocTypeRow[]>;
+  listFieldDefs(docTypeId: string): Promise<FieldDefRow[]>;
+  saveFieldDefs(docTypeId: string, defs: FieldDefWrite[]): Promise<FieldDefRow[]>;
   insertTemplate(input: {
     pack_id: string;
+    doc_type_id: string;
     name: string;
     page_image_uri?: string | null;
   }): Promise<TemplateRow>;
@@ -110,6 +126,12 @@ export interface LedgerStore {
   updateFixtureLastResult(id: number, lastResult: string): Promise<RuleFixtureRow>;
   insertProject(name: string): Promise<ProjectRow>;
   listProjects(): Promise<ProjectRow[]>;
+  getProject(projectId: string): Promise<ProjectRow | null>;
+  updateProjectName(projectId: string, name: string): Promise<ProjectRow>;
+  softDeleteProject(projectId: string): Promise<ProjectRow>;
+  updateSpecPackName(packId: string, name: string): Promise<SpecPackRow>;
+  softDeleteSpecPack(packId: string): Promise<SpecPackRow>;
+  countJobsByPack(packId: string): Promise<number>;
   getTemplate(templateId: string): Promise<TemplateRow | null>;
   listTemplates(packId: string): Promise<TemplateRow[]>;
   listJobs(): Promise<JobRow[]>;
@@ -122,8 +144,10 @@ export interface LedgerStore {
     pack_id: string | null;
     status: string;
     template_id?: string | null;
+    doc_type_id?: string | null;
   }): Promise<JobRow>;
   updateJobStatus(jobId: string, status: string): Promise<JobRow>;
+  updateJobAgentRunId(jobId: string, agentRunId: string): Promise<JobRow>;
   getJob(jobId: string): Promise<JobRow | null>;
   getJobByTrace(traceId: string): Promise<JobRow | null>;
   insertDocument(input: {
@@ -312,8 +336,46 @@ export class SqliteLedger implements LedgerStore {
     return Promise.resolve(this.inner.listStandardEdges(fromClauseId));
   }
 
+  insertDocType(input: {
+    pack_id: string;
+    name: string;
+    parent_doc_type_id?: string | null;
+    doc_type_id?: string;
+  }): Promise<DocTypeRow> {
+    return Promise.resolve(this.inner.insertDocType(input));
+  }
+
+  getDocType(docTypeId: string): Promise<DocTypeRow | null> {
+    return Promise.resolve(this.inner.getDocType(docTypeId));
+  }
+
+  updateDocType(docTypeId: string, name: string): Promise<DocTypeRow> {
+    return Promise.resolve(this.inner.updateDocType(docTypeId, name));
+  }
+
+  softDeleteDocType(docTypeId: string): Promise<DocTypeRow> {
+    return Promise.resolve(this.inner.softDeleteDocType(docTypeId));
+  }
+
+  listDocTypesByPack(packId: string): Promise<DocTypeRow[]> {
+    return Promise.resolve(this.inner.listDocTypesByPack(packId));
+  }
+
+  getDocTypeAncestors(docTypeId: string): Promise<DocTypeRow[]> {
+    return Promise.resolve(this.inner.getDocTypeAncestors(docTypeId));
+  }
+
+  listFieldDefs(docTypeId: string): Promise<FieldDefRow[]> {
+    return Promise.resolve(this.inner.listFieldDefs(docTypeId));
+  }
+
+  saveFieldDefs(docTypeId: string, defs: FieldDefWrite[]): Promise<FieldDefRow[]> {
+    return Promise.resolve(this.inner.saveFieldDefs(docTypeId, defs));
+  }
+
   insertTemplate(input: {
     pack_id: string;
+    doc_type_id: string;
     name: string;
     page_image_uri?: string | null;
   }): Promise<TemplateRow> {
@@ -380,6 +442,30 @@ export class SqliteLedger implements LedgerStore {
     return Promise.resolve(this.inner.listProjects());
   }
 
+  getProject(projectId: string): Promise<ProjectRow | null> {
+    return Promise.resolve(this.inner.getProject(projectId));
+  }
+
+  updateProjectName(projectId: string, name: string): Promise<ProjectRow> {
+    return Promise.resolve(this.inner.updateProjectName(projectId, name));
+  }
+
+  softDeleteProject(projectId: string): Promise<ProjectRow> {
+    return Promise.resolve(this.inner.softDeleteProject(projectId));
+  }
+
+  updateSpecPackName(packId: string, name: string): Promise<SpecPackRow> {
+    return Promise.resolve(this.inner.updateSpecPackName(packId, name));
+  }
+
+  softDeleteSpecPack(packId: string): Promise<SpecPackRow> {
+    return Promise.resolve(this.inner.softDeleteSpecPack(packId));
+  }
+
+  countJobsByPack(packId: string): Promise<number> {
+    return Promise.resolve(this.inner.countJobsByPack(packId));
+  }
+
   getTemplate(templateId: string): Promise<TemplateRow | null> {
     return Promise.resolve(this.inner.getTemplate(templateId));
   }
@@ -413,12 +499,16 @@ export class SqliteLedger implements LedgerStore {
     pack_id: string | null;
     status: string;
     template_id?: string | null;
+    doc_type_id?: string | null;
   }): Promise<JobRow> {
     return Promise.resolve(this.inner.insertJob(input));
   }
 
   updateJobStatus(jobId: string, status: string): Promise<JobRow> {
     return Promise.resolve(this.inner.updateJobStatus(jobId, status));
+  }
+  updateJobAgentRunId(jobId: string, agentRunId: string): Promise<JobRow> {
+    return Promise.resolve(this.inner.updateJobAgentRunId(jobId, agentRunId));
   }
 
   getJob(jobId: string): Promise<JobRow | null> {

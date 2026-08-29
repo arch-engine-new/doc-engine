@@ -13,9 +13,11 @@ import type {
   ClauseRow,
   ConversationMessageRow,
   ConversationThreadRow,
+  DocTypeRow,
   DocumentRow,
   ExtractionRow,
   FieldBoxRow,
+  FieldDefRow,
   FindingRow,
   JobRow,
   ProjectRow,
@@ -32,6 +34,8 @@ import type {
   VolumePreviewRow,
 } from "../types.js";
 import {
+  DOC_TYPE_CHILD_ID,
+  DOC_TYPE_PARENT_ID,
   EMPTY_PACK_NAME,
   EMPTY_PACK_VERSION,
   PACK_ID,
@@ -42,13 +46,18 @@ import {
   RULE_R2_ID,
   RULE_R2_VERSION_ID,
   SEED_PACK_PROJECT_ID,
+  seedDemoDocTypes,
 } from "../pipeline/seed.js";
+import { LedgerConflictError } from "../pipeline/job-pipeline.js";
 
 /** Writable FieldBox columns for upsert; names match FieldBoxRow, coords stay DECIMAL strings. */
 export type FieldBoxWrite = Pick<
   FieldBoxRow,
   "field_key" | "value_type" | "page" | "x" | "y" | "w" | "h"
 >;
+
+/** Writable FieldDef columns for saveFieldDefs. */
+export type FieldDefWrite = Pick<FieldDefRow, "field_key" | "value_type" | "required">;
 
 const SYSTEM = "system";
 
@@ -61,6 +70,7 @@ export class CoreEngineStore {
 
   seedPublishedRules(): void {
     this.ensureEmptySpecPack();
+    this.seedDemoDocTypes();
     const ts = nowIso();
     this.db
       .prepare(
@@ -360,20 +370,211 @@ export class CoreEngineStore {
       .all() as StandardEdgeRow[];
   }
 
+  insertDocType(input: {
+    pack_id: string;
+    name: string;
+    parent_doc_type_id?: string | null;
+    doc_type_id?: string;
+  }): DocTypeRow {
+    const pack = this.getSpecPack(input.pack_id);
+    if (!pack) {
+      throw new Error(`spec pack not found: ${input.pack_id}`);
+    }
+    if (input.parent_doc_type_id) {
+      const parent = this.getDocType(input.parent_doc_type_id);
+      if (!parent) {
+        throw new Error(`parent doc type not found: ${input.parent_doc_type_id}`);
+      }
+      if (parent.pack_id !== input.pack_id) {
+        throw new Error(`parent doc type ${input.parent_doc_type_id} does not belong to pack ${input.pack_id}`);
+      }
+    }
+    const ts = nowIso();
+    const doc_type_id = input.doc_type_id ?? newId("dt");
+    this.db
+      .prepare(
+        `INSERT INTO t_doc_type
+          (doc_type_id, pack_id, parent_doc_type_id, name, created_at, updated_at, creator, updater, deleted)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0)`,
+      )
+      .run(
+        doc_type_id,
+        input.pack_id,
+        input.parent_doc_type_id ?? null,
+        input.name,
+        ts,
+        ts,
+        SYSTEM,
+        SYSTEM,
+      );
+    return this.getDocType(doc_type_id)!;
+  }
+
+  getDocType(docTypeId: string): DocTypeRow | null {
+    const row = this.db
+      .prepare(`SELECT * FROM t_doc_type WHERE doc_type_id = ? AND deleted = 0`)
+      .get(docTypeId) as DocTypeRow | undefined;
+    return row ?? null;
+  }
+
+  updateDocType(docTypeId: string, name: string): DocTypeRow {
+    const docType = this.getDocType(docTypeId);
+    if (!docType) {
+      throw new Error(`doc type not found: ${docTypeId}`);
+    }
+    const ts = nowIso();
+    this.db
+      .prepare(
+        `UPDATE t_doc_type SET name = ?, updated_at = ?, updater = ? WHERE doc_type_id = ? AND deleted = 0`,
+      )
+      .run(name, ts, SYSTEM, docTypeId);
+    return this.getDocType(docTypeId)!;
+  }
+
+  softDeleteDocType(docTypeId: string): DocTypeRow {
+    const docType = this.getDocType(docTypeId);
+    if (!docType) {
+      throw new Error(`doc type not found: ${docTypeId}`);
+    }
+    const child = this.db
+      .prepare(
+        `SELECT COUNT(*) AS cnt FROM t_doc_type WHERE parent_doc_type_id = ? AND deleted = 0`,
+      )
+      .get(docTypeId) as { cnt: number };
+    if (Number(child.cnt) > 0) {
+      throw new LedgerConflictError("doc type has children");
+    }
+    const templates = this.db
+      .prepare(`SELECT COUNT(*) AS cnt FROM t_template WHERE doc_type_id = ? AND deleted = 0`)
+      .get(docTypeId) as { cnt: number };
+    if (Number(templates.cnt) > 0) {
+      throw new LedgerConflictError("doc type has templates");
+    }
+    const jobs = this.db
+      .prepare(`SELECT COUNT(*) AS cnt FROM t_job WHERE doc_type_id = ? AND deleted = 0`)
+      .get(docTypeId) as { cnt: number };
+    if (Number(jobs.cnt) > 0) {
+      throw new LedgerConflictError("doc type has jobs");
+    }
+    const ts = nowIso();
+    this.db
+      .prepare(
+        `UPDATE t_doc_type SET deleted = 1, updated_at = ?, updater = ? WHERE doc_type_id = ? AND deleted = 0`,
+      )
+      .run(ts, SYSTEM, docTypeId);
+    return this.db.prepare(`SELECT * FROM t_doc_type WHERE doc_type_id = ?`).get(docTypeId) as DocTypeRow;
+  }
+
+  listDocTypesByPack(packId: string): DocTypeRow[] {
+    return this.db
+      .prepare(`SELECT * FROM t_doc_type WHERE pack_id = ? AND deleted = 0 ORDER BY id ASC`)
+      .all(packId) as DocTypeRow[];
+  }
+
+  /** Root-first chain including docTypeId; used to flatten FieldDef with child winning duplicate keys. */
+  getDocTypeAncestors(docTypeId: string): DocTypeRow[] {
+    const chain: DocTypeRow[] = [];
+    let current = this.getDocType(docTypeId);
+    while (current) {
+      chain.unshift(current);
+      if (!current.parent_doc_type_id) {
+        break;
+      }
+      current = this.getDocType(current.parent_doc_type_id);
+      if (chain.length > 32) {
+        throw new Error(`doc type ancestor cycle detected at ${docTypeId}`);
+      }
+    }
+    return chain;
+  }
+
+  listFieldDefs(docTypeId: string): FieldDefRow[] {
+    return this.db
+      .prepare(
+        `SELECT * FROM t_field_def WHERE doc_type_id = ? AND deleted = 0 ORDER BY id ASC`,
+      )
+      .all(docTypeId) as FieldDefRow[];
+  }
+
+  saveFieldDefs(docTypeId: string, defs: FieldDefWrite[]): FieldDefRow[] {
+    const docType = this.getDocType(docTypeId);
+    if (!docType) {
+      throw new Error(`doc type not found: ${docTypeId}`);
+    }
+    const ts = nowIso();
+    const upsert = this.db.prepare(
+      `INSERT INTO t_field_def
+        (doc_type_id, field_key, value_type, required, created_at, updated_at, creator, updater, deleted)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0)
+       ON CONFLICT(doc_type_id, field_key) DO UPDATE SET
+         value_type = excluded.value_type,
+         required = excluded.required,
+         updated_at = excluded.updated_at,
+         updater = excluded.updater,
+         deleted = 0`,
+    );
+    const tx = this.db.transaction(() => {
+      this.db
+        .prepare(`UPDATE t_field_def SET deleted = 1, updated_at = ?, updater = ? WHERE doc_type_id = ?`)
+        .run(ts, SYSTEM, docTypeId);
+      for (const def of defs) {
+        upsert.run(
+          docTypeId,
+          def.field_key,
+          def.value_type,
+          def.required ?? 0,
+          ts,
+          ts,
+          SYSTEM,
+          SYSTEM,
+        );
+      }
+    });
+    tx();
+    return this.listFieldDefs(docTypeId);
+  }
+
+  /** Demo parent/child DocType tree on PACK_ID for fixture extraction regression. */
+  private seedDemoDocTypes(): void {
+    seedDemoDocTypes(this, {
+      packId: PACK_ID,
+      parentId: DOC_TYPE_PARENT_ID,
+      childId: DOC_TYPE_CHILD_ID,
+    });
+  }
+
   insertTemplate(input: {
     pack_id: string;
+    doc_type_id: string;
     name: string;
     page_image_uri?: string | null;
   }): TemplateRow {
+    const docType = this.getDocType(input.doc_type_id);
+    if (!docType) {
+      throw new Error(`doc type not found: ${input.doc_type_id}`);
+    }
+    if (docType.pack_id !== input.pack_id) {
+      throw new Error(`doc type ${input.doc_type_id} does not belong to pack ${input.pack_id}`);
+    }
     const ts = nowIso();
     const template_id = newId("tpl");
     this.db
       .prepare(
         `INSERT INTO t_template
-          (template_id, pack_id, name, page_image_uri, created_at, updated_at, creator, updater, deleted)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0)`,
+          (template_id, pack_id, doc_type_id, name, page_image_uri, created_at, updated_at, creator, updater, deleted)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0)`,
       )
-      .run(template_id, input.pack_id, input.name, input.page_image_uri ?? null, ts, ts, SYSTEM, SYSTEM);
+      .run(
+        template_id,
+        input.pack_id,
+        input.doc_type_id,
+        input.name,
+        input.page_image_uri ?? null,
+        ts,
+        ts,
+        SYSTEM,
+        SYSTEM,
+      );
     return this.db.prepare(`SELECT * FROM t_template WHERE template_id = ?`).get(template_id) as TemplateRow;
   }
 
@@ -552,6 +753,82 @@ export class CoreEngineStore {
       .all() as ProjectRow[];
   }
 
+  getProject(projectId: string): ProjectRow | null {
+    const row = this.db
+      .prepare(`SELECT * FROM t_project WHERE project_id = ? AND deleted = 0`)
+      .get(projectId) as ProjectRow | undefined;
+    return row ?? null;
+  }
+
+  updateProjectName(projectId: string, name: string): ProjectRow {
+    const project = this.getProject(projectId);
+    if (!project) {
+      throw new Error(`project not found: ${projectId}`);
+    }
+    const ts = nowIso();
+    this.db
+      .prepare(
+        `UPDATE t_project SET name = ?, updated_at = ?, updater = ? WHERE project_id = ? AND deleted = 0`,
+      )
+      .run(name, ts, SYSTEM, projectId);
+    return this.getProject(projectId)!;
+  }
+
+  softDeleteProject(projectId: string): ProjectRow {
+    const project = this.getProject(projectId);
+    if (!project) {
+      throw new Error(`project not found: ${projectId}`);
+    }
+    if (this.listSpecPacks(projectId).length > 0) {
+      throw new LedgerConflictError("project has spec packs");
+    }
+    const ts = nowIso();
+    this.db
+      .prepare(
+        `UPDATE t_project SET deleted = 1, updated_at = ?, updater = ? WHERE project_id = ? AND deleted = 0`,
+      )
+      .run(ts, SYSTEM, projectId);
+    return this.db.prepare(`SELECT * FROM t_project WHERE project_id = ?`).get(projectId) as ProjectRow;
+  }
+
+  updateSpecPackName(packId: string, name: string): SpecPackRow {
+    const pack = this.getSpecPack(packId);
+    if (!pack) {
+      throw new Error(`spec pack not found: ${packId}`);
+    }
+    const ts = nowIso();
+    this.db
+      .prepare(
+        `UPDATE t_spec_pack SET name = ?, updated_at = ?, updater = ? WHERE pack_id = ? AND deleted = 0`,
+      )
+      .run(name, ts, SYSTEM, packId);
+    return this.getSpecPack(packId)!;
+  }
+
+  softDeleteSpecPack(packId: string): SpecPackRow {
+    const pack = this.getSpecPack(packId);
+    if (!pack) {
+      throw new Error(`spec pack not found: ${packId}`);
+    }
+    if (this.countJobsByPack(packId) > 0) {
+      throw new LedgerConflictError("spec pack has jobs");
+    }
+    const ts = nowIso();
+    this.db
+      .prepare(
+        `UPDATE t_spec_pack SET deleted = 1, updated_at = ?, updater = ? WHERE pack_id = ? AND deleted = 0`,
+      )
+      .run(ts, SYSTEM, packId);
+    return this.db.prepare(`SELECT * FROM t_spec_pack WHERE pack_id = ?`).get(packId) as SpecPackRow;
+  }
+
+  countJobsByPack(packId: string): number {
+    const row = this.db
+      .prepare(`SELECT COUNT(*) AS cnt FROM t_job WHERE pack_id = ? AND deleted = 0`)
+      .get(packId) as { cnt: number };
+    return Number(row.cnt);
+  }
+
   getTemplate(templateId: string): TemplateRow | null {
     const row = this.db
       .prepare(`SELECT * FROM t_template WHERE template_id = ? AND deleted = 0`)
@@ -613,16 +890,26 @@ export class CoreEngineStore {
     pack_id: string | null;
     status: string;
     template_id?: string | null;
+    doc_type_id?: string | null;
   }): JobRow {
+    if (input.doc_type_id && input.pack_id) {
+      const docType = this.getDocType(input.doc_type_id);
+      if (!docType) {
+        throw new Error(`doc type not found: ${input.doc_type_id}`);
+      }
+      if (docType.pack_id !== input.pack_id) {
+        throw new Error(`doc type ${input.doc_type_id} does not belong to pack ${input.pack_id}`);
+      }
+    }
     const ts = nowIso();
     const job_id = newId("job");
     const trace_id = newId("trc");
     this.db
       .prepare(
         `INSERT INTO t_job
-          (job_id, project_id, pack_id, trace_id, status, template_id, agent_run_id,
+          (job_id, project_id, pack_id, trace_id, status, template_id, doc_type_id, agent_run_id,
            created_at, updated_at, creator, updater, deleted)
-         VALUES (?, ?, ?, ?, ?, ?, NULL, ?, ?, ?, ?, 0)`,
+         VALUES (?, ?, ?, ?, ?, ?, ?, NULL, ?, ?, ?, ?, 0)`,
       )
       .run(
         job_id,
@@ -631,6 +918,7 @@ export class CoreEngineStore {
         trace_id,
         input.status,
         input.template_id ?? null,
+        input.doc_type_id ?? null,
         ts,
         ts,
         SYSTEM,
@@ -644,6 +932,16 @@ export class CoreEngineStore {
     this.db
       .prepare(`UPDATE t_job SET status = ?, updated_at = ?, updater = ? WHERE job_id = ? AND deleted = 0`)
       .run(status, ts, SYSTEM, jobId);
+    return this.getJob(jobId)!;
+  }
+
+  updateJobAgentRunId(jobId: string, agentRunId: string): JobRow {
+    const ts = nowIso();
+    this.db
+      .prepare(
+        `UPDATE t_job SET agent_run_id = ?, updated_at = ?, updater = ? WHERE job_id = ? AND deleted = 0`,
+      )
+      .run(agentRunId, ts, SYSTEM, jobId);
     return this.getJob(jobId)!;
   }
 

@@ -7,6 +7,7 @@ import Database from "better-sqlite3";
 import type { BlobStore } from "../blob/port.js";
 import { blobObjectUri, uploadObjectKey } from "../blob/minio.js";
 import { extractByTemplate } from "../extract/field-box.js";
+import { resolveEffectiveBoxes } from "../extract/effective-boxes.js";
 import { extractOcrByTemplate, parseOcrFields } from "../extract/ocr-fields.js";
 import type { OcrPort } from "../ocr/port.js";
 import { SqliteLedger, type LedgerStore } from "../persistence/ledger.js";
@@ -28,9 +29,11 @@ import type {
   ClauseRow,
   ConversationMessageRow,
   ConversationThreadRow,
+  DocTypeRow,
   DocumentRow,
   ExtractionRow,
   FieldBoxRow,
+  FieldDefRow,
   FindingRow,
   JobRow,
   ProjectRow,
@@ -43,7 +46,8 @@ import type {
   TemplateRow,
   VolumePreviewRow,
 } from "../types.js";
-import { PACK_ID, fieldsForKind, type FixtureKind } from "./seed.js";
+import type { JobStepOrchestrator } from "../agent/job-step-orchestrator.js";
+import { DOC_TYPE_PARENT_ID, PACK_ID, fieldsForKind, type FixtureKind } from "./seed.js";
 import {
   ReviewDesk,
   type CheckWordingInput,
@@ -93,12 +97,14 @@ export interface CreateSpecPackInput {
 export interface CreateTemplateInput {
   packId: string;
   name: string;
+  docTypeId?: string;
   pageImageUri?: string;
 }
 
 export interface RunFixtureJobInput {
   kind: FixtureKind;
   template_id?: string;
+  doc_type_id?: string;
 }
 
 export interface OpenJobForPackInput {
@@ -124,10 +130,27 @@ export class UploadValidationError extends Error {
   }
 }
 
+/** Thrown when rename/delete violates ledger constraints; HTTP maps to 409. */
+export class LedgerConflictError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "LedgerConflictError";
+  }
+}
+
+const INDUSTRY_SPEC_PACK_NAME_RE = /公路|水利|房建/;
+
+function rejectIndustrySpecPackName(name: string): void {
+  if (INDUSTRY_SPEC_PACK_NAME_RE.test(name)) {
+    throw new Error("spec pack name must not contain industry presets");
+  }
+}
+
 export interface OpenUploadJobInput {
   projectId: string;
   packId?: string;
   template_id?: string;
+  doc_type_id?: string;
   fileName: string;
   mime: string;
   bytes: Uint8Array;
@@ -164,6 +187,8 @@ export class JobPipeline {
   readonly review: ReviewDesk;
   readonly volume: VolumeDesk;
   readonly library: StandardLibrary;
+  /** Optional agent step orchestrator (wired by HTTP session). */
+  stepOrchestrator: Pick<JobStepOrchestrator, "onStepEntered"> | null = null;
 
   constructor(
     private readonly store: LedgerStore,
@@ -269,8 +294,10 @@ export class JobPipeline {
 
   /** Template bound to a pack; page_image_uri optional this slice. */
   async createTemplate(input: CreateTemplateInput): Promise<TemplateRow> {
+    const doc_type_id = await this.resolveDocTypeIdForTemplate(input.packId, input.docTypeId);
     return this.store.insertTemplate({
       pack_id: input.packId,
+      doc_type_id,
       name: input.name,
       page_image_uri: input.pageImageUri ?? null,
     });
@@ -316,12 +343,30 @@ export class JobPipeline {
   async runFixtureJob(input: RunFixtureJobInput): Promise<FixtureJobResult> {
     const project = this.project ?? (await this.createProject());
     const fixtureFields = fieldsForKind(input.kind);
+    let packId = PACK_ID;
+    if (input.template_id) {
+      const template = await this.store.getTemplate(input.template_id);
+      if (template) {
+        packId = template.pack_id;
+      }
+    } else if (input.doc_type_id) {
+      const docType = await this.store.getDocType(input.doc_type_id);
+      if (docType) {
+        packId = docType.pack_id;
+      }
+    }
+    const { template_id, doc_type_id } = await this.resolveJobDocBinding({
+      packId,
+      template_id: input.template_id ?? null,
+      doc_type_id: input.doc_type_id ?? null,
+    });
 
     let job = await this.store.insertJob({
       project_id: project.project_id,
-      pack_id: PACK_ID,
+      pack_id: packId,
       status: "inspecting",
-      template_id: input.template_id ?? null,
+      template_id,
+      doc_type_id,
     });
 
     const document = await this.store.insertDocument({
@@ -384,7 +429,9 @@ export class JobPipeline {
     }
 
     // Blocking fail must not auto-pass; both fixtures remain at checking.
-    return { project, job, document, extraction, findings };
+    await this.emitStepEntered(job);
+    const refreshed = await this.store.getJob(job.job_id);
+    return { project, job: refreshed ?? job, document, extraction, findings };
   }
 
   /**
@@ -400,12 +447,18 @@ export class JobPipeline {
 
     const project = await this.resolveProjectForUpload(input.projectId);
     const packId = input.packId ?? PACK_ID;
+    const { template_id, doc_type_id } = await this.resolveJobDocBinding({
+      packId,
+      template_id: input.template_id ?? null,
+      doc_type_id: input.doc_type_id ?? null,
+    });
 
     let job = await this.store.insertJob({
       project_id: project.project_id,
       pack_id: packId,
       status: "uploaded",
-      template_id: input.template_id ?? null,
+      template_id,
+      doc_type_id,
     });
 
     let document: DocumentRow;
@@ -492,7 +545,13 @@ export class JobPipeline {
       await this.tryAttachStandardFit(job, packId, input.standardFitQuery, fields, findings);
     }
 
-    return { project, job, document, extraction, findings };
+    await this.emitStepEntered(job);
+    const refreshed = await this.store.getJob(job.job_id);
+    return { project, job: refreshed ?? job, document, extraction, findings };
+  }
+
+  private async emitStepEntered(job: JobRow): Promise<void> {
+    await this.stepOrchestrator?.onStepEntered(job, job.status);
   }
 
   private async resolveProjectForUpload(projectId: string): Promise<ProjectRow> {
@@ -547,11 +606,11 @@ export class JobPipeline {
     if (!templateId) {
       return parseOcrFields(ocrText);
     }
-    const boxes = await this.store.listFieldBoxes(templateId);
-    if (boxes.length === 0) {
+    const effective = await this.loadEffectiveBoxes(templateId);
+    if (effective.length === 0) {
       return parseOcrFields(ocrText);
     }
-    return extractOcrByTemplate(ocrText, boxes);
+    return extractOcrByTemplate(ocrText, effective);
   }
 
   private async tryAttachStandardFit(
@@ -578,7 +637,7 @@ export class JobPipeline {
   }
 
   /**
-   * Bound template with boxes → project fixture onto field_key list.
+   * Bound template with effective boxes → project fixture onto field_key list.
    * No boxes (or no template) keeps SLICE-1 full fixture fields.
    */
   private async projectExtractionFields(
@@ -586,9 +645,82 @@ export class JobPipeline {
     fixtureFields: Record<string, string>,
   ): Promise<Record<string, unknown>> {
     if (!templateId) return fixtureFields;
-    const boxes = await this.store.listFieldBoxes(templateId);
-    if (boxes.length === 0) return fixtureFields;
-    return extractByTemplate(fixtureFields, boxes);
+    const effective = await this.loadEffectiveBoxes(templateId);
+    if (effective.length === 0) return fixtureFields;
+    return extractByTemplate(fixtureFields, effective);
+  }
+
+  private async loadEffectiveBoxes(templateId: string) {
+    const template = await this.store.getTemplate(templateId);
+    if (!template) {
+      return [];
+    }
+    const ancestors = await this.store.getDocTypeAncestors(template.doc_type_id);
+    const defByKey = new Map<string, FieldDefRow>();
+    for (const docType of ancestors) {
+      for (const def of await this.store.listFieldDefs(docType.doc_type_id)) {
+        defByKey.set(def.field_key, def);
+      }
+    }
+    const templateBoxes = await this.store.listFieldBoxes(templateId);
+    return resolveEffectiveBoxes([...defByKey.values()], templateBoxes);
+  }
+
+  private async resolveDocTypeIdForTemplate(packId: string, docTypeId?: string): Promise<string> {
+    if (docTypeId) {
+      await this.assertDocTypeInPack(docTypeId, packId);
+      return docTypeId;
+    }
+    const listed = await this.store.listDocTypesByPack(packId);
+    if (listed.length > 0) {
+      return listed[0]!.doc_type_id;
+    }
+    const created = await this.store.insertDocType({ pack_id: packId, name: "默认类型" });
+    return created.doc_type_id;
+  }
+
+  private async assertDocTypeInPack(docTypeId: string, packId: string): Promise<DocTypeRow> {
+    const docType = await this.store.getDocType(docTypeId);
+    if (!docType) {
+      throw new Error(`doc type not found: ${docTypeId}`);
+    }
+    if (docType.pack_id !== packId) {
+      throw new Error(`doc type ${docTypeId} does not belong to pack ${packId}`);
+    }
+    return docType;
+  }
+
+  private async resolveJobDocBinding(input: {
+    packId: string;
+    template_id: string | null;
+    doc_type_id: string | null;
+  }): Promise<{ template_id: string | null; doc_type_id: string | null }> {
+    let template_id = input.template_id;
+    let doc_type_id = input.doc_type_id;
+
+    if (template_id) {
+      const template = await this.store.getTemplate(template_id);
+      if (!template) {
+        throw new Error(`template not found: ${template_id}`);
+      }
+      if (template.pack_id !== input.packId) {
+        throw new Error(`template ${template_id} does not belong to pack ${input.packId}`);
+      }
+      if (doc_type_id && doc_type_id !== template.doc_type_id) {
+        throw new Error(
+          `doc type ${doc_type_id} does not match template doc type ${template.doc_type_id}`,
+        );
+      }
+      doc_type_id = doc_type_id ?? template.doc_type_id;
+    }
+
+    if (doc_type_id) {
+      await this.assertDocTypeInPack(doc_type_id, input.packId);
+    } else if (input.packId === PACK_ID) {
+      doc_type_id = DOC_TYPE_PARENT_ID;
+    }
+
+    return { template_id, doc_type_id };
   }
 
   async checkWording(input: CheckWordingInput): Promise<ProposalRow> {
@@ -704,6 +836,23 @@ export class JobPipeline {
     return this.store.listProjects();
   }
 
+  async updateProject(projectId: string, name: string): Promise<ProjectRow> {
+    return this.store.updateProjectName(projectId, name);
+  }
+
+  async deleteProject(projectId: string): Promise<ProjectRow> {
+    return this.store.softDeleteProject(projectId);
+  }
+
+  async updateSpecPack(packId: string, name: string): Promise<SpecPackRow> {
+    rejectIndustrySpecPackName(name);
+    return this.store.updateSpecPackName(packId, name);
+  }
+
+  async deleteSpecPack(packId: string): Promise<SpecPackRow> {
+    return this.store.softDeleteSpecPack(packId);
+  }
+
   async listJobs(): Promise<JobRow[]> {
     return this.store.listJobs();
   }
@@ -730,6 +879,10 @@ export class JobPipeline {
 
   async listMessagesByTrace(traceId: string): Promise<ConversationMessageRow[]> {
     return this.store.listMessagesByTrace(traceId);
+  }
+
+  async updateJobAgentRunId(jobId: string, agentRunId: string): Promise<JobRow> {
+    return this.store.updateJobAgentRunId(jobId, agentRunId);
   }
 
   /**

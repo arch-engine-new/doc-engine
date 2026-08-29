@@ -12,9 +12,11 @@ import type {
   ClauseRow,
   ConversationMessageRow,
   ConversationThreadRow,
+  DocTypeRow,
   DocumentRow,
   ExtractionRow,
   FieldBoxRow,
+  FieldDefRow,
   FindingRow,
   JobRow,
   ProjectRow,
@@ -30,7 +32,10 @@ import type {
   TemplateRow,
   VolumePreviewRow,
 } from "../types.js";
+import { LedgerConflictError } from "../pipeline/job-pipeline.js";
 import {
+  DOC_TYPE_CHILD_ID,
+  DOC_TYPE_PARENT_ID,
   EMPTY_PACK_NAME,
   EMPTY_PACK_VERSION,
   PACK_ID,
@@ -41,10 +46,11 @@ import {
   RULE_R2_ID,
   RULE_R2_VERSION_ID,
   SEED_PACK_PROJECT_ID,
+  seedDemoDocTypes,
 } from "../pipeline/seed.js";
 import type { LedgerStore } from "./ledger.js";
 import { LEDGER_TABLES } from "./migrate.js";
-import type { FieldBoxWrite } from "./store.js";
+import type { FieldBoxWrite, FieldDefWrite } from "./store.js";
 
 const SYSTEM = "system";
 
@@ -127,11 +133,32 @@ function mapSpecPack(row: QueryResultRow): SpecPackRow {
   };
 }
 
+function mapDocType(row: QueryResultRow): DocTypeRow {
+  return {
+    ...mapAudit(row),
+    doc_type_id: String(row.doc_type_id),
+    pack_id: String(row.pack_id),
+    parent_doc_type_id: row.parent_doc_type_id == null ? null : String(row.parent_doc_type_id),
+    name: String(row.name),
+  };
+}
+
+function mapFieldDef(row: QueryResultRow): FieldDefRow {
+  return {
+    ...mapAudit(row),
+    doc_type_id: String(row.doc_type_id),
+    field_key: String(row.field_key),
+    value_type: String(row.value_type),
+    required: asNumber(row.required),
+  };
+}
+
 function mapTemplate(row: QueryResultRow): TemplateRow {
   return {
     ...mapAudit(row),
     template_id: String(row.template_id),
     pack_id: String(row.pack_id),
+    doc_type_id: String(row.doc_type_id),
     name: String(row.name),
     page_image_uri: row.page_image_uri == null ? null : String(row.page_image_uri),
   };
@@ -190,6 +217,7 @@ function mapJob(row: QueryResultRow): JobRow {
     trace_id: String(row.trace_id),
     status: String(row.status),
     template_id: row.template_id == null ? null : String(row.template_id),
+    doc_type_id: row.doc_type_id == null ? null : String(row.doc_type_id),
     agent_run_id: row.agent_run_id == null ? null : String(row.agent_run_id),
   };
 }
@@ -358,6 +386,7 @@ export class PostgresLedger implements LedgerStore {
 
   async seedPublishedRules(): Promise<void> {
     await this.ensureEmptySpecPack();
+    await this.seedDemoDocTypes();
     const ts = nowIso();
     await this.q(
       `INSERT INTO t_rule
@@ -400,6 +429,213 @@ export class PostgresLedger implements LedgerStore {
        ON CONFLICT DO NOTHING`,
       [PACK_ID, SEED_PACK_PROJECT_ID, EMPTY_PACK_NAME, EMPTY_PACK_VERSION, ts, ts, SYSTEM, SYSTEM],
     );
+  }
+
+  private async seedDemoDocTypes(): Promise<void> {
+    seedDemoDocTypes(this, {
+      packId: PACK_ID,
+      parentId: DOC_TYPE_PARENT_ID,
+      childId: DOC_TYPE_CHILD_ID,
+    });
+  }
+
+  async insertDocType(input: {
+    pack_id: string;
+    name: string;
+    parent_doc_type_id?: string | null;
+    doc_type_id?: string;
+  }): Promise<DocTypeRow> {
+    const pack = await this.getSpecPack(input.pack_id);
+    if (!pack) {
+      throw new Error(`spec pack not found: ${input.pack_id}`);
+    }
+    if (input.parent_doc_type_id) {
+      const parent = await this.getDocType(input.parent_doc_type_id);
+      if (!parent) {
+        throw new Error(`parent doc type not found: ${input.parent_doc_type_id}`);
+      }
+      if (parent.pack_id !== input.pack_id) {
+        throw new Error(`parent doc type ${input.parent_doc_type_id} does not belong to pack ${input.pack_id}`);
+      }
+    }
+    const ts = nowIso();
+    const doc_type_id = input.doc_type_id ?? newId("dt");
+    const result = await this.q(
+      `INSERT INTO t_doc_type
+        (doc_type_id, pack_id, parent_doc_type_id, name, created_at, updated_at, creator, updater, deleted)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 0)
+       RETURNING *`,
+      [
+        doc_type_id,
+        input.pack_id,
+        input.parent_doc_type_id ?? null,
+        input.name,
+        ts,
+        ts,
+        SYSTEM,
+        SYSTEM,
+      ],
+    );
+    return mapDocType(result.rows[0]);
+  }
+
+  async getDocType(docTypeId: string): Promise<DocTypeRow | null> {
+    const result = await this.q(`SELECT * FROM t_doc_type WHERE doc_type_id = $1 AND deleted = 0`, [
+      docTypeId,
+    ]);
+    const row = result.rows[0];
+    return row ? mapDocType(row) : null;
+  }
+
+  async updateDocType(docTypeId: string, name: string): Promise<DocTypeRow> {
+    const docType = await this.getDocType(docTypeId);
+    if (!docType) {
+      throw new Error(`doc type not found: ${docTypeId}`);
+    }
+    const ts = nowIso();
+    await this.q(
+      `UPDATE t_doc_type SET name = $1, updated_at = $2, updater = $3 WHERE doc_type_id = $4 AND deleted = 0`,
+      [name, ts, SYSTEM, docTypeId],
+    );
+    return (await this.getDocType(docTypeId))!;
+  }
+
+  async softDeleteDocType(docTypeId: string): Promise<DocTypeRow> {
+    const docType = await this.getDocType(docTypeId);
+    if (!docType) {
+      throw new Error(`doc type not found: ${docTypeId}`);
+    }
+    const childResult = await this.q(
+      `SELECT COUNT(*)::int AS cnt FROM t_doc_type WHERE parent_doc_type_id = $1 AND deleted = 0`,
+      [docTypeId],
+    );
+    if (Number(childResult.rows[0]?.cnt ?? 0) > 0) {
+      throw new LedgerConflictError("doc type has children");
+    }
+    const templateResult = await this.q(
+      `SELECT COUNT(*)::int AS cnt FROM t_template WHERE doc_type_id = $1 AND deleted = 0`,
+      [docTypeId],
+    );
+    if (Number(templateResult.rows[0]?.cnt ?? 0) > 0) {
+      throw new LedgerConflictError("doc type has templates");
+    }
+    const jobResult = await this.q(
+      `SELECT COUNT(*)::int AS cnt FROM t_job WHERE doc_type_id = $1 AND deleted = 0`,
+      [docTypeId],
+    );
+    if (Number(jobResult.rows[0]?.cnt ?? 0) > 0) {
+      throw new LedgerConflictError("doc type has jobs");
+    }
+    const ts = nowIso();
+    const result = await this.q(
+      `UPDATE t_doc_type SET deleted = 1, updated_at = $1, updater = $2
+       WHERE doc_type_id = $3 AND deleted = 0
+       RETURNING *`,
+      [ts, SYSTEM, docTypeId],
+    );
+    return mapDocType(result.rows[0]);
+  }
+
+  async listDocTypesByPack(packId: string): Promise<DocTypeRow[]> {
+    const result = await this.q(
+      `SELECT * FROM t_doc_type WHERE pack_id = $1 AND deleted = 0 ORDER BY id ASC`,
+      [packId],
+    );
+    return result.rows.map(mapDocType);
+  }
+
+  async getDocTypeAncestors(docTypeId: string): Promise<DocTypeRow[]> {
+    const chain: DocTypeRow[] = [];
+    let current = await this.getDocType(docTypeId);
+    while (current) {
+      chain.unshift(current);
+      if (!current.parent_doc_type_id) {
+        break;
+      }
+      current = await this.getDocType(current.parent_doc_type_id);
+      if (chain.length > 32) {
+        throw new Error(`doc type ancestor cycle detected at ${docTypeId}`);
+      }
+    }
+    return chain;
+  }
+
+  async listFieldDefs(docTypeId: string): Promise<FieldDefRow[]> {
+    const result = await this.q(
+      `SELECT * FROM t_field_def WHERE doc_type_id = $1 AND deleted = 0 ORDER BY id ASC`,
+      [docTypeId],
+    );
+    return result.rows.map(mapFieldDef);
+  }
+
+  async saveFieldDefs(docTypeId: string, defs: FieldDefWrite[]): Promise<FieldDefRow[]> {
+    const docType = await this.getDocType(docTypeId);
+    if (!docType) {
+      throw new Error(`doc type not found: ${docTypeId}`);
+    }
+    const ts = nowIso();
+    const upsert = `INSERT INTO t_field_def
+        (doc_type_id, field_key, value_type, required, created_at, updated_at, creator, updater, deleted)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 0)
+       ON CONFLICT (doc_type_id, field_key) DO UPDATE SET
+         value_type = EXCLUDED.value_type,
+         required = EXCLUDED.required,
+         updated_at = EXCLUDED.updated_at,
+         updater = EXCLUDED.updater,
+         deleted = 0`;
+    if (this.db instanceof pg.Pool) {
+      const client = await this.db.connect();
+      try {
+        await client.query("BEGIN");
+        await client.query(
+          `UPDATE t_field_def SET deleted = 1, updated_at = $1, updater = $2 WHERE doc_type_id = $3`,
+          [ts, SYSTEM, docTypeId],
+        );
+        for (const def of defs) {
+          await client.query(upsert, [
+            docTypeId,
+            def.field_key,
+            def.value_type,
+            def.required ?? 0,
+            ts,
+            ts,
+            SYSTEM,
+            SYSTEM,
+          ]);
+        }
+        await client.query("COMMIT");
+      } catch (err) {
+        await client.query("ROLLBACK");
+        throw err;
+      } finally {
+        client.release();
+      }
+    } else {
+      try {
+        await this.db.query("BEGIN");
+        await this.db.query(
+          `UPDATE t_field_def SET deleted = 1, updated_at = $1, updater = $2 WHERE doc_type_id = $3`,
+          [ts, SYSTEM, docTypeId],
+        );
+        for (const def of defs) {
+          await this.db.query(upsert, [
+            docTypeId,
+            def.field_key,
+            def.value_type,
+            def.required ?? 0,
+            ts,
+            ts,
+            SYSTEM,
+            SYSTEM,
+          ]);
+        }
+        await this.db.query("COMMIT");
+      } catch (err) {
+        await this.db.query("ROLLBACK");
+        throw err;
+      }
+    }
+    return this.listFieldDefs(docTypeId);
   }
 
   async insertSpecPack(input: {
@@ -673,17 +909,35 @@ export class PostgresLedger implements LedgerStore {
 
   async insertTemplate(input: {
     pack_id: string;
+    doc_type_id: string;
     name: string;
     page_image_uri?: string | null;
   }): Promise<TemplateRow> {
+    const docType = await this.getDocType(input.doc_type_id);
+    if (!docType) {
+      throw new Error(`doc type not found: ${input.doc_type_id}`);
+    }
+    if (docType.pack_id !== input.pack_id) {
+      throw new Error(`doc type ${input.doc_type_id} does not belong to pack ${input.pack_id}`);
+    }
     const ts = nowIso();
     const template_id = newId("tpl");
     const result = await this.q(
       `INSERT INTO t_template
-        (template_id, pack_id, name, page_image_uri, created_at, updated_at, creator, updater, deleted)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 0)
+        (template_id, pack_id, doc_type_id, name, page_image_uri, created_at, updated_at, creator, updater, deleted)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 0)
        RETURNING *`,
-      [template_id, input.pack_id, input.name, input.page_image_uri ?? null, ts, ts, SYSTEM, SYSTEM],
+      [
+        template_id,
+        input.pack_id,
+        input.doc_type_id,
+        input.name,
+        input.page_image_uri ?? null,
+        ts,
+        ts,
+        SYSTEM,
+        SYSTEM,
+      ],
     );
     return mapTemplate(result.rows[0]);
   }
@@ -881,6 +1135,89 @@ export class PostgresLedger implements LedgerStore {
     return result.rows.map(mapProject);
   }
 
+  async getProject(projectId: string): Promise<ProjectRow | null> {
+    const result = await this.q(
+      `SELECT * FROM t_project WHERE project_id = $1 AND deleted = 0`,
+      [projectId],
+    );
+    const row = result.rows[0];
+    return row ? mapProject(row) : null;
+  }
+
+  async updateProjectName(projectId: string, name: string): Promise<ProjectRow> {
+    const project = await this.getProject(projectId);
+    if (!project) {
+      throw new Error(`project not found: ${projectId}`);
+    }
+    const ts = nowIso();
+    const result = await this.q(
+      `UPDATE t_project SET name = $1, updated_at = $2, updater = $3
+       WHERE project_id = $4 AND deleted = 0
+       RETURNING *`,
+      [name, ts, SYSTEM, projectId],
+    );
+    return mapProject(result.rows[0]);
+  }
+
+  async softDeleteProject(projectId: string): Promise<ProjectRow> {
+    const project = await this.getProject(projectId);
+    if (!project) {
+      throw new Error(`project not found: ${projectId}`);
+    }
+    if ((await this.listSpecPacks(projectId)).length > 0) {
+      throw new LedgerConflictError("project has spec packs");
+    }
+    const ts = nowIso();
+    const result = await this.q(
+      `UPDATE t_project SET deleted = 1, updated_at = $1, updater = $2
+       WHERE project_id = $3 AND deleted = 0
+       RETURNING *`,
+      [ts, SYSTEM, projectId],
+    );
+    return mapProject(result.rows[0]);
+  }
+
+  async updateSpecPackName(packId: string, name: string): Promise<SpecPackRow> {
+    const pack = await this.getSpecPack(packId);
+    if (!pack) {
+      throw new Error(`spec pack not found: ${packId}`);
+    }
+    const ts = nowIso();
+    const result = await this.q(
+      `UPDATE t_spec_pack SET name = $1, updated_at = $2, updater = $3
+       WHERE pack_id = $4 AND deleted = 0
+       RETURNING *`,
+      [name, ts, SYSTEM, packId],
+    );
+    return mapSpecPack(result.rows[0]);
+  }
+
+  async softDeleteSpecPack(packId: string): Promise<SpecPackRow> {
+    const pack = await this.getSpecPack(packId);
+    if (!pack) {
+      throw new Error(`spec pack not found: ${packId}`);
+    }
+    if ((await this.countJobsByPack(packId)) > 0) {
+      throw new LedgerConflictError("spec pack has jobs");
+    }
+    const ts = nowIso();
+    const result = await this.q(
+      `UPDATE t_spec_pack SET deleted = 1, updated_at = $1, updater = $2
+       WHERE pack_id = $3 AND deleted = 0
+       RETURNING *`,
+      [ts, SYSTEM, packId],
+    );
+    return mapSpecPack(result.rows[0]);
+  }
+
+  async countJobsByPack(packId: string): Promise<number> {
+    const result = await this.q(
+      `SELECT COUNT(*)::int AS cnt FROM t_job WHERE pack_id = $1 AND deleted = 0`,
+      [packId],
+    );
+    return Number(result.rows[0]?.cnt ?? 0);
+  }
+
   async getTemplate(templateId: string): Promise<TemplateRow | null> {
     const result = await this.q(
       `SELECT * FROM t_template WHERE template_id = $1 AND deleted = 0`,
@@ -945,17 +1282,39 @@ export class PostgresLedger implements LedgerStore {
     pack_id: string | null;
     status: string;
     template_id?: string | null;
+    doc_type_id?: string | null;
   }): Promise<JobRow> {
+    if (input.doc_type_id && input.pack_id) {
+      const docType = await this.getDocType(input.doc_type_id);
+      if (!docType) {
+        throw new Error(`doc type not found: ${input.doc_type_id}`);
+      }
+      if (docType.pack_id !== input.pack_id) {
+        throw new Error(`doc type ${input.doc_type_id} does not belong to pack ${input.pack_id}`);
+      }
+    }
     const ts = nowIso();
     const job_id = newId("job");
     const trace_id = newId("trc");
     const result = await this.q(
       `INSERT INTO t_job
-        (job_id, project_id, pack_id, trace_id, status, template_id, agent_run_id,
+        (job_id, project_id, pack_id, trace_id, status, template_id, doc_type_id, agent_run_id,
          created_at, updated_at, creator, updater, deleted)
-       VALUES ($1, $2, $3, $4, $5, $6, NULL, $7, $8, $9, $10, 0)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, NULL, $8, $9, $10, $11, 0)
        RETURNING *`,
-      [job_id, input.project_id, input.pack_id, trace_id, input.status, input.template_id ?? null, ts, ts, SYSTEM, SYSTEM],
+      [
+        job_id,
+        input.project_id,
+        input.pack_id,
+        trace_id,
+        input.status,
+        input.template_id ?? null,
+        input.doc_type_id ?? null,
+        ts,
+        ts,
+        SYSTEM,
+        SYSTEM,
+      ],
     );
     return mapJob(result.rows[0]);
   }
@@ -965,6 +1324,15 @@ export class PostgresLedger implements LedgerStore {
     await this.q(
       `UPDATE t_job SET status = $1, updated_at = $2, updater = $3 WHERE job_id = $4 AND deleted = 0`,
       [status, ts, SYSTEM, jobId],
+    );
+    return (await this.getJob(jobId))!;
+  }
+
+  async updateJobAgentRunId(jobId: string, agentRunId: string): Promise<JobRow> {
+    const ts = nowIso();
+    await this.q(
+      `UPDATE t_job SET agent_run_id = $1, updated_at = $2, updater = $3 WHERE job_id = $4 AND deleted = 0`,
+      [agentRunId, ts, SYSTEM, jobId],
     );
     return (await this.getJob(jobId))!;
   }
