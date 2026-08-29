@@ -69,6 +69,13 @@ export interface SignatureTaskView {
   receipt_id: string | null;
 }
 
+/** Missing required document from GET /api/projects/:id/document-gaps. */
+export interface DocumentGapView {
+  doc_type_id: string;
+  label: string;
+  pack_id: string;
+}
+
 /** HITL confirm-next machine. Submit is not a valid next status. */
 export const CONFIRM_NEXT: Record<string, string> = {
   uploaded: "inspecting",

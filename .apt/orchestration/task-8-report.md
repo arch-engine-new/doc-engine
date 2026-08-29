@@ -1,29 +1,48 @@
-# Task 8 Report — EventLog + Control Plane API
+# Task 8 Report — 缺表扫描 + CompletenessRule
 
-## Status
-DONE — commit `116d410`
+## Summary
 
-## What was implemented
-- `src/obs/event-log.ts` — EventLog: append/getTrace/getEventsFrom/getLatestSeq/resetSeqCache with typed events (node_start, node_end, tool_call, checkpoint, hitl, run_started, run_completed, run_failed, run_cancelled). Per-runId append chain added to prevent UNIQUE(run_id, seq) race (async cache-check-then-insert could collide).
-- `src/obs/otel-hooks.ts` — optional OTel tracer attach (try/catch based).
-- `src/api/control.ts` — ControlPlane: compileGraph, startRun (non-blocking + HITL probe + terminal event/store handler), getRun, cancelRun, resumeHitl (delegates to RunManager for correct error ordering), getTrace, listRunsFromStore, deleteRun, clear, createControlPlane.
-- `src/api/http.ts` — native Node http REST adapter (optional): /graphs, /runs, /runs/:id, cancel, resume, trace, health.
-- `src/tools/runtime.ts` — added `onToolCall` observability hook (success/failure/cache-hit emission).
-- ControlPlane wires a ToolExecutor with an emitting ToolRuntime so tool_call events land in the run trace.
+Implemented document completeness gap scanning (AC-8): backend compares `CompletenessRule` rows against `DocumentArtifact` records per project, exposes REST endpoints, seeds a concrete inspection batch rule, and surfaces missing docs on `project_home` with a「补表」action that triggers generate + upload.
 
-## Verification
-```
-npx tsc -p packages/agent-runtime --noEmit   PASS (0 errors)
-npm test -w agent-runtime                    122 passed, 8 skipped (HTTP suite skipped by design)
-```
+## Backend
 
-## Accept criteria coverage
-- AC-5 (trace replay by runId): `controlPlane.getTrace(runId)` returns ordered event rows — test `getTrace (AC-5: trace replay by runId)`.
-- AC-7 (public API types + tests): ControlPlane/EventLog types exported via index; 33-test control-api suite.
+### `packages/core-engine/src/pipeline/document-pipeline.ts`
+- Added `DocumentGap` / `DocumentGapsResult` types.
+- Added `listDocumentGaps(projectId)` — walks project packs, required completeness rules, and existing artifacts; returns missing doc types.
 
-## Notes / fixes applied to subagent's leftover work
-- startRun no longer blocks until completion; returns `running` (or `waiting_hitl` + interrupt) immediately.
-- Run row is created in StateStore at start (`createRun`) — listRunsFromStore now returns rows.
-- Terminal events/stores updated via promise-chain handler; cancel dedupes run_cancelled.
-- resumeHitl error semantics: not-found / mismatched-runId / expired throw before run-status checks.
-- AC-7 event-type test split into success / failed / cancelled scenarios (run_failed/run_cancelled cannot appear in a successful run trace).
+### `packages/core-engine/src/http/handle-request.ts`
+- `GET /api/projects/:projectId/document-gaps` → `{ missing: [{ doc_type_id, label, pack_id }] }`
+- `GET /api/packs/:packId/completeness-rules`
+- `PUT /api/packs/:packId/completeness-rules` (bulk replace)
+- Added `completenessRulesFromBody` parser (snake_case + camelCase aliases).
+
+### `packages/core-engine/src/pipeline/seed.ts`
+- Extended `ConcreteExcelSeedStore` with `saveCompletenessRules`.
+- Added `concreteCompletenessRules(docTypeId)` — required rule for「混凝土施工检验批质量验收记录」.
+- Idempotent seed in `applyConcreteLedgerSeed` / `seedConcreteInspectionBatchLedger` (including existing-seed path).
+
+### `packages/core-engine/test/document-gaps.test.ts`
+- AC-8: gap present after reset for concrete rule; cleared after `documents/generate`.
+- PUT completeness-rules replaces pack rules.
+
+## Frontend
+
+### `apps/web/src/services/http.ts` + `types.ts`
+- `DocumentGapView` type and `fetchDocumentGaps(projectId)`.
+
+### `apps/web/src/views/project_home/`
+- `useProjectHome.ts`: loads gaps per project on `load()`, `fillDocumentGap` delegates to `generateInspectionBatch`, refreshes gaps after fill.
+- `DocumentGapsPanel.vue`: per-project missing-doc list with「补表」button.
+- `index.vue`: renders `DocumentGapsPanel` above pack table.
+
+## Verify
+
+| Command | Result |
+|---------|--------|
+| `npm test -w core-engine` | PASS (97 tests) |
+| `npm test -w core-engine -- document-gaps` | PASS (2 tests) |
+| `npx tsc -p apps/web --noEmit` | PASS |
+
+## Commit
+
+`feat: document gaps scan and completeness rules (task 8)`

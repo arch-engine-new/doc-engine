@@ -9,6 +9,7 @@ import { mockPendingMount, uploadDocument, type FieldBoxWrite } from "../index.j
 import type {
   ExcelCellMappingWrite,
   FieldFillRuleWrite,
+  CompletenessRuleWrite,
 } from "../persistence/store.js";
 import { NoOpenHitlError } from "../agent/job-step-orchestrator.js";
 import { LedgerConflictError, UploadValidationError } from "../pipeline/job-pipeline.js";
@@ -251,6 +252,21 @@ function fillRulesFromBody(body: unknown): FieldFillRuleWrite[] {
   });
 }
 
+function completenessRulesFromBody(body: unknown): CompletenessRuleWrite[] {
+  const rec = asRecord(body);
+  const raw = Array.isArray(body) ? body : rec.rules;
+  if (!Array.isArray(raw)) throw new Error("rules array required");
+  return raw.map((item) => {
+    const row = asRecord(item);
+    return {
+      rule_id: row.rule_id ?? row.ruleId ? String(row.rule_id ?? row.ruleId) : undefined,
+      doc_type_id: String(row.doc_type_id ?? row.docTypeId ?? ""),
+      label: String(row.label ?? ""),
+      required: row.required === undefined ? 1 : Number(row.required),
+    };
+  });
+}
+
 function fieldValuesFromBody(body: unknown): Record<string, string | number | boolean | null> {
   const rec = asRecord(body);
   const raw = pick(body, "fieldValues", "field_values");
@@ -376,6 +392,25 @@ export async function handleDemoRequest(
         });
       }
       return json(200, { docTypes: enriched });
+    }
+
+    const packCompletenessRules = match(pathname, "/api/packs/:packId/completeness-rules");
+    if (packCompletenessRules) {
+      const pack = await p.getSpecPack(packCompletenessRules.packId);
+      if (!pack) return json(404, { error: `spec pack not found: ${packCompletenessRules.packId}` });
+      if (method === "GET") {
+        return json(200, {
+          rules: await session.ledger().listCompletenessRules(packCompletenessRules.packId),
+        });
+      }
+      if (method === "PUT") {
+        return json(200, {
+          rules: await session.ledger().saveCompletenessRules(
+            packCompletenessRules.packId,
+            completenessRulesFromBody(req.body),
+          ),
+        });
+      }
     }
 
     if (method === "POST" && pathname === "/api/doc-types") {
@@ -724,6 +759,15 @@ export async function handleDemoRequest(
         traceId: str(req.body, "traceId", "trace_id"),
       });
       return json(200, { artifact });
+    }
+
+    const documentGaps = match(pathname, "/api/projects/:projectId/document-gaps");
+    if (method === "GET" && documentGaps) {
+      if (!(await session.ledger().getProject(documentGaps.projectId))) {
+        return json(404, { error: `project not found: ${documentGaps.projectId}` });
+      }
+      const gaps = await session.getDocumentPipeline().listDocumentGaps(documentGaps.projectId);
+      return json(200, gaps);
     }
 
     const uploadDoc = match(pathname, "/api/projects/:projectId/documents/:artifactId/upload");

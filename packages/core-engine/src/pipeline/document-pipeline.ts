@@ -37,6 +37,17 @@ export interface ConfirmSignatureResult {
   receipt: ReceiptRow;
 }
 
+/** Missing required document for a project (CompletenessRule vs artifacts). */
+export interface DocumentGap {
+  doc_type_id: string;
+  label: string;
+  pack_id: string;
+}
+
+export interface DocumentGapsResult {
+  missing: DocumentGap[];
+}
+
 type PipelineStore = LedgerStore & {
   listEffectiveFieldDefs(docTypeId: string): ReturnType<LedgerStore["listFieldDefs"]>;
 };
@@ -291,6 +302,36 @@ export class DocumentPipeline {
 
   async listPendingSignatures(): Promise<SignatureTaskRow[]> {
     return this.store.listPendingSignatureTasks();
+  }
+
+  /**
+   * Compare required CompletenessRules for project packs against DocumentArtifacts.
+   * Returns doc types that have no artifact yet (AC-8).
+   */
+  async listDocumentGaps(projectId: string): Promise<DocumentGapsResult> {
+    const project = await this.store.getProject(projectId);
+    if (!project) {
+      throw new Error(`project not found: ${projectId}`);
+    }
+
+    const packs = await this.store.listSpecPacks(projectId);
+    const artifacts = await this.store.listDocumentArtifacts(projectId);
+    const coveredDocTypes = new Set(artifacts.map((row) => row.doc_type_id));
+
+    const missing: DocumentGap[] = [];
+    for (const pack of packs) {
+      const rules = await this.store.listCompletenessRules(pack.pack_id);
+      for (const rule of rules) {
+        if (rule.required && !coveredDocTypes.has(rule.doc_type_id)) {
+          missing.push({
+            doc_type_id: rule.doc_type_id,
+            label: rule.label,
+            pack_id: pack.pack_id,
+          });
+        }
+      }
+    }
+    return { missing };
   }
 
   private async resolveTemplate(docTypeId: string, templateId?: string): Promise<TemplateRow> {

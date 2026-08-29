@@ -43,6 +43,12 @@ export type ConcreteFillRuleWrite = {
   default_literal: string | null;
 };
 
+export type ConcreteCompletenessRuleWrite = {
+  doc_type_id: string;
+  label: string;
+  required: number;
+};
+
 export interface ConcreteExcelSeedStore extends DocTypeSeedStore {
   listDocTypesByPack(packId: string): DocTypeRow[];
   getTemplate(templateId: string): TemplateRow | null;
@@ -70,6 +76,7 @@ export interface ConcreteExcelSeedStore extends DocTypeSeedStore {
   ): unknown[];
   saveFieldFillRules(docTypeId: string, rules: ConcreteFillRuleWrite[]): unknown[];
   listExcelCellMappings(templateId: string): unknown[];
+  saveCompletenessRules(packId: string, rules: ConcreteCompletenessRuleWrite[]): unknown[];
 }
 
 export const PACK_ID = "pack_slice1";
@@ -204,9 +211,7 @@ export function concreteFieldDefsFromFixture(
   }));
 }
 
-export function concreteCellMappingsFromFixture(
-  fixture: ConcreteFixtureMapping,
-): ConcreteCellMappingWrite[] {
+export function concreteCellMappingsFromFixture(fixture: ConcreteFixtureMapping): ConcreteCellMappingWrite[] {
   return fixture.fields.map((field) => ({
     sheet_name: fixture.sheet,
     cell: field.cell,
@@ -258,6 +263,17 @@ export function concreteFillRulesFromFixture(fixture: ConcreteFixtureMapping): C
       default_literal: override.default_literal ?? null,
     };
   });
+}
+
+/** Required completeness rule for concrete inspection batch (AC-8). */
+export function concreteCompletenessRules(docTypeId: string): ConcreteCompletenessRuleWrite[] {
+  return [
+    {
+      doc_type_id: docTypeId,
+      label: CONCRETE_TEMPLATE_NAME,
+      required: 1,
+    },
+  ];
 }
 
 async function findConcreteTemplate(
@@ -369,6 +385,12 @@ async function applyConcreteLedgerSeed(
 ): Promise<SeedConcreteInspectionBatchResult> {
   const existing = await tryExistingConcreteSeed(store, input.packId);
   if (existing) {
+    const docType = await Promise.resolve(store.getDocType(existing.docTypeId));
+    if (docType) {
+      await Promise.resolve(
+        store.saveCompletenessRules(input.packId, concreteCompletenessRules(docType.doc_type_id)),
+      );
+    }
     return existing;
   }
 
@@ -414,6 +436,9 @@ async function applyConcreteLedgerSeed(
 
   const mappings = concreteCellMappingsFromFixture(fixture);
   await Promise.resolve(store.saveExcelCellMappings(template.template_id, mappings));
+  await Promise.resolve(
+    store.saveCompletenessRules(input.packId, concreteCompletenessRules(docType.doc_type_id)),
+  );
 
   return {
     docTypeId: docType.doc_type_id,
@@ -432,6 +457,10 @@ export function seedConcreteInspectionBatchLedger(
 ): SeedConcreteInspectionBatchResult {
   const existing = tryExistingConcreteSeedSync(store, input.packId);
   if (existing) {
+    const docType = store.getDocType(existing.docTypeId);
+    if (docType) {
+      store.saveCompletenessRules(input.packId, concreteCompletenessRules(docType.doc_type_id));
+    }
     return existing;
   }
 
@@ -467,6 +496,7 @@ export function seedConcreteInspectionBatchLedger(
 
   const mappings = concreteCellMappingsFromFixture(fixture);
   store.saveExcelCellMappings(template.template_id, mappings);
+  store.saveCompletenessRules(input.packId, concreteCompletenessRules(docType.doc_type_id));
 
   return {
     docTypeId: docType.doc_type_id,

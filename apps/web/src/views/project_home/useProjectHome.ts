@@ -1,9 +1,10 @@
 import { onMounted, reactive, ref } from "vue";
 import { rememberDemoNav, resetDemo } from "../../services/demo-session";
-import { errorMessage, generateDocument, http, uploadDocumentArtifact } from "../../services/http";
+import { errorMessage, fetchDocumentGaps, generateDocument, http, uploadDocumentArtifact } from "../../services/http";
 import type {
   DocTypeView,
   DocumentArtifactView,
+  DocumentGapView,
   FieldDefView,
   ProjectView,
   SpecPackView,
@@ -40,6 +41,8 @@ export function useProjectHome() {
 
   const artifactByDocType = ref<Record<string, DocumentArtifactView>>({});
   const generatingDocTypeId = ref("");
+  const documentGapsByProject = ref<Record<string, DocumentGapView[]>>({});
+  const fillingGapKey = ref("");
 
   function excelTemplateFor(pack: SpecPackView, docType: DocTypeView): TemplateView | undefined {
     return pack.templates?.find(
@@ -66,6 +69,20 @@ export function useProjectHome() {
 
   function isGeneratingDocType(docTypeId: string): boolean {
     return generatingDocTypeId.value === docTypeId;
+  }
+
+  function gapKey(gap: DocumentGapView): string {
+    return `${gap.pack_id}:${gap.doc_type_id}`;
+  }
+
+  function isFillingGap(gap: DocumentGapView): boolean {
+    return fillingGapKey.value === gapKey(gap);
+  }
+
+  async function loadDocumentGaps(projectId: string) {
+    if (!projectId) return;
+    const data = await fetchDocumentGaps(projectId);
+    documentGapsByProject.value = { ...documentGapsByProject.value, [projectId]: data.missing };
   }
 
   function crudLabel(target: CrudTarget): string {
@@ -102,6 +119,9 @@ export function useProjectHome() {
     packsByProject.value = next;
     if (!selectedProjectId.value || !data.projects.some((p) => p.project_id === selectedProjectId.value)) {
       selectedProjectId.value = data.projects[0]?.project_id ?? "";
+    }
+    for (const project of data.projects) {
+      await loadDocumentGaps(project.project_id);
     }
     const firstPack = selectedProjectId.value ? next[selectedProjectId.value]?.[0] : undefined;
     const template = firstPack?.templates?.[0];
@@ -370,11 +390,28 @@ export function useProjectHome() {
       };
       traceId.value = uploaded.artifact.trace_id;
       rememberDemoNav({ traceId: uploaded.artifact.trace_id });
+      await loadDocumentGaps(project.project_id);
     } catch (err) {
       error.value = errorMessage(err);
     } finally {
       generatingDocTypeId.value = "";
       busy.value = false;
+    }
+  }
+
+  /** Fill a document gap by generating and uploading the missing doc type. */
+  async function fillDocumentGap(project: ProjectView, gap: DocumentGapView) {
+    const pack = packsByProject.value[project.project_id]?.find((row) => row.pack_id === gap.pack_id);
+    const docType = docTypesByPack.value[gap.pack_id]?.find((row) => row.doc_type_id === gap.doc_type_id);
+    if (!pack || !docType) {
+      error.value = "缺表对应的规范包或文档类型未找到";
+      return;
+    }
+    fillingGapKey.value = gapKey(gap);
+    try {
+      await generateInspectionBatch(project, pack, docType);
+    } finally {
+      fillingGapKey.value = "";
     }
   }
 
@@ -505,10 +542,13 @@ export function useProjectHome() {
     fieldDefsDraft,
     artifactByDocType,
     generatingDocTypeId,
+    documentGapsByProject,
+    fillingGapKey,
     hasExcelTemplate,
     artifactForDocType,
     artifactStatusLabel,
     isGeneratingDocType,
+    isFillingGap,
     crudLabel,
     createProject,
     createPack,
@@ -525,6 +565,7 @@ export function useProjectHome() {
     createTemplateForDocType,
     annotateDocType,
     generateInspectionBatch,
+    fillDocumentGap,
     openRenameProject,
     openRenamePack,
     closeRename,

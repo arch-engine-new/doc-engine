@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import StepChat from "../../components/StepChat.vue";
+import DocumentGapsPanel from "./DocumentGapsPanel.vue";
 import ProjectHomeDialogs from "./ProjectHomeDialogs.vue";
 import ProjectPackTable from "./ProjectPackTable.vue";
 import { useProjectHome } from "./useProjectHome";
@@ -34,6 +35,15 @@ const home = useProjectHome();
       </button>
     </div>
     <p v-if="home.error" class="sub error-text">{{ home.error }}</p>
+    <DocumentGapsPanel
+      v-for="project in home.projects"
+      :key="`gaps-${project.project_id}`"
+      :project="project"
+      :gaps="home.documentGapsByProject[project.project_id] ?? []"
+      :busy="home.busy"
+      :is-filling-gap="home.isFillingGap"
+      @fill-gap="home.fillDocumentGap"
+    />
     <ProjectHomeDialogs
       :rename-target="home.renameTarget"
       :rename-input="home.renameInput"

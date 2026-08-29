@@ -2,6 +2,7 @@
 
 import type {
   DocumentArtifactView,
+  DocumentGapView,
   ExcelCellMappingView,
   ExcelCellMappingWrite,
   JobView,
@@ -152,6 +153,13 @@ export async function uploadDocumentArtifact(
     receipt: ReceiptView;
     signatureTasks: SignatureTaskView[];
   }>(`/api/projects/${projectId}/documents/${artifactId}/upload`, { method: "POST" });
+}
+
+/** List missing required documents for a project (CompletenessRule vs artifacts). */
+export async function fetchDocumentGaps(
+  projectId: string,
+): Promise<{ missing: DocumentGapView[] }> {
+  return http<{ missing: DocumentGapView[] }>(`/api/projects/${projectId}/document-gaps`);
 }
 
 /** Multipart upload for POST /api/jobs/upload — no JSON Content-Type (browser sets boundary). */
