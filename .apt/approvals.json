@@ -10,5 +10,23 @@
     "approval": "approved",
     "at": "2026-08-28T15:48:00.000Z",
     "by": "user"
+  },
+  {
+    "spec": "docs/superpowers/specs/2026-08-29-agent-connect-design.md",
+    "approval": "approved",
+    "at": "2026-08-29T01:21:00.000Z",
+    "by": "user"
+  },
+  {
+    "spec": "docs/superpowers/specs/2026-08-29-agent-orchestration-full-design.md",
+    "approval": "approved",
+    "at": "2026-08-29T02:49:00.000Z",
+    "by": "user"
+  },
+  {
+    "spec": "docs/superpowers/specs/2026-08-29-doc-type-field-inheritance-design.md",
+    "approval": "pending",
+    "at": "2026-08-29T06:50:00.000Z",
+    "by": "apt-auto-brainstorm"
   }
 ]
