@@ -1,6 +1,6 @@
 /** Fetch wrapper for live `/api/*` (Vite middleware → JobPipeline). */
 
-import type { JobView } from "./types";
+import type { ExcelCellMappingView, ExcelCellMappingWrite, JobView, TemplateView } from "./types";
 
 /** Thrown when `/api/*` returns a non-2xx status so callers can branch on HTTP status. */
 export class HttpError extends Error {
@@ -58,6 +58,41 @@ export async function loadDict(dictType: string): Promise<DictItem[]> {
 /** Map a dict value to its label; unknown values stay as the raw code. */
 export function dictLabel(items: DictItem[], value: string): string {
   return items.find((item) => item.value === value)?.label ?? value;
+}
+
+/** Multipart upload for POST /api/templates/:id/excel-template. */
+export async function uploadExcelTemplate(
+  templateId: string,
+  file: File,
+  excelSheetName?: string,
+): Promise<{ template: TemplateView }> {
+  const form = new FormData();
+  form.append("file", file);
+  if (excelSheetName) form.append("excel_sheet_name", excelSheetName);
+
+  const res = await fetch(`/api/templates/${templateId}/excel-template`, { method: "POST", body: form });
+  const text = await res.text();
+  const data: unknown = text ? JSON.parse(text) : null;
+  if (!res.ok) throw new HttpError(res.status, data);
+  return data as { template: TemplateView };
+}
+
+export async function fetchExcelMappings(templateId: string): Promise<ExcelCellMappingView[]> {
+  const data = await http<{ mappings: ExcelCellMappingView[] }>(
+    `/api/templates/${templateId}/excel-mappings`,
+  );
+  return data.mappings;
+}
+
+export async function saveExcelMappings(
+  templateId: string,
+  mappings: ExcelCellMappingWrite[],
+): Promise<ExcelCellMappingView[]> {
+  const data = await http<{ mappings: ExcelCellMappingView[] }>(
+    `/api/templates/${templateId}/excel-mappings`,
+    { method: "PUT", body: JSON.stringify({ mappings }) },
+  );
+  return data.mappings;
 }
 
 /** Multipart upload for POST /api/jobs/upload — no JSON Content-Type (browser sets boundary). */

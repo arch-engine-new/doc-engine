@@ -2,6 +2,9 @@
 import { computed, onMounted, ref, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import StepChat from "../../components/StepChat.vue";
+import InheritedFieldsPanel from "./InheritedFieldsPanel.vue";
+import ExcelCellMappingPanel from "./ExcelCellMappingPanel.vue";
+import { boxStyle, useAnnotateCanvas, type DraftBox } from "./useAnnotateCanvas";
 import { demoNav, ensureDemoSession, rememberDemoNav } from "../../services/demo-session";
 import { errorMessage, HttpError, http } from "../../services/http";
 import type {
@@ -10,16 +13,6 @@ import type {
   FieldBoxView,
   TemplateView,
 } from "../../services/types";
-
-interface DraftBox {
-  field_key: string;
-  value_type: string;
-  page: number;
-  x: string;
-  y: string;
-  w: string;
-  h: string;
-}
 
 const route = useRoute();
 const router = useRouter();
@@ -32,12 +25,16 @@ const nextKey = ref("编号");
 const nextType = ref("string");
 const error = ref("");
 const busy = ref(false);
-const drawing = ref<{ x: number; y: number } | null>(null);
-const ghost = ref<{ x: number; y: number; w: number; h: number } | null>(null);
 const saved = ref(false);
 const traceId = ref("");
 
+const { ghost, onDown, onMove, onUp, removeBox } = useAnnotateCanvas(boxes, nextKey, nextType, () => {
+  saved.value = false;
+});
+
 const templateId = computed(() => String(route.params.id ?? ""));
+
+const isExcelMode = computed(() => template.value?.layout_kind === "excel");
 
 const canvasStyle = computed(() => {
   const uri = template.value?.page_image_uri;
@@ -58,15 +55,6 @@ function toDraft(row: FieldBoxView): DraftBox {
     y: row.y,
     w: row.w,
     h: row.h,
-  };
-}
-
-function boxStyle(box: { x: string | number; y: string | number; w: string | number; h: string | number }) {
-  return {
-    left: `${box.x}%`,
-    top: `${box.y}%`,
-    width: `${box.w}%`,
-    height: `${box.h}%`,
   };
 }
 
@@ -115,54 +103,6 @@ async function load() {
   }
 }
 
-function pct(ev: MouseEvent, axis: "x" | "y"): number {
-  const el = ev.currentTarget as HTMLElement;
-  const rect = el.getBoundingClientRect();
-  const value = axis === "x" ? ((ev.clientX - rect.left) / rect.width) * 100 : ((ev.clientY - rect.top) / rect.height) * 100;
-  return Math.max(0, Math.min(100, value));
-}
-
-function onDown(ev: MouseEvent) {
-  drawing.value = { x: pct(ev, "x"), y: pct(ev, "y") };
-  ghost.value = { x: drawing.value.x, y: drawing.value.y, w: 0, h: 0 };
-}
-
-function onMove(ev: MouseEvent) {
-  if (!drawing.value) return;
-  const x2 = pct(ev, "x");
-  const y2 = pct(ev, "y");
-  const x = Math.min(drawing.value.x, x2);
-  const y = Math.min(drawing.value.y, y2);
-  ghost.value = {
-    x,
-    y,
-    w: Math.abs(x2 - drawing.value.x),
-    h: Math.abs(y2 - drawing.value.y),
-  };
-}
-
-function onUp() {
-  if (ghost.value && ghost.value.w >= 2 && ghost.value.h >= 2) {
-    boxes.value.push({
-      field_key: nextKey.value.trim() || `field_${boxes.value.length + 1}`,
-      value_type: nextType.value.trim() || "string",
-      page: 1,
-      x: ghost.value.x.toFixed(1),
-      y: ghost.value.y.toFixed(1),
-      w: ghost.value.w.toFixed(1),
-      h: ghost.value.h.toFixed(1),
-    });
-    saved.value = false;
-  }
-  drawing.value = null;
-  ghost.value = null;
-}
-
-function removeBox(index: number) {
-  boxes.value.splice(index, 1);
-  saved.value = false;
-}
-
 async function saveBoxes() {
   busy.value = true;
   error.value = "";
@@ -197,12 +137,17 @@ watch(templateId, () => {
   <div class="wrap">
     <h1>模板标注</h1>
     <p class="sub">
-      左侧为类型继承的基字段（只读）；画布仅编辑扩展/覆盖框。保存 page / x / y / w / h / field_key / value_type。
+      <template v-if="isExcelMode">
+        左侧为类型继承的基字段（只读）；右侧配置 Excel 单元格与 field_key 映射。
+      </template>
+      <template v-else>
+        左侧为类型继承的基字段（只读）；画布仅编辑扩展/覆盖框。保存 page / x / y / w / h / field_key / value_type。
+      </template>
     </p>
     <p v-if="template" class="sub">
       模板 {{ template.name }} · 文档类型路径：{{ breadcrumb }}
     </p>
-    <div class="row-actions">
+    <div v-if="!isExcelMode" class="row-actions">
       <label class="filter-label">
         field_key
         <input v-model="nextKey" type="text" />
@@ -216,28 +161,15 @@ watch(templateId, () => {
     </div>
     <p v-if="error" class="sub error-text">{{ error }}</p>
     <section class="annotate-layout card">
-      <aside class="annotate-side">
-        <h2 class="card-title">继承基字段</h2>
-        <p class="muted">来自 DocType 字段定义，标注页不可编辑。</p>
-        <table>
-          <thead>
-            <tr>
-              <th>field_key</th>
-              <th>value_type</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="field in inheritedFields" :key="field.field_key">
-              <td>{{ field.field_key }}</td>
-              <td>{{ field.value_type }}</td>
-            </tr>
-            <tr v-if="inheritedFields.length === 0">
-              <td colspan="2" class="muted">无继承基字段。可在项目页编辑 DocType 基字段。</td>
-            </tr>
-          </tbody>
-        </table>
-      </aside>
-      <div class="annotate-main">
+      <InheritedFieldsPanel :inherited-fields="inheritedFields" />
+      <ExcelCellMappingPanel
+        v-if="isExcelMode && template"
+        :template-id="templateId"
+        :template="template"
+        :inherited-fields="inheritedFields"
+        @template-updated="onTemplateUpdated"
+      />
+      <div v-else class="annotate-main">
         <div
           class="canvas"
           :class="{ 'has-image': !!template?.page_image_uri }"
@@ -304,10 +236,6 @@ watch(templateId, () => {
   gap: 16px;
   align-items: start;
 }
-.annotate-side {
-  border-right: 1px solid var(--apt-border);
-  padding-right: 12px;
-}
 .annotate-main {
   min-width: 0;
 }
@@ -323,12 +251,6 @@ watch(templateId, () => {
 @media (max-width: 720px) {
   .annotate-layout {
     grid-template-columns: 1fr;
-  }
-  .annotate-side {
-    border-right: 0;
-    border-bottom: 1px solid var(--apt-border);
-    padding-right: 0;
-    padding-bottom: 12px;
   }
 }
 </style>

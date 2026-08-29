@@ -7,7 +7,6 @@ export interface JobView {
   trace_id: string;
   status: string;
   template_id: string | null;
-  doc_type_id: string | null;
   file_name: string | null;
 }
 
@@ -59,11 +58,30 @@ export interface ProjectView {
   name: string;
 }
 
-export interface DocTypeView {
-  doc_type_id: string;
+export interface TemplateView {
+  template_id: string;
   pack_id: string;
-  parent_doc_type_id: string | null;
+  doc_type_id?: string;
   name: string;
+  page_image_uri: string | null;
+  layout_kind?: string;
+  excel_template_uri?: string | null;
+  excel_sheet_name?: string | null;
+}
+
+/** Writable Excel cell mapping (PUT /api/templates/:id/excel-mappings). */
+export interface ExcelCellMappingWrite {
+  sheet_name: string;
+  cell: string;
+  field_key: string;
+  value_type: string;
+  signature_role: string | null;
+}
+
+/** Excel cell mapping row from GET /api/templates/:id/excel-mappings. */
+export interface ExcelCellMappingView extends ExcelCellMappingWrite {
+  mapping_id: string;
+  template_id: string;
 }
 
 export interface FieldDefView {
@@ -73,12 +91,17 @@ export interface FieldDefView {
   required: number;
 }
 
-export interface TemplateView {
-  template_id: string;
-  pack_id: string;
+export interface DocTypeView {
   doc_type_id: string;
+  pack_id: string;
+  parent_doc_type_id: string | null;
   name: string;
-  page_image_uri: string | null;
+  parent_name?: string | null;
+  template_count?: number;
+}
+
+export interface EffectiveFieldBoxView extends FieldBoxView {
+  inherited?: boolean;
 }
 
 export interface SpecPackView {
@@ -101,17 +124,6 @@ export interface FieldBoxView {
   y: string;
   w: string;
   h: string;
-}
-
-export interface EffectiveFieldBoxView {
-  field_key: string;
-  value_type: string;
-  page: number;
-  x: string;
-  y: string;
-  w: string;
-  h: string;
-  inherited?: boolean;
 }
 
 export interface RuleVersionView {
