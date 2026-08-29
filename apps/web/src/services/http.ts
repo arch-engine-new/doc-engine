@@ -63,12 +63,13 @@ export function dictLabel(items: DictItem[], value: string): string {
 /** Multipart upload for POST /api/jobs/upload — no JSON Content-Type (browser sets boundary). */
 export async function uploadJob(
   file: File,
-  fields?: { packId?: string; templateId?: string; projectId?: string },
+  fields?: { packId?: string; templateId?: string; projectId?: string; docTypeId?: string },
 ): Promise<{ job: JobView }> {
   const form = new FormData();
   form.append("file", file);
   if (fields?.projectId) form.append("project_id", fields.projectId);
   if (fields?.packId) form.append("pack_id", fields.packId);
+  if (fields?.docTypeId) form.append("doc_type_id", fields.docTypeId);
   if (fields?.templateId) form.append("template_id", fields.templateId);
 
   const res = await fetch("/api/jobs/upload", { method: "POST", body: form });

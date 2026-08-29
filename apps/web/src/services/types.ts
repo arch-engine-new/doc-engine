@@ -7,6 +7,7 @@ export interface JobView {
   trace_id: string;
   status: string;
   template_id: string | null;
+  doc_type_id: string | null;
   file_name: string | null;
 }
 
