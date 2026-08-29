@@ -1,42 +1,49 @@
-# Task 9 Report — 任务页上传控件
+# Task 9 Report — logic 同步 + arch 闭环准备
 
 ## Status
 DONE
 
-## SHA
-`ac9b1a16f41586e98ddd43d353d573efe7bca6a9`
+## Plan
+`docs/apt/plans/2026-08-29-excel-gap-fill-plan.md` — Task 9
 
-## BASE_SHA
-`9ad9ea582d00a4b64409b0f409da04bfcca8d2c9`
+## Changes
 
-## commits
-- `ac9b1a16f41586e98ddd43d353d573efe7bca6a9` — `feat(web): add job upload file picker and multipart uploadJob helper`
+### `designs/v0/project_home/page.logic.md`
+- 新增操作：`listDocumentGaps`、`generateInspectionBatch`、`fillDocumentGap`
+- 主流程补充缺表扫描（CompletenessRule vs DocumentArtifact）与 Excel 生成上传
+- 约束：CompletenessRule 语义、generate 前置条件（excel 模板）
+- 依赖扩展：CompletenessRule、DocumentArtifact 及相关 REST API；验收 AC-3/AC-5/AC-8
 
-## What was implemented
-MCP:
-- `query_design` page=`job_upload`
-- `query_design` component=`PrimaryButton`
+### `designs/v0/template_annotate/page.logic.md`
+- 新增操作：`loadExcelMappings`、`saveExcelMappings`、`uploadExcelTemplate`
+- 主流程按 `layout_kind` 分支：`raster` 画布 vs `excel` 映射面板
+- 约束：API 分支、映射字段与合并格锚点
+- 依赖扩展：ExcelCellMapping、excel-mappings / excel-template API；验收 AC-1/AC-2
 
-`apps/web/src/services/http.ts`:
-- `uploadJob(file, fields?)` — `FormData` POST `/api/jobs/upload` with optional `project_id` / `pack_id` / `template_id`
-- No JSON `Content-Type`; errors via existing `HttpError` / `errorMessage`
+### `designs/v0/pending_review/page.logic.md`
+- 新增 Tab 与操作：`listSignatureTasks`、`confirmSignatureTask`
+- 合并重复「主流程」段落；措辞待审 / 资料待签双 Tab 流程
+- 依赖扩展：SignatureTask、DocumentArtifact；验收 AC-5/AC-7
 
-`apps/web/src/views/job_upload/index.vue`:
-- Hidden `<input type="file" accept="image/jpeg,image/png,application/pdf">`
-- Primary `button.btn`「上传资料」opens picker; on select uploads and refreshes job list
-- Fixture buttons remain `button.btn.ghost`;「同意下一步」stays primary `btn`
-- Upload success selects new job via `load(result.job.job_id)` + `rememberDemoNav`
-- Styles use existing `--apt-*` tokens and `btn` / `btn ghost` only
-
-Did not edit core-engine, routes, or new pages. Did not start Task 10.
+### `packages/core-engine/src/index.ts`
+- 导出 Excel gap-fill 相关 row 类型：`CompletenessRuleRow`、`DocTypeRow`、`DocumentArtifactRow`、`ExcelCellMappingRow`、`FieldDefRow`、`FieldFillRuleRow`、`SignatureTaskRow`
+- 导出 write 类型：`ExcelCellMappingWrite`、`FieldFillRuleWrite`、`CompletenessRuleWrite`
+- 导出 pipeline 类型：`DocumentGap`、`DocumentGapsResult`
 
 ## Verify
-`npx tsc -p apps/web --noEmit`:
 
-```
-(exit 0)
-```
+| Command | Result |
+|---------|--------|
+| `npm test -w core-engine` | PASS (97 passed, 4 skipped) |
 
-## Files (whitelist commit)
-- `apps/web/src/views/job_upload/index.vue`
-- `apps/web/src/services/http.ts`
+## Commit
+`docs: sync page.logic for excel gap-fill (task 9)`
+
+## Deferred (main agent / finish-feature)
+- MCP `register_contract` 新类型/服务
+- MCP `audit_arch_changes` → `refresh_asset`
+- `/verify docs/apt/plans/2026-08-29-excel-gap-fill-plan.md` 全量 AC 对照
+
+## Notes
+- raster 回归由全量 core-engine 测试覆盖（R9）
+- document-gaps 与 http-adapter excel flow 用例均通过（AC-8、AC-4/5/7 回归）

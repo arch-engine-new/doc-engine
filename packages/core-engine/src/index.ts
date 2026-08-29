@@ -4,11 +4,17 @@ export type {
   AuditColumns,
   AuditEventRow,
   ClauseRow,
+  CompletenessRuleRow,
   ConversationMessageRow,
   ConversationThreadRow,
+  DocTypeRow,
+  DocumentArtifactRow,
   DocumentRow,
+  ExcelCellMappingRow,
   ExtractionRow,
   FieldBoxRow,
+  FieldDefRow,
+  FieldFillRuleRow,
   FindingRow,
   JobRow,
   JsonValue,
@@ -18,6 +24,7 @@ export type {
   RuleFixtureRow,
   RuleRow,
   RuleVersionRow,
+  SignatureTaskRow,
   SpecPackRow,
   StandardDocRow,
   StandardEdgeRow,
@@ -161,7 +168,12 @@ export type { FixtureKind, SeedConcreteInspectionBatchResult } from "./pipeline/
 
 export { runMigration, runMigrationOnDb, isMigrated, LEDGER_TABLES, SLICE1_TABLES } from "./persistence/migrate.js";
 export { CoreEngineStore } from "./persistence/store.js";
-export type { FieldBoxWrite } from "./persistence/store.js";
+export type {
+  CompletenessRuleWrite,
+  ExcelCellMappingWrite,
+  FieldBoxWrite,
+  FieldFillRuleWrite,
+} from "./persistence/store.js";
 export { SqliteLedger } from "./persistence/ledger.js";
 export type { LedgerStore } from "./persistence/ledger.js";
 
@@ -193,6 +205,8 @@ export type { ExcelFillInput, ExcelFillTemplate } from "./excel/fill-service.js"
 export { DocumentPipeline } from "./pipeline/document-pipeline.js";
 export type {
   ConfirmSignatureResult,
+  DocumentGap,
+  DocumentGapsResult,
   GenerateArtifactInput,
   UploadArtifactResult,
 } from "./pipeline/document-pipeline.js";
