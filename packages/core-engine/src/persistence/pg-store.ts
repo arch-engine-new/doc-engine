@@ -51,6 +51,7 @@ import {
   SEED_PACK_PROJECT_ID,
   DOC_TYPE_CHILD_ID,
   DOC_TYPE_PARENT_ID,
+  seedConcreteInspectionBatchExcelDemo,
 } from "../pipeline/seed.js";
 import type { LedgerStore } from "./ledger.js";
 import { LEDGER_TABLES } from "./migrate.js";
@@ -525,6 +526,7 @@ export class PostgresLedger implements LedgerStore {
        ON CONFLICT DO NOTHING`,
       [RULE_R2_VERSION_ID, RULE_R2_ID, JSON.stringify(R2_DSL), ts, ts, SYSTEM, SYSTEM],
     );
+    await seedConcreteInspectionBatchExcelDemo(this, { packId: PACK_ID });
   }
 
   /** Empty spec-pack shell named 「空规范包」 — never an industry preset. */

@@ -18,6 +18,7 @@ import {
   JobPipeline,
   PACK_ID,
   resetAdapterWrites,
+  seedConcreteInspectionBatchExcelDemo,
   type FixtureJobResult,
   type IngestStandardResult,
   type ProjectRow,
@@ -321,6 +322,12 @@ export class DemoHttpSession {
       docTypeId: packTypes.childId,
     });
     await this.pipeline.saveFieldBoxes(template.template_id, [...DEMO_BOXES]);
+
+    const { blob } = this.resolveUploadDeps();
+    await seedConcreteInspectionBatchExcelDemo(this.ledger(), {
+      packId: pack.pack_id,
+      blob,
+    });
 
     let standard: IngestStandardResult | null = null;
     try {

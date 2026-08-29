@@ -136,6 +136,10 @@ export type {
 } from "./pipeline/volume.js";
 
 export {
+  CONCRETE_DOC_TYPE_ID,
+  CONCRETE_FIXTURE_MAPPING_JSON,
+  CONCRETE_FIXTURE_XLSX,
+  CONCRETE_TEMPLATE_NAME,
   EMPTY_PACK_NAME,
   EMPTY_PACK_VERSION,
   FIXTURE_OK,
@@ -149,8 +153,11 @@ export {
   RULE_R2_VERSION_ID,
   SEED_PACK_PROJECT_ID,
   fieldsForKind,
+  loadConcreteFixtureMapping,
+  seedConcreteInspectionBatchExcelDemo,
+  seedConcreteInspectionBatchLedger,
 } from "./pipeline/seed.js";
-export type { FixtureKind } from "./pipeline/seed.js";
+export type { FixtureKind, SeedConcreteInspectionBatchResult } from "./pipeline/seed.js";
 
 export { runMigration, runMigrationOnDb, isMigrated, LEDGER_TABLES, SLICE1_TABLES } from "./persistence/migrate.js";
 export { CoreEngineStore } from "./persistence/store.js";

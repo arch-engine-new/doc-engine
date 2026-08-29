@@ -51,6 +51,7 @@ import {
   SEED_PACK_PROJECT_ID,
   DOC_TYPE_CHILD_ID,
   DOC_TYPE_PARENT_ID,
+  seedConcreteInspectionBatchLedger,
   seedDemoDocTypes,
 } from "../pipeline/seed.js";
 import { LedgerConflictError } from "../pipeline/job-pipeline.js";
@@ -101,6 +102,7 @@ export class CoreEngineStore {
       parentId: DOC_TYPE_PARENT_ID,
       childId: DOC_TYPE_CHILD_ID,
     });
+    seedConcreteInspectionBatchLedger(this, { packId: PACK_ID });
     const ts = nowIso();
     this.db
       .prepare(

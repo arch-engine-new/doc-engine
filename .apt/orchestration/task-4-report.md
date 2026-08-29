@@ -1,47 +1,43 @@
-# Task 4 Report — project_home + template_annotate DocType 前端
+# Task 4 Report — Seed 混凝土检验批 Excel 演示数据
 
 ## Status
-DONE
+**Completed**
 
-## What was implemented
+## Summary
+Extended `seed.ts` with idempotent concrete inspection batch (GB 50204) demo seed: DocType、excel 模板、`≥20` 单元格映射、基础 `FieldFillRule`，并将夹具 xlsx 上传到 BlobStore（test/dev 使用 `MemoryBlobStore`）。已接入 `seedPublishedRules`（`PACK_ID`）与 `DemoHttpSession.seedFixtures`（演示项目 pack）。
 
-### `apps/web/src/services/types.ts`
-- 新增 `DocTypeView`、`FieldDefView`、`EffectiveFieldBoxView`
-- `TemplateView` 增加 `doc_type_id`
+## Changes
 
-### `apps/web/src/views/project_home/index.vue`
-- 规范包行可展开（▶/▼），展开后加载 `GET /api/packs/:packId/doc-types`
-- DocType 表：名称、父类型、模板数（由 pack.templates 按 doc_type_id 统计）
-- 操作（dialog-panel 风格，非 prompt）：
-  - **新建文档类型** — `POST /api/doc-types`（可选父类型）
-  - **编辑基字段** — `GET/PUT /api/doc-types/:id/field-defs`（表格增删行）
-  - **新建模板** — `POST /api/templates`（带 docTypeId）
-  - **标注** — 跳转 `/templates/:id/annotate`（需已有模板）
-- 保留原有项目/规范包 CRUD 与重命名/删除 dialog
+### `packages/core-engine/src/pipeline/seed.ts`
+- 导出常量：`CONCRETE_DOC_TYPE_ID`、`CONCRETE_TEMPLATE_NAME`、夹具路径
+- `loadConcreteFixtureMapping` / `concreteCellMappingsFromFixture` / `concreteFillRulesFromFixture`
+- `seedConcreteInspectionBatchLedger`（同步，供 SQLite `seedPublishedRules`）
+- `seedConcreteInspectionBatchExcelDemo`（异步，含 blob 上传）
+- 多 pack 安全：稳定 id 仅用于 `PACK_ID`；演示 pack 自动创建 pack-local DocType
+- 幂等：已存在 ≥20 映射时跳过重复写入
 
-### `apps/web/src/views/template_annotate/index.vue`
-- 顶栏显示 DocType 路径面包屑（沿 parent 链拼接）
-- 左侧只读「继承基字段」列表（来自 `GET effective-boxes`，`inherited=true`）
-- 画布仅编辑模板扩展框（`GET/PUT /api/templates/:id/boxes`）；继承框以灰色只读 overlay 展示（有坐标时）
-- `page_image_uri` 存在时作 canvas 背景；否则沿用 global.css 棋盘格（AC-4）
+### 集成
+- `store.ts` / `pg-store.ts` — `seedPublishedRules` 调用 ledger seed
+- `session.ts` — `seedFixtures` 调用 `seedConcreteInspectionBatchExcelDemo` + `MemoryBlobStore`
+- `index.ts` — 导出新 seed API
 
-## Verify output
+### `packages/core-engine/test/seed-concrete-excel.test.ts` (new)
+- 断言 `seedPublishedRules` 后映射数 ≥20
+- 幂等性 + blob 上传
 
+## Verify
+```bash
+npm test -w core-engine                  # 95 passed, 4 skipped
+npm test -w core-engine -- seed-concrete # 3 passed
 ```
-npx tsc -p apps/web --noEmit
-```
 
-| Result | Detail |
-|--------|--------|
-| tsc | exit 0 |
+## Acceptance
+| AC | Result |
+|----|--------|
+| AC-1 ≥20 excel-mappings | 夹具 27 字段全部写入 `t_excel_cell_mapping` |
+| 夹具 SSOT | `docs/fixtures/excel/concrete-inspection-batch-*` |
+| Fill rules | `acceptance_basis` literal `GB 50204-2015`；`project_name` → `project_field` |
 
-## Files changed
-- `apps/web/src/services/types.ts`
-- `apps/web/src/views/project_home/index.vue`
-- `apps/web/src/views/template_annotate/index.vue`
-
-## Out of scope
-- `job_upload` 未改动（Task 5）
-
-## Concerns
-None.
+## Notes
+- UI Tasks 5–9 未实施（按范围边界）
+- `http-adapter` 现有 excel e2e 用例仍手动建模板；reset 后演示 pack 已预置混凝土检验批数据可供后续简化测试
