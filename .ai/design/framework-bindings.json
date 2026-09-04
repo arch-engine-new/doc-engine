@@ -1,0 +1,13 @@
+{
+  "vue": {
+    "PrimaryButton": { "tag": "button", "class": "btn", "notes": "primary CTA" },
+    "GhostButton": { "tag": "button", "class": "btn ghost", "notes": "secondary" },
+    "DataTable": { "tag": "table", "class": "", "notes": "native table + StatusTag" },
+    "StatusTag": { "tag": "span", "class": "tag", "notes": "ok|warn|bad" },
+    "WorkbenchCard": { "tag": "section", "class": "card", "notes": "workbench panel" },
+    "StepChatPanel": { "tag": "aside", "class": "step-chat", "notes": "HITL; does not write ledger" },
+    "FieldBoxCanvas": { "tag": "div", "class": "canvas", "notes": "template annotate" },
+    "VolumeTree": { "tag": "div", "class": "tree", "notes": "submitted always false" },
+    "AuditTimeline": { "tag": "ol", "class": "timeline", "notes": "trace_id events" }
+  }
+}

@@ -626,6 +626,2178 @@
         }
       ],
       "source": "sql"
+    },
+    {
+      "name": "t_project",
+      "table": "t_project",
+      "moduleSlug": "",
+      "filePath": "docs/schema/generated/core-engine-migration.sql",
+      "fields": [
+        {
+          "name": "id",
+          "type": "BIGINT",
+          "column": "id",
+          "nullable": true
+        },
+        {
+          "name": "project_id",
+          "type": "VARCHAR",
+          "column": "project_id",
+          "nullable": false
+        },
+        {
+          "name": "name",
+          "type": "VARCHAR",
+          "column": "name",
+          "nullable": false
+        },
+        {
+          "name": "created_at",
+          "type": "TIMESTAMP",
+          "column": "created_at",
+          "nullable": false
+        },
+        {
+          "name": "updated_at",
+          "type": "TIMESTAMP",
+          "column": "updated_at",
+          "nullable": false
+        },
+        {
+          "name": "creator",
+          "type": "VARCHAR",
+          "column": "creator",
+          "nullable": false
+        },
+        {
+          "name": "updater",
+          "type": "VARCHAR",
+          "column": "updater",
+          "nullable": false
+        },
+        {
+          "name": "deleted",
+          "type": "SMALLINT",
+          "column": "deleted",
+          "nullable": false
+        }
+      ],
+      "source": "sql"
+    },
+    {
+      "name": "t_spec_pack",
+      "table": "t_spec_pack",
+      "moduleSlug": "",
+      "filePath": "docs/schema/generated/core-engine-migration.sql",
+      "fields": [
+        {
+          "name": "id",
+          "type": "BIGINT",
+          "column": "id",
+          "nullable": true
+        },
+        {
+          "name": "pack_id",
+          "type": "VARCHAR",
+          "column": "pack_id",
+          "nullable": false
+        },
+        {
+          "name": "project_id",
+          "type": "VARCHAR",
+          "column": "project_id",
+          "nullable": false
+        },
+        {
+          "name": "name",
+          "type": "VARCHAR",
+          "column": "name",
+          "nullable": false
+        },
+        {
+          "name": "version",
+          "type": "VARCHAR",
+          "column": "version",
+          "nullable": false
+        },
+        {
+          "name": "group_keys_json",
+          "type": "JSONB",
+          "column": "group_keys_json",
+          "nullable": true
+        },
+        {
+          "name": "order_key",
+          "type": "VARCHAR",
+          "column": "order_key",
+          "nullable": true
+        },
+        {
+          "name": "effective_standard_version_id",
+          "type": "VARCHAR",
+          "column": "effective_standard_version_id",
+          "nullable": true
+        },
+        {
+          "name": "created_at",
+          "type": "TIMESTAMP",
+          "column": "created_at",
+          "nullable": false
+        },
+        {
+          "name": "updated_at",
+          "type": "TIMESTAMP",
+          "column": "updated_at",
+          "nullable": false
+        },
+        {
+          "name": "creator",
+          "type": "VARCHAR",
+          "column": "creator",
+          "nullable": false
+        },
+        {
+          "name": "updater",
+          "type": "VARCHAR",
+          "column": "updater",
+          "nullable": false
+        },
+        {
+          "name": "deleted",
+          "type": "SMALLINT",
+          "column": "deleted",
+          "nullable": false
+        }
+      ],
+      "source": "sql"
+    },
+    {
+      "name": "t_doc_type",
+      "table": "t_doc_type",
+      "moduleSlug": "",
+      "filePath": "docs/schema/generated/core-engine-migration.sql",
+      "fields": [
+        {
+          "name": "id",
+          "type": "BIGINT",
+          "column": "id",
+          "nullable": true
+        },
+        {
+          "name": "doc_type_id",
+          "type": "VARCHAR",
+          "column": "doc_type_id",
+          "nullable": false
+        },
+        {
+          "name": "pack_id",
+          "type": "VARCHAR",
+          "column": "pack_id",
+          "nullable": false
+        },
+        {
+          "name": "parent_doc_type_id",
+          "type": "VARCHAR",
+          "column": "parent_doc_type_id",
+          "nullable": true
+        },
+        {
+          "name": "name",
+          "type": "VARCHAR",
+          "column": "name",
+          "nullable": false
+        },
+        {
+          "name": "created_at",
+          "type": "TIMESTAMP",
+          "column": "created_at",
+          "nullable": false
+        },
+        {
+          "name": "updated_at",
+          "type": "TIMESTAMP",
+          "column": "updated_at",
+          "nullable": false
+        },
+        {
+          "name": "creator",
+          "type": "VARCHAR",
+          "column": "creator",
+          "nullable": false
+        },
+        {
+          "name": "updater",
+          "type": "VARCHAR",
+          "column": "updater",
+          "nullable": false
+        },
+        {
+          "name": "deleted",
+          "type": "SMALLINT",
+          "column": "deleted",
+          "nullable": false
+        }
+      ],
+      "source": "sql"
+    },
+    {
+      "name": "t_field_def",
+      "table": "t_field_def",
+      "moduleSlug": "",
+      "filePath": "docs/schema/generated/core-engine-migration.sql",
+      "fields": [
+        {
+          "name": "id",
+          "type": "BIGINT",
+          "column": "id",
+          "nullable": true
+        },
+        {
+          "name": "doc_type_id",
+          "type": "VARCHAR",
+          "column": "doc_type_id",
+          "nullable": false
+        },
+        {
+          "name": "field_key",
+          "type": "VARCHAR",
+          "column": "field_key",
+          "nullable": false
+        },
+        {
+          "name": "value_type",
+          "type": "VARCHAR",
+          "column": "value_type",
+          "nullable": false
+        },
+        {
+          "name": "required",
+          "type": "SMALLINT",
+          "column": "required",
+          "nullable": false
+        },
+        {
+          "name": "created_at",
+          "type": "TIMESTAMP",
+          "column": "created_at",
+          "nullable": false
+        },
+        {
+          "name": "updated_at",
+          "type": "TIMESTAMP",
+          "column": "updated_at",
+          "nullable": false
+        },
+        {
+          "name": "creator",
+          "type": "VARCHAR",
+          "column": "creator",
+          "nullable": false
+        },
+        {
+          "name": "updater",
+          "type": "VARCHAR",
+          "column": "updater",
+          "nullable": false
+        },
+        {
+          "name": "deleted",
+          "type": "SMALLINT",
+          "column": "deleted",
+          "nullable": false
+        }
+      ],
+      "source": "sql"
+    },
+    {
+      "name": "t_template",
+      "table": "t_template",
+      "moduleSlug": "",
+      "filePath": "docs/schema/generated/core-engine-migration.sql",
+      "fields": [
+        {
+          "name": "id",
+          "type": "BIGINT",
+          "column": "id",
+          "nullable": true
+        },
+        {
+          "name": "template_id",
+          "type": "VARCHAR",
+          "column": "template_id",
+          "nullable": false
+        },
+        {
+          "name": "pack_id",
+          "type": "VARCHAR",
+          "column": "pack_id",
+          "nullable": false
+        },
+        {
+          "name": "doc_type_id",
+          "type": "VARCHAR",
+          "column": "doc_type_id",
+          "nullable": false
+        },
+        {
+          "name": "name",
+          "type": "VARCHAR",
+          "column": "name",
+          "nullable": false
+        },
+        {
+          "name": "page_image_uri",
+          "type": "VARCHAR",
+          "column": "page_image_uri",
+          "nullable": true
+        },
+        {
+          "name": "layout_kind",
+          "type": "VARCHAR",
+          "column": "layout_kind",
+          "nullable": false
+        },
+        {
+          "name": "excel_template_uri",
+          "type": "VARCHAR",
+          "column": "excel_template_uri",
+          "nullable": true
+        },
+        {
+          "name": "excel_sheet_name",
+          "type": "VARCHAR",
+          "column": "excel_sheet_name",
+          "nullable": true
+        },
+        {
+          "name": "created_at",
+          "type": "TIMESTAMP",
+          "column": "created_at",
+          "nullable": false
+        },
+        {
+          "name": "updated_at",
+          "type": "TIMESTAMP",
+          "column": "updated_at",
+          "nullable": false
+        },
+        {
+          "name": "creator",
+          "type": "VARCHAR",
+          "column": "creator",
+          "nullable": false
+        },
+        {
+          "name": "updater",
+          "type": "VARCHAR",
+          "column": "updater",
+          "nullable": false
+        },
+        {
+          "name": "deleted",
+          "type": "SMALLINT",
+          "column": "deleted",
+          "nullable": false
+        }
+      ],
+      "source": "sql"
+    },
+    {
+      "name": "t_excel_cell_mapping",
+      "table": "t_excel_cell_mapping",
+      "moduleSlug": "",
+      "filePath": "docs/schema/generated/core-engine-migration.sql",
+      "fields": [
+        {
+          "name": "id",
+          "type": "BIGINT",
+          "column": "id",
+          "nullable": true
+        },
+        {
+          "name": "mapping_id",
+          "type": "VARCHAR",
+          "column": "mapping_id",
+          "nullable": false
+        },
+        {
+          "name": "template_id",
+          "type": "VARCHAR",
+          "column": "template_id",
+          "nullable": false
+        },
+        {
+          "name": "sheet_name",
+          "type": "VARCHAR",
+          "column": "sheet_name",
+          "nullable": false
+        },
+        {
+          "name": "cell",
+          "type": "VARCHAR",
+          "column": "cell",
+          "nullable": false
+        },
+        {
+          "name": "field_key",
+          "type": "VARCHAR",
+          "column": "field_key",
+          "nullable": false
+        },
+        {
+          "name": "value_type",
+          "type": "VARCHAR",
+          "column": "value_type",
+          "nullable": false
+        },
+        {
+          "name": "signature_role",
+          "type": "VARCHAR",
+          "column": "signature_role",
+          "nullable": true
+        },
+        {
+          "name": "created_at",
+          "type": "TIMESTAMP",
+          "column": "created_at",
+          "nullable": false
+        },
+        {
+          "name": "updated_at",
+          "type": "TIMESTAMP",
+          "column": "updated_at",
+          "nullable": false
+        },
+        {
+          "name": "creator",
+          "type": "VARCHAR",
+          "column": "creator",
+          "nullable": false
+        },
+        {
+          "name": "updater",
+          "type": "VARCHAR",
+          "column": "updater",
+          "nullable": false
+        },
+        {
+          "name": "deleted",
+          "type": "SMALLINT",
+          "column": "deleted",
+          "nullable": false
+        }
+      ],
+      "source": "sql"
+    },
+    {
+      "name": "t_field_fill_rule",
+      "table": "t_field_fill_rule",
+      "moduleSlug": "",
+      "filePath": "docs/schema/generated/core-engine-migration.sql",
+      "fields": [
+        {
+          "name": "id",
+          "type": "BIGINT",
+          "column": "id",
+          "nullable": true
+        },
+        {
+          "name": "doc_type_id",
+          "type": "VARCHAR",
+          "column": "doc_type_id",
+          "nullable": false
+        },
+        {
+          "name": "field_key",
+          "type": "VARCHAR",
+          "column": "field_key",
+          "nullable": false
+        },
+        {
+          "name": "required",
+          "type": "SMALLINT",
+          "column": "required",
+          "nullable": false
+        },
+        {
+          "name": "pattern",
+          "type": "VARCHAR",
+          "column": "pattern",
+          "nullable": true
+        },
+        {
+          "name": "min_num",
+          "type": "NUMERIC",
+          "column": "min_num",
+          "nullable": true
+        },
+        {
+          "name": "max_num",
+          "type": "NUMERIC",
+          "column": "max_num",
+          "nullable": true
+        },
+        {
+          "name": "default_generator",
+          "type": "VARCHAR",
+          "column": "default_generator",
+          "nullable": true
+        },
+        {
+          "name": "default_literal",
+          "type": "TEXT",
+          "column": "default_literal",
+          "nullable": true
+        },
+        {
+          "name": "created_at",
+          "type": "TIMESTAMP",
+          "column": "created_at",
+          "nullable": false
+        },
+        {
+          "name": "updated_at",
+          "type": "TIMESTAMP",
+          "column": "updated_at",
+          "nullable": false
+        },
+        {
+          "name": "creator",
+          "type": "VARCHAR",
+          "column": "creator",
+          "nullable": false
+        },
+        {
+          "name": "updater",
+          "type": "VARCHAR",
+          "column": "updater",
+          "nullable": false
+        },
+        {
+          "name": "deleted",
+          "type": "SMALLINT",
+          "column": "deleted",
+          "nullable": false
+        }
+      ],
+      "source": "sql"
+    },
+    {
+      "name": "t_document_artifact",
+      "table": "t_document_artifact",
+      "moduleSlug": "",
+      "filePath": "docs/schema/generated/core-engine-migration.sql",
+      "fields": [
+        {
+          "name": "id",
+          "type": "BIGINT",
+          "column": "id",
+          "nullable": true
+        },
+        {
+          "name": "artifact_id",
+          "type": "VARCHAR",
+          "column": "artifact_id",
+          "nullable": false
+        },
+        {
+          "name": "project_id",
+          "type": "VARCHAR",
+          "column": "project_id",
+          "nullable": false
+        },
+        {
+          "name": "doc_type_id",
+          "type": "VARCHAR",
+          "column": "doc_type_id",
+          "nullable": false
+        },
+        {
+          "name": "template_id",
+          "type": "VARCHAR",
+          "column": "template_id",
+          "nullable": false
+        },
+        {
+          "name": "file_uri",
+          "type": "VARCHAR",
+          "column": "file_uri",
+          "nullable": false
+        },
+        {
+          "name": "adapter_document_id",
+          "type": "VARCHAR",
+          "column": "adapter_document_id",
+          "nullable": true
+        },
+        {
+          "name": "status",
+          "type": "VARCHAR",
+          "column": "status",
+          "nullable": false
+        },
+        {
+          "name": "trace_id",
+          "type": "VARCHAR",
+          "column": "trace_id",
+          "nullable": false
+        },
+        {
+          "name": "receipt_id",
+          "type": "VARCHAR",
+          "column": "receipt_id",
+          "nullable": true
+        },
+        {
+          "name": "metadata_json",
+          "type": "JSONB",
+          "column": "metadata_json",
+          "nullable": true
+        },
+        {
+          "name": "created_at",
+          "type": "TIMESTAMP",
+          "column": "created_at",
+          "nullable": false
+        },
+        {
+          "name": "updated_at",
+          "type": "TIMESTAMP",
+          "column": "updated_at",
+          "nullable": false
+        },
+        {
+          "name": "creator",
+          "type": "VARCHAR",
+          "column": "creator",
+          "nullable": false
+        },
+        {
+          "name": "updater",
+          "type": "VARCHAR",
+          "column": "updater",
+          "nullable": false
+        },
+        {
+          "name": "deleted",
+          "type": "SMALLINT",
+          "column": "deleted",
+          "nullable": false
+        }
+      ],
+      "source": "sql"
+    },
+    {
+      "name": "t_signature_task",
+      "table": "t_signature_task",
+      "moduleSlug": "",
+      "filePath": "docs/schema/generated/core-engine-migration.sql",
+      "fields": [
+        {
+          "name": "id",
+          "type": "BIGINT",
+          "column": "id",
+          "nullable": true
+        },
+        {
+          "name": "task_id",
+          "type": "VARCHAR",
+          "column": "task_id",
+          "nullable": false
+        },
+        {
+          "name": "artifact_id",
+          "type": "VARCHAR",
+          "column": "artifact_id",
+          "nullable": false
+        },
+        {
+          "name": "role",
+          "type": "VARCHAR",
+          "column": "role",
+          "nullable": false
+        },
+        {
+          "name": "assignee_label",
+          "type": "VARCHAR",
+          "column": "assignee_label",
+          "nullable": true
+        },
+        {
+          "name": "status",
+          "type": "VARCHAR",
+          "column": "status",
+          "nullable": false
+        },
+        {
+          "name": "signer_name",
+          "type": "VARCHAR",
+          "column": "signer_name",
+          "nullable": true
+        },
+        {
+          "name": "trace_id",
+          "type": "VARCHAR",
+          "column": "trace_id",
+          "nullable": false
+        },
+        {
+          "name": "receipt_id",
+          "type": "VARCHAR",
+          "column": "receipt_id",
+          "nullable": true
+        },
+        {
+          "name": "created_at",
+          "type": "TIMESTAMP",
+          "column": "created_at",
+          "nullable": false
+        },
+        {
+          "name": "updated_at",
+          "type": "TIMESTAMP",
+          "column": "updated_at",
+          "nullable": false
+        },
+        {
+          "name": "creator",
+          "type": "VARCHAR",
+          "column": "creator",
+          "nullable": false
+        },
+        {
+          "name": "updater",
+          "type": "VARCHAR",
+          "column": "updater",
+          "nullable": false
+        },
+        {
+          "name": "deleted",
+          "type": "SMALLINT",
+          "column": "deleted",
+          "nullable": false
+        }
+      ],
+      "source": "sql"
+    },
+    {
+      "name": "t_completeness_rule",
+      "table": "t_completeness_rule",
+      "moduleSlug": "",
+      "filePath": "docs/schema/generated/core-engine-migration.sql",
+      "fields": [
+        {
+          "name": "id",
+          "type": "BIGINT",
+          "column": "id",
+          "nullable": true
+        },
+        {
+          "name": "rule_id",
+          "type": "VARCHAR",
+          "column": "rule_id",
+          "nullable": false
+        },
+        {
+          "name": "pack_id",
+          "type": "VARCHAR",
+          "column": "pack_id",
+          "nullable": false
+        },
+        {
+          "name": "doc_type_id",
+          "type": "VARCHAR",
+          "column": "doc_type_id",
+          "nullable": false
+        },
+        {
+          "name": "label",
+          "type": "VARCHAR",
+          "column": "label",
+          "nullable": false
+        },
+        {
+          "name": "required",
+          "type": "SMALLINT",
+          "column": "required",
+          "nullable": false
+        },
+        {
+          "name": "created_at",
+          "type": "TIMESTAMP",
+          "column": "created_at",
+          "nullable": false
+        },
+        {
+          "name": "updated_at",
+          "type": "TIMESTAMP",
+          "column": "updated_at",
+          "nullable": false
+        },
+        {
+          "name": "creator",
+          "type": "VARCHAR",
+          "column": "creator",
+          "nullable": false
+        },
+        {
+          "name": "updater",
+          "type": "VARCHAR",
+          "column": "updater",
+          "nullable": false
+        },
+        {
+          "name": "deleted",
+          "type": "SMALLINT",
+          "column": "deleted",
+          "nullable": false
+        }
+      ],
+      "source": "sql"
+    },
+    {
+      "name": "t_field_box",
+      "table": "t_field_box",
+      "moduleSlug": "",
+      "filePath": "docs/schema/generated/core-engine-migration.sql",
+      "fields": [
+        {
+          "name": "id",
+          "type": "BIGINT",
+          "column": "id",
+          "nullable": true
+        },
+        {
+          "name": "template_id",
+          "type": "VARCHAR",
+          "column": "template_id",
+          "nullable": false
+        },
+        {
+          "name": "field_key",
+          "type": "VARCHAR",
+          "column": "field_key",
+          "nullable": false
+        },
+        {
+          "name": "value_type",
+          "type": "VARCHAR",
+          "column": "value_type",
+          "nullable": false
+        },
+        {
+          "name": "page",
+          "type": "INT",
+          "column": "page",
+          "nullable": false
+        },
+        {
+          "name": "x",
+          "type": "NUMERIC",
+          "column": "x",
+          "nullable": false
+        },
+        {
+          "name": "y",
+          "type": "NUMERIC",
+          "column": "y",
+          "nullable": false
+        },
+        {
+          "name": "w",
+          "type": "NUMERIC",
+          "column": "w",
+          "nullable": false
+        },
+        {
+          "name": "h",
+          "type": "NUMERIC",
+          "column": "h",
+          "nullable": false
+        },
+        {
+          "name": "created_at",
+          "type": "TIMESTAMP",
+          "column": "created_at",
+          "nullable": false
+        },
+        {
+          "name": "updated_at",
+          "type": "TIMESTAMP",
+          "column": "updated_at",
+          "nullable": false
+        },
+        {
+          "name": "creator",
+          "type": "VARCHAR",
+          "column": "creator",
+          "nullable": false
+        },
+        {
+          "name": "updater",
+          "type": "VARCHAR",
+          "column": "updater",
+          "nullable": false
+        },
+        {
+          "name": "deleted",
+          "type": "SMALLINT",
+          "column": "deleted",
+          "nullable": false
+        }
+      ],
+      "source": "sql"
+    },
+    {
+      "name": "t_rule",
+      "table": "t_rule",
+      "moduleSlug": "",
+      "filePath": "docs/schema/generated/core-engine-migration.sql",
+      "fields": [
+        {
+          "name": "id",
+          "type": "BIGINT",
+          "column": "id",
+          "nullable": true
+        },
+        {
+          "name": "rule_id",
+          "type": "VARCHAR",
+          "column": "rule_id",
+          "nullable": false
+        },
+        {
+          "name": "pack_id",
+          "type": "VARCHAR",
+          "column": "pack_id",
+          "nullable": false
+        },
+        {
+          "name": "title",
+          "type": "VARCHAR",
+          "column": "title",
+          "nullable": true
+        },
+        {
+          "name": "created_at",
+          "type": "TIMESTAMP",
+          "column": "created_at",
+          "nullable": false
+        },
+        {
+          "name": "updated_at",
+          "type": "TIMESTAMP",
+          "column": "updated_at",
+          "nullable": false
+        },
+        {
+          "name": "creator",
+          "type": "VARCHAR",
+          "column": "creator",
+          "nullable": false
+        },
+        {
+          "name": "updater",
+          "type": "VARCHAR",
+          "column": "updater",
+          "nullable": false
+        },
+        {
+          "name": "deleted",
+          "type": "SMALLINT",
+          "column": "deleted",
+          "nullable": false
+        }
+      ],
+      "source": "sql"
+    },
+    {
+      "name": "t_rule_version",
+      "table": "t_rule_version",
+      "moduleSlug": "",
+      "filePath": "docs/schema/generated/core-engine-migration.sql",
+      "fields": [
+        {
+          "name": "id",
+          "type": "BIGINT",
+          "column": "id",
+          "nullable": true
+        },
+        {
+          "name": "version_id",
+          "type": "VARCHAR",
+          "column": "version_id",
+          "nullable": false
+        },
+        {
+          "name": "rule_id",
+          "type": "VARCHAR",
+          "column": "rule_id",
+          "nullable": false
+        },
+        {
+          "name": "dsl_json",
+          "type": "JSONB",
+          "column": "dsl_json",
+          "nullable": false
+        },
+        {
+          "name": "status",
+          "type": "VARCHAR",
+          "column": "status",
+          "nullable": false
+        },
+        {
+          "name": "blocking",
+          "type": "SMALLINT",
+          "column": "blocking",
+          "nullable": false
+        },
+        {
+          "name": "created_at",
+          "type": "TIMESTAMP",
+          "column": "created_at",
+          "nullable": false
+        },
+        {
+          "name": "updated_at",
+          "type": "TIMESTAMP",
+          "column": "updated_at",
+          "nullable": false
+        },
+        {
+          "name": "creator",
+          "type": "VARCHAR",
+          "column": "creator",
+          "nullable": false
+        },
+        {
+          "name": "updater",
+          "type": "VARCHAR",
+          "column": "updater",
+          "nullable": false
+        },
+        {
+          "name": "deleted",
+          "type": "SMALLINT",
+          "column": "deleted",
+          "nullable": false
+        }
+      ],
+      "source": "sql"
+    },
+    {
+      "name": "t_rule_fixture",
+      "table": "t_rule_fixture",
+      "moduleSlug": "",
+      "filePath": "docs/schema/generated/core-engine-migration.sql",
+      "fields": [
+        {
+          "name": "id",
+          "type": "BIGINT",
+          "column": "id",
+          "nullable": true
+        },
+        {
+          "name": "version_id",
+          "type": "VARCHAR",
+          "column": "version_id",
+          "nullable": false
+        },
+        {
+          "name": "kind",
+          "type": "VARCHAR",
+          "column": "kind",
+          "nullable": false
+        },
+        {
+          "name": "payload_json",
+          "type": "JSONB",
+          "column": "payload_json",
+          "nullable": false
+        },
+        {
+          "name": "last_result",
+          "type": "VARCHAR",
+          "column": "last_result",
+          "nullable": true
+        },
+        {
+          "name": "created_at",
+          "type": "TIMESTAMP",
+          "column": "created_at",
+          "nullable": false
+        },
+        {
+          "name": "updated_at",
+          "type": "TIMESTAMP",
+          "column": "updated_at",
+          "nullable": false
+        },
+        {
+          "name": "creator",
+          "type": "VARCHAR",
+          "column": "creator",
+          "nullable": false
+        },
+        {
+          "name": "updater",
+          "type": "VARCHAR",
+          "column": "updater",
+          "nullable": false
+        },
+        {
+          "name": "deleted",
+          "type": "SMALLINT",
+          "column": "deleted",
+          "nullable": false
+        }
+      ],
+      "source": "sql"
+    },
+    {
+      "name": "t_standard_doc",
+      "table": "t_standard_doc",
+      "moduleSlug": "",
+      "filePath": "docs/schema/generated/core-engine-migration.sql",
+      "fields": [
+        {
+          "name": "id",
+          "type": "BIGINT",
+          "column": "id",
+          "nullable": true
+        },
+        {
+          "name": "doc_id",
+          "type": "VARCHAR",
+          "column": "doc_id",
+          "nullable": false
+        },
+        {
+          "name": "pack_id",
+          "type": "VARCHAR",
+          "column": "pack_id",
+          "nullable": false
+        },
+        {
+          "name": "title",
+          "type": "VARCHAR",
+          "column": "title",
+          "nullable": false
+        },
+        {
+          "name": "file_uri",
+          "type": "VARCHAR",
+          "column": "file_uri",
+          "nullable": false
+        },
+        {
+          "name": "created_at",
+          "type": "TIMESTAMP",
+          "column": "created_at",
+          "nullable": false
+        },
+        {
+          "name": "updated_at",
+          "type": "TIMESTAMP",
+          "column": "updated_at",
+          "nullable": false
+        },
+        {
+          "name": "creator",
+          "type": "VARCHAR",
+          "column": "creator",
+          "nullable": false
+        },
+        {
+          "name": "updater",
+          "type": "VARCHAR",
+          "column": "updater",
+          "nullable": false
+        },
+        {
+          "name": "deleted",
+          "type": "SMALLINT",
+          "column": "deleted",
+          "nullable": false
+        }
+      ],
+      "source": "sql"
+    },
+    {
+      "name": "t_standard_version",
+      "table": "t_standard_version",
+      "moduleSlug": "",
+      "filePath": "docs/schema/generated/core-engine-migration.sql",
+      "fields": [
+        {
+          "name": "id",
+          "type": "BIGINT",
+          "column": "id",
+          "nullable": true
+        },
+        {
+          "name": "version_id",
+          "type": "VARCHAR",
+          "column": "version_id",
+          "nullable": false
+        },
+        {
+          "name": "doc_id",
+          "type": "VARCHAR",
+          "column": "doc_id",
+          "nullable": false
+        },
+        {
+          "name": "status",
+          "type": "VARCHAR",
+          "column": "status",
+          "nullable": false
+        },
+        {
+          "name": "created_at",
+          "type": "TIMESTAMP",
+          "column": "created_at",
+          "nullable": false
+        },
+        {
+          "name": "updated_at",
+          "type": "TIMESTAMP",
+          "column": "updated_at",
+          "nullable": false
+        },
+        {
+          "name": "creator",
+          "type": "VARCHAR",
+          "column": "creator",
+          "nullable": false
+        },
+        {
+          "name": "updater",
+          "type": "VARCHAR",
+          "column": "updater",
+          "nullable": false
+        },
+        {
+          "name": "deleted",
+          "type": "SMALLINT",
+          "column": "deleted",
+          "nullable": false
+        }
+      ],
+      "source": "sql"
+    },
+    {
+      "name": "t_clause",
+      "table": "t_clause",
+      "moduleSlug": "",
+      "filePath": "docs/schema/generated/core-engine-migration.sql",
+      "fields": [
+        {
+          "name": "id",
+          "type": "BIGINT",
+          "column": "id",
+          "nullable": true
+        },
+        {
+          "name": "clause_id",
+          "type": "VARCHAR",
+          "column": "clause_id",
+          "nullable": false
+        },
+        {
+          "name": "version_id",
+          "type": "VARCHAR",
+          "column": "version_id",
+          "nullable": false
+        },
+        {
+          "name": "parent_clause_id",
+          "type": "VARCHAR",
+          "column": "parent_clause_id",
+          "nullable": true
+        },
+        {
+          "name": "heading",
+          "type": "VARCHAR",
+          "column": "heading",
+          "nullable": true
+        },
+        {
+          "name": "body",
+          "type": "TEXT",
+          "column": "body",
+          "nullable": false
+        },
+        {
+          "name": "span_json",
+          "type": "JSONB",
+          "column": "span_json",
+          "nullable": true
+        },
+        {
+          "name": "qdrant_point_id",
+          "type": "VARCHAR",
+          "column": "qdrant_point_id",
+          "nullable": true
+        },
+        {
+          "name": "created_at",
+          "type": "TIMESTAMP",
+          "column": "created_at",
+          "nullable": false
+        },
+        {
+          "name": "updated_at",
+          "type": "TIMESTAMP",
+          "column": "updated_at",
+          "nullable": false
+        },
+        {
+          "name": "creator",
+          "type": "VARCHAR",
+          "column": "creator",
+          "nullable": false
+        },
+        {
+          "name": "updater",
+          "type": "VARCHAR",
+          "column": "updater",
+          "nullable": false
+        },
+        {
+          "name": "deleted",
+          "type": "SMALLINT",
+          "column": "deleted",
+          "nullable": false
+        }
+      ],
+      "source": "sql"
+    },
+    {
+      "name": "t_standard_edge",
+      "table": "t_standard_edge",
+      "moduleSlug": "",
+      "filePath": "docs/schema/generated/core-engine-migration.sql",
+      "fields": [
+        {
+          "name": "id",
+          "type": "BIGINT",
+          "column": "id",
+          "nullable": true
+        },
+        {
+          "name": "from_clause_id",
+          "type": "VARCHAR",
+          "column": "from_clause_id",
+          "nullable": false
+        },
+        {
+          "name": "to_clause_id",
+          "type": "VARCHAR",
+          "column": "to_clause_id",
+          "nullable": false
+        },
+        {
+          "name": "kind",
+          "type": "VARCHAR",
+          "column": "kind",
+          "nullable": false
+        },
+        {
+          "name": "created_at",
+          "type": "TIMESTAMP",
+          "column": "created_at",
+          "nullable": false
+        },
+        {
+          "name": "updated_at",
+          "type": "TIMESTAMP",
+          "column": "updated_at",
+          "nullable": false
+        },
+        {
+          "name": "creator",
+          "type": "VARCHAR",
+          "column": "creator",
+          "nullable": false
+        },
+        {
+          "name": "updater",
+          "type": "VARCHAR",
+          "column": "updater",
+          "nullable": false
+        },
+        {
+          "name": "deleted",
+          "type": "SMALLINT",
+          "column": "deleted",
+          "nullable": false
+        }
+      ],
+      "source": "sql"
+    },
+    {
+      "name": "t_job",
+      "table": "t_job",
+      "moduleSlug": "",
+      "filePath": "docs/schema/generated/core-engine-migration.sql",
+      "fields": [
+        {
+          "name": "id",
+          "type": "BIGINT",
+          "column": "id",
+          "nullable": true
+        },
+        {
+          "name": "job_id",
+          "type": "VARCHAR",
+          "column": "job_id",
+          "nullable": false
+        },
+        {
+          "name": "project_id",
+          "type": "VARCHAR",
+          "column": "project_id",
+          "nullable": false
+        },
+        {
+          "name": "pack_id",
+          "type": "VARCHAR",
+          "column": "pack_id",
+          "nullable": true
+        },
+        {
+          "name": "trace_id",
+          "type": "VARCHAR",
+          "column": "trace_id",
+          "nullable": false
+        },
+        {
+          "name": "status",
+          "type": "VARCHAR",
+          "column": "status",
+          "nullable": false
+        },
+        {
+          "name": "template_id",
+          "type": "VARCHAR",
+          "column": "template_id",
+          "nullable": true
+        },
+        {
+          "name": "doc_type_id",
+          "type": "VARCHAR",
+          "column": "doc_type_id",
+          "nullable": true
+        },
+        {
+          "name": "agent_run_id",
+          "type": "VARCHAR",
+          "column": "agent_run_id",
+          "nullable": true
+        },
+        {
+          "name": "created_at",
+          "type": "TIMESTAMP",
+          "column": "created_at",
+          "nullable": false
+        },
+        {
+          "name": "updated_at",
+          "type": "TIMESTAMP",
+          "column": "updated_at",
+          "nullable": false
+        },
+        {
+          "name": "creator",
+          "type": "VARCHAR",
+          "column": "creator",
+          "nullable": false
+        },
+        {
+          "name": "updater",
+          "type": "VARCHAR",
+          "column": "updater",
+          "nullable": false
+        },
+        {
+          "name": "deleted",
+          "type": "SMALLINT",
+          "column": "deleted",
+          "nullable": false
+        }
+      ],
+      "source": "sql"
+    },
+    {
+      "name": "t_document",
+      "table": "t_document",
+      "moduleSlug": "",
+      "filePath": "docs/schema/generated/core-engine-migration.sql",
+      "fields": [
+        {
+          "name": "id",
+          "type": "BIGINT",
+          "column": "id",
+          "nullable": true
+        },
+        {
+          "name": "doc_id",
+          "type": "VARCHAR",
+          "column": "doc_id",
+          "nullable": false
+        },
+        {
+          "name": "job_id",
+          "type": "VARCHAR",
+          "column": "job_id",
+          "nullable": false
+        },
+        {
+          "name": "file_name",
+          "type": "VARCHAR",
+          "column": "file_name",
+          "nullable": false
+        },
+        {
+          "name": "file_uri",
+          "type": "VARCHAR",
+          "column": "file_uri",
+          "nullable": false
+        },
+        {
+          "name": "mime",
+          "type": "VARCHAR",
+          "column": "mime",
+          "nullable": true
+        },
+        {
+          "name": "created_at",
+          "type": "TIMESTAMP",
+          "column": "created_at",
+          "nullable": false
+        },
+        {
+          "name": "updated_at",
+          "type": "TIMESTAMP",
+          "column": "updated_at",
+          "nullable": false
+        },
+        {
+          "name": "creator",
+          "type": "VARCHAR",
+          "column": "creator",
+          "nullable": false
+        },
+        {
+          "name": "updater",
+          "type": "VARCHAR",
+          "column": "updater",
+          "nullable": false
+        },
+        {
+          "name": "deleted",
+          "type": "SMALLINT",
+          "column": "deleted",
+          "nullable": false
+        }
+      ],
+      "source": "sql"
+    },
+    {
+      "name": "t_extraction",
+      "table": "t_extraction",
+      "moduleSlug": "",
+      "filePath": "docs/schema/generated/core-engine-migration.sql",
+      "fields": [
+        {
+          "name": "id",
+          "type": "BIGINT",
+          "column": "id",
+          "nullable": true
+        },
+        {
+          "name": "extraction_id",
+          "type": "VARCHAR",
+          "column": "extraction_id",
+          "nullable": false
+        },
+        {
+          "name": "job_id",
+          "type": "VARCHAR",
+          "column": "job_id",
+          "nullable": false
+        },
+        {
+          "name": "ocr_text",
+          "type": "TEXT",
+          "column": "ocr_text",
+          "nullable": true
+        },
+        {
+          "name": "fields_json",
+          "type": "JSONB",
+          "column": "fields_json",
+          "nullable": false
+        },
+        {
+          "name": "created_at",
+          "type": "TIMESTAMP",
+          "column": "created_at",
+          "nullable": false
+        },
+        {
+          "name": "updated_at",
+          "type": "TIMESTAMP",
+          "column": "updated_at",
+          "nullable": false
+        },
+        {
+          "name": "creator",
+          "type": "VARCHAR",
+          "column": "creator",
+          "nullable": false
+        },
+        {
+          "name": "updater",
+          "type": "VARCHAR",
+          "column": "updater",
+          "nullable": false
+        },
+        {
+          "name": "deleted",
+          "type": "SMALLINT",
+          "column": "deleted",
+          "nullable": false
+        }
+      ],
+      "source": "sql"
+    },
+    {
+      "name": "t_finding",
+      "table": "t_finding",
+      "moduleSlug": "",
+      "filePath": "docs/schema/generated/core-engine-migration.sql",
+      "fields": [
+        {
+          "name": "id",
+          "type": "BIGINT",
+          "column": "id",
+          "nullable": true
+        },
+        {
+          "name": "finding_id",
+          "type": "VARCHAR",
+          "column": "finding_id",
+          "nullable": false
+        },
+        {
+          "name": "job_id",
+          "type": "VARCHAR",
+          "column": "job_id",
+          "nullable": false
+        },
+        {
+          "name": "rule_version_id",
+          "type": "VARCHAR",
+          "column": "rule_version_id",
+          "nullable": false
+        },
+        {
+          "name": "result",
+          "type": "VARCHAR",
+          "column": "result",
+          "nullable": false
+        },
+        {
+          "name": "blocking",
+          "type": "SMALLINT",
+          "column": "blocking",
+          "nullable": false
+        },
+        {
+          "name": "detail",
+          "type": "VARCHAR",
+          "column": "detail",
+          "nullable": true
+        },
+        {
+          "name": "clause_id",
+          "type": "VARCHAR",
+          "column": "clause_id",
+          "nullable": true
+        },
+        {
+          "name": "standard_version_id",
+          "type": "VARCHAR",
+          "column": "standard_version_id",
+          "nullable": true
+        },
+        {
+          "name": "retrieve_path",
+          "type": "VARCHAR",
+          "column": "retrieve_path",
+          "nullable": true
+        },
+        {
+          "name": "created_at",
+          "type": "TIMESTAMP",
+          "column": "created_at",
+          "nullable": false
+        },
+        {
+          "name": "updated_at",
+          "type": "TIMESTAMP",
+          "column": "updated_at",
+          "nullable": false
+        },
+        {
+          "name": "creator",
+          "type": "VARCHAR",
+          "column": "creator",
+          "nullable": false
+        },
+        {
+          "name": "updater",
+          "type": "VARCHAR",
+          "column": "updater",
+          "nullable": false
+        },
+        {
+          "name": "deleted",
+          "type": "SMALLINT",
+          "column": "deleted",
+          "nullable": false
+        }
+      ],
+      "source": "sql"
+    },
+    {
+      "name": "t_proposal",
+      "table": "t_proposal",
+      "moduleSlug": "",
+      "filePath": "docs/schema/generated/core-engine-migration.sql",
+      "fields": [
+        {
+          "name": "id",
+          "type": "BIGINT",
+          "column": "id",
+          "nullable": true
+        },
+        {
+          "name": "proposal_id",
+          "type": "VARCHAR",
+          "column": "proposal_id",
+          "nullable": false
+        },
+        {
+          "name": "job_id",
+          "type": "VARCHAR",
+          "column": "job_id",
+          "nullable": false
+        },
+        {
+          "name": "status",
+          "type": "VARCHAR",
+          "column": "status",
+          "nullable": false
+        },
+        {
+          "name": "wording",
+          "type": "TEXT",
+          "column": "wording",
+          "nullable": false
+        },
+        {
+          "name": "agent_run_id",
+          "type": "VARCHAR",
+          "column": "agent_run_id",
+          "nullable": true
+        },
+        {
+          "name": "created_at",
+          "type": "TIMESTAMP",
+          "column": "created_at",
+          "nullable": false
+        },
+        {
+          "name": "updated_at",
+          "type": "TIMESTAMP",
+          "column": "updated_at",
+          "nullable": false
+        },
+        {
+          "name": "creator",
+          "type": "VARCHAR",
+          "column": "creator",
+          "nullable": false
+        },
+        {
+          "name": "updater",
+          "type": "VARCHAR",
+          "column": "updater",
+          "nullable": false
+        },
+        {
+          "name": "deleted",
+          "type": "SMALLINT",
+          "column": "deleted",
+          "nullable": false
+        }
+      ],
+      "source": "sql"
+    },
+    {
+      "name": "t_receipt",
+      "table": "t_receipt",
+      "moduleSlug": "",
+      "filePath": "docs/schema/generated/core-engine-migration.sql",
+      "fields": [
+        {
+          "name": "id",
+          "type": "BIGINT",
+          "column": "id",
+          "nullable": true
+        },
+        {
+          "name": "receipt_id",
+          "type": "VARCHAR",
+          "column": "receipt_id",
+          "nullable": false
+        },
+        {
+          "name": "proposal_id",
+          "type": "VARCHAR",
+          "column": "proposal_id",
+          "nullable": true
+        },
+        {
+          "name": "job_id",
+          "type": "VARCHAR",
+          "column": "job_id",
+          "nullable": false
+        },
+        {
+          "name": "status",
+          "type": "VARCHAR",
+          "column": "status",
+          "nullable": false
+        },
+        {
+          "name": "payload_json",
+          "type": "JSONB",
+          "column": "payload_json",
+          "nullable": true
+        },
+        {
+          "name": "created_at",
+          "type": "TIMESTAMP",
+          "column": "created_at",
+          "nullable": false
+        },
+        {
+          "name": "updated_at",
+          "type": "TIMESTAMP",
+          "column": "updated_at",
+          "nullable": false
+        },
+        {
+          "name": "creator",
+          "type": "VARCHAR",
+          "column": "creator",
+          "nullable": false
+        },
+        {
+          "name": "updater",
+          "type": "VARCHAR",
+          "column": "updater",
+          "nullable": false
+        },
+        {
+          "name": "deleted",
+          "type": "SMALLINT",
+          "column": "deleted",
+          "nullable": false
+        }
+      ],
+      "source": "sql"
+    },
+    {
+      "name": "t_volume_preview",
+      "table": "t_volume_preview",
+      "moduleSlug": "",
+      "filePath": "docs/schema/generated/core-engine-migration.sql",
+      "fields": [
+        {
+          "name": "id",
+          "type": "BIGINT",
+          "column": "id",
+          "nullable": true
+        },
+        {
+          "name": "preview_id",
+          "type": "VARCHAR",
+          "column": "preview_id",
+          "nullable": false
+        },
+        {
+          "name": "job_id",
+          "type": "VARCHAR",
+          "column": "job_id",
+          "nullable": false
+        },
+        {
+          "name": "tree_json",
+          "type": "JSONB",
+          "column": "tree_json",
+          "nullable": false
+        },
+        {
+          "name": "created_at",
+          "type": "TIMESTAMP",
+          "column": "created_at",
+          "nullable": false
+        },
+        {
+          "name": "updated_at",
+          "type": "TIMESTAMP",
+          "column": "updated_at",
+          "nullable": false
+        },
+        {
+          "name": "creator",
+          "type": "VARCHAR",
+          "column": "creator",
+          "nullable": false
+        },
+        {
+          "name": "updater",
+          "type": "VARCHAR",
+          "column": "updater",
+          "nullable": false
+        },
+        {
+          "name": "deleted",
+          "type": "SMALLINT",
+          "column": "deleted",
+          "nullable": false
+        }
+      ],
+      "source": "sql"
+    },
+    {
+      "name": "t_audit_event",
+      "table": "t_audit_event",
+      "moduleSlug": "",
+      "filePath": "docs/schema/generated/core-engine-migration.sql",
+      "fields": [
+        {
+          "name": "id",
+          "type": "BIGINT",
+          "column": "id",
+          "nullable": true
+        },
+        {
+          "name": "trace_id",
+          "type": "VARCHAR",
+          "column": "trace_id",
+          "nullable": false
+        },
+        {
+          "name": "seq",
+          "type": "INT",
+          "column": "seq",
+          "nullable": false
+        },
+        {
+          "name": "event_type",
+          "type": "VARCHAR",
+          "column": "event_type",
+          "nullable": false
+        },
+        {
+          "name": "ref_id",
+          "type": "VARCHAR",
+          "column": "ref_id",
+          "nullable": true
+        },
+        {
+          "name": "payload_json",
+          "type": "JSONB",
+          "column": "payload_json",
+          "nullable": false
+        },
+        {
+          "name": "created_at",
+          "type": "TIMESTAMP",
+          "column": "created_at",
+          "nullable": false
+        },
+        {
+          "name": "updated_at",
+          "type": "TIMESTAMP",
+          "column": "updated_at",
+          "nullable": false
+        },
+        {
+          "name": "creator",
+          "type": "VARCHAR",
+          "column": "creator",
+          "nullable": false
+        },
+        {
+          "name": "updater",
+          "type": "VARCHAR",
+          "column": "updater",
+          "nullable": false
+        },
+        {
+          "name": "deleted",
+          "type": "SMALLINT",
+          "column": "deleted",
+          "nullable": false
+        }
+      ],
+      "source": "sql"
+    },
+    {
+      "name": "t_conversation_thread",
+      "table": "t_conversation_thread",
+      "moduleSlug": "",
+      "filePath": "docs/schema/generated/core-engine-migration.sql",
+      "fields": [
+        {
+          "name": "id",
+          "type": "BIGINT",
+          "column": "id",
+          "nullable": true
+        },
+        {
+          "name": "thread_id",
+          "type": "VARCHAR",
+          "column": "thread_id",
+          "nullable": false
+        },
+        {
+          "name": "trace_id",
+          "type": "VARCHAR",
+          "column": "trace_id",
+          "nullable": false
+        },
+        {
+          "name": "step",
+          "type": "VARCHAR",
+          "column": "step",
+          "nullable": false
+        },
+        {
+          "name": "job_id",
+          "type": "VARCHAR",
+          "column": "job_id",
+          "nullable": true
+        },
+        {
+          "name": "hitl_token",
+          "type": "VARCHAR",
+          "column": "hitl_token",
+          "nullable": true
+        },
+        {
+          "name": "created_at",
+          "type": "TIMESTAMP",
+          "column": "created_at",
+          "nullable": false
+        },
+        {
+          "name": "updated_at",
+          "type": "TIMESTAMP",
+          "column": "updated_at",
+          "nullable": false
+        },
+        {
+          "name": "creator",
+          "type": "VARCHAR",
+          "column": "creator",
+          "nullable": false
+        },
+        {
+          "name": "updater",
+          "type": "VARCHAR",
+          "column": "updater",
+          "nullable": false
+        },
+        {
+          "name": "deleted",
+          "type": "SMALLINT",
+          "column": "deleted",
+          "nullable": false
+        }
+      ],
+      "source": "sql"
+    },
+    {
+      "name": "t_conversation_message",
+      "table": "t_conversation_message",
+      "moduleSlug": "",
+      "filePath": "docs/schema/generated/core-engine-migration.sql",
+      "fields": [
+        {
+          "name": "id",
+          "type": "BIGINT",
+          "column": "id",
+          "nullable": true
+        },
+        {
+          "name": "thread_id",
+          "type": "VARCHAR",
+          "column": "thread_id",
+          "nullable": false
+        },
+        {
+          "name": "role",
+          "type": "VARCHAR",
+          "column": "role",
+          "nullable": false
+        },
+        {
+          "name": "body",
+          "type": "TEXT",
+          "column": "body",
+          "nullable": false
+        },
+        {
+          "name": "created_at",
+          "type": "TIMESTAMP",
+          "column": "created_at",
+          "nullable": false
+        },
+        {
+          "name": "updated_at",
+          "type": "TIMESTAMP",
+          "column": "updated_at",
+          "nullable": false
+        },
+        {
+          "name": "creator",
+          "type": "VARCHAR",
+          "column": "creator",
+          "nullable": false
+        },
+        {
+          "name": "updater",
+          "type": "VARCHAR",
+          "column": "updater",
+          "nullable": false
+        },
+        {
+          "name": "deleted",
+          "type": "SMALLINT",
+          "column": "deleted",
+          "nullable": false
+        }
+      ],
+      "source": "sql"
     }
   ],
   "relations": []

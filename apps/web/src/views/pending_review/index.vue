@@ -4,7 +4,6 @@ import { RouterLink, useRoute } from "vue-router";
 import StepChat from "../../components/StepChat.vue";
 import {
   confirmSignatureTask,
-  dictLabel,
   errorMessage,
   fetchPendingSignatures,
   http,
@@ -12,6 +11,9 @@ import {
   type DictItem,
 } from "../../services/http";
 import type { JobView, ProposalView, ReceiptView, SignatureTaskView } from "../../services/types";
+import SignatureConfirmDialog from "./SignatureConfirmDialog.vue";
+import SignatureReviewPanel from "./SignatureReviewPanel.vue";
+import WordingReviewPanel from "./WordingReviewPanel.vue";
 
 type PendingTab = "wording" | "signature";
 
@@ -82,13 +84,6 @@ async function loadProposals(preferId?: string) {
 
 async function loadSignatures() {
   signatureTasks.value = await fetchPendingSignatures();
-}
-
-async function load(preferId?: string) {
-  await loadProposals(preferId);
-  if (activeTab.value === "signature") {
-    await loadSignatures();
-  }
 }
 
 async function switchTab(tab: PendingTab) {
@@ -244,102 +239,39 @@ watch(jobFilter, () => {
       适配器 pending-mount receipt_id={{ adapterReceipt.receipt_id }}（不是提案确认回执）
     </p>
 
-    <template v-if="activeTab === 'wording'">
-      <section class="card">
-        <table>
-          <thead>
-            <tr>
-              <th>提案</th>
-              <th>Job</th>
-              <th>状态</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr
-              v-for="row in proposals"
-              :key="row.proposal_id"
-              class="clickable"
-              :class="{ 'is-selected': selected?.proposal_id === row.proposal_id }"
-              @click="selectRow(row)"
-            >
-              <td>{{ row.proposal_id }}</td>
-              <td>
-                <RouterLink :to="`/jobs/${row.job_id}/findings`">{{ row.job_id }}</RouterLink>
-              </td>
-              <td>
-                <span class="tag" :class="tagClass(row.status)">{{ dictLabel(statusDict, row.status) }}</span>
-              </td>
-            </tr>
-            <tr v-if="proposals.length === 0">
-              <td colspan="3">暂无待审提案。可从检查页「同意进入待审」，或运行颠倒夹具后重置演示。</td>
-            </tr>
-          </tbody>
-        </table>
-      </section>
+    <WordingReviewPanel
+      v-if="activeTab === 'wording'"
+      :proposals="proposals"
+      :jobs="jobs"
+      :status-dict="statusDict"
+      :selected="selected"
+      :wording="wording"
+      :busy="busy"
+      :tag-class="tagClass"
+      @select="selectRow"
+      @update:wording="wording = $event"
+      @save-wording="saveWording"
+      @confirm="confirm"
+    />
 
-      <section v-if="selected" class="card">
-        <p>建议措辞（可改）：</p>
-        <textarea v-model="wording" class="wording-box" rows="3" />
-        <div class="row-actions">
-          <button class="btn ghost" type="button" :disabled="busy" @click="saveWording">保存措辞</button>
-          <button class="btn" type="button" :disabled="busy" @click="confirm">确认并开 Receipt</button>
-        </div>
-      </section>
-    </template>
+    <SignatureReviewPanel
+      v-else
+      :tasks="signatureTasks"
+      :busy="busy"
+      :tag-class="tagClass"
+      :status-label="signatureStatusLabel"
+      @confirm="openConfirmDialog"
+    />
 
-    <template v-else>
-      <section v-if="signatureTasks.length === 0" class="card">
-        <p class="muted">暂无待签资料。可在项目页生成并上传文档后查看。</p>
-      </section>
-      <section v-for="task in signatureTasks" :key="task.task_id" class="card sig-card">
-        <div class="sig-head">
-          <h2 class="card-title">{{ task.role }}</h2>
-          <span class="tag" :class="tagClass(task.status)">{{ signatureStatusLabel(task.status) }}</span>
-        </div>
-        <dl class="sig-meta">
-          <div>
-            <dt>签认人</dt>
-            <dd>{{ task.assignee_label || "—" }}</dd>
-          </div>
-          <div>
-            <dt>资料</dt>
-            <dd>
-              <span class="mono">{{ task.artifact_id }}</span>
-              <RouterLink class="sig-link" :to="`/audit/${task.trace_id}`">审计</RouterLink>
-            </dd>
-          </div>
-        </dl>
-        <div class="row-actions">
-          <button
-            class="btn"
-            type="button"
-            :disabled="busy || task.status !== 'pending'"
-            @click="openConfirmDialog(task)"
-          >
-            确认签字
-          </button>
-        </div>
-      </section>
-    </template>
-
-    <section v-if="confirmTarget" class="card dialog-panel">
-      <p><strong>确认签字 — {{ confirmTarget.role }}</strong></p>
-      <p class="muted">资料 {{ confirmTarget.artifact_id }}</p>
-      <label class="filter-label">
-        签字人姓名
-        <input
-          v-model="signerName"
-          type="text"
-          class="grow"
-          placeholder="如：张监理"
-          @keydown.enter.prevent="submitSignatureConfirm"
-        />
-      </label>
-      <div class="row-actions">
-        <button class="btn" type="button" :disabled="busy" @click="submitSignatureConfirm">提交签字</button>
-        <button class="btn ghost" type="button" :disabled="busy" @click="closeConfirmDialog">取消</button>
-      </div>
-    </section>
+    <SignatureConfirmDialog
+      v-if="confirmTarget"
+      :task="confirmTarget"
+      :signer-name="signerName"
+      :busy="busy"
+      @update:signer-name="signerName = $event"
+      @submit="submitSignatureConfirm"
+      @close="closeConfirmDialog"
+    />
   </div>
   <StepChat :trace-id="stepTraceId" step="pending" />
 </template>
@@ -363,46 +295,5 @@ watch(jobFilter, () => {
   border-color: var(--apt-primary);
   color: #fff;
   font-weight: 600;
-}
-.sig-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 12px;
-}
-.sig-head .card-title {
-  margin: 0;
-}
-.sig-meta {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 12px;
-  margin: 0 0 12px;
-}
-.sig-meta div {
-  margin: 0;
-}
-.sig-meta dt {
-  color: var(--apt-text-muted);
-  font-size: 12px;
-  margin-bottom: 4px;
-}
-.sig-meta dd {
-  margin: 0;
-  font-size: 13px;
-}
-.mono {
-  font-family: var(--apt-font-mono), monospace;
-  font-size: 12px;
-}
-.sig-link {
-  margin-left: 8px;
-  font-size: 12px;
-}
-@media (max-width: 720px) {
-  .sig-meta {
-    grid-template-columns: 1fr;
-  }
 }
 </style>

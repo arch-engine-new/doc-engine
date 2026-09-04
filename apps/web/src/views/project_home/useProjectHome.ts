@@ -105,7 +105,9 @@ export function useProjectHome() {
     docTypesByPack.value = { ...docTypesByPack.value, [packId]: data.docTypes };
   }
 
+  /** Load projects, nested packs/docTypes, document gaps, and refresh demo nav context. */
   async function load() {
+    // Cascade: projects → packs per project → doc types per pack → gaps; keep selection when possible.
     const data = await http<{ projects: ProjectView[] }>("/api/projects");
     projects.value = data.projects;
     const next: Record<string, SpecPackView[]> = {};

@@ -1,0 +1,19 @@
+{
+  "id": "pending_review",
+  "title": "待审工作台",
+  "pageType": "list",
+  "feature": "core-engine",
+  "route": "/pending",
+  "description": "check_wording 产出 Proposal；确认后中台写 Receipt。验收 A6/A8。",
+  "logicPath": "logic/pending_review.md",
+  "manifestPath": "designs/v0/pending_review/page.manifest.json",
+  "approval": {
+    "status": "approved"
+  },
+  "regions": [
+    {
+      "id": "main",
+      "components": []
+    }
+  ]
+}

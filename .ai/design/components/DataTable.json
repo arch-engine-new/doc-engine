@@ -1,0 +1,6 @@
+{
+  "id": "DataTable",
+  "kind": "component",
+  "summary": "工作台数据表",
+  "framework": "vue"
+}

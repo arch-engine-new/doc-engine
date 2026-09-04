@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>审计追踪</title>
+  <link rel="stylesheet" href="../styles/tokens.css" />
+  <link rel="stylesheet" href="../styles/global.css" />
+</head>
+<body data-step="audit" data-trace="trc_bad_002">
+<nav class="app-nav">
+  <span class="brand">工程资料核心引擎</span>
+  <a href="../project_home/index.html">项目</a>
+  <a href="../template_annotate/index.html">模板</a>
+  <a href="../rule_editor/index.html">规则</a>
+  <a href="../standard_lib/index.html">标准库</a>
+  <a href="../job_upload/index.html">任务</a>
+  <a href="../pending_review/index.html">待审</a>
+  <a href="../check_findings/index.html">检查</a>
+  <a href="../volume_preview/index.html">组卷</a>
+  <a class="active" href="../audit_trace/index.html">审计</a>
+</nav>
+<div class="wrap">
+  <h1>审计追踪</h1>
+  <p class="sub">同一 trace_id 串起 Job / 规则版本 / 抽取 JSON / Receipt。模型声称成功无效。</p>
+  <div class="card timeline">
+    <div class="ev"><time>t0</time> Job uploaded · trc_bad_002</div>
+    <div class="ev"><time>t1</time> Extraction JSON · 编号=SH-002, 日期A&gt;日期B</div>
+    <div class="ev"><time>t2</time> RuleVersion v1 R2 fail · blocking</div>
+    <div class="ev"><time>t3</time> Proposal pending · check_wording</div>
+    <div class="ev"><time>t4</time> Receipt 待确认（无回执不算落库）</div>
+  </div>
+</div>
+<script src="../mock/step-chat.js"></script>
+</body>
+</html>

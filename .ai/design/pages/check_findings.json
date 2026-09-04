@@ -1,0 +1,19 @@
+{
+  "id": "check_findings",
+  "title": "检查结果",
+  "pageType": "detail",
+  "feature": "core-engine",
+  "route": "/jobs/:id/findings",
+  "description": "抽取 JSON 与规则命中；标准符合度挂 clause_id。验收 A4/A5/A11。",
+  "logicPath": "logic/check_findings.md",
+  "manifestPath": "designs/v0/check_findings/page.manifest.json",
+  "approval": {
+    "status": "approved"
+  },
+  "regions": [
+    {
+      "id": "main",
+      "components": []
+    }
+  ]
+}

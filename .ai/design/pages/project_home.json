@@ -1,0 +1,19 @@
+{
+  "id": "project_home",
+  "title": "项目与规范包",
+  "pageType": "list",
+  "feature": "core-engine",
+  "route": "/projects",
+  "description": "项目隔离与空规范包；无预置公路/水利规则。验收 A1。",
+  "logicPath": "logic/project_home.md",
+  "manifestPath": "designs/v0/project_home/page.manifest.json",
+  "approval": {
+    "status": "approved"
+  },
+  "regions": [
+    {
+      "id": "main",
+      "components": []
+    }
+  ]
+}

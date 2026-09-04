@@ -6,10 +6,14 @@
 
 | Module | Path | APIs | RPCs | Utils | Enums | POJO |
 |--------|------|------|------|-------|-------|------|
-| agent-runtime | backend/agent-runtime | 2 api asset(s) |  | 13 util asset(s) |  | 4 pojo asset(s) |
+| docs | backend/docs |  |  | 1 util asset(s) |  |  |
 
 ## Frontend Packages
 
 | Package | Path | Components | Utils | Enums |
 |---------|------|------------|-------|-------|
-| _None._ | | | | |
+| agent-runtime | frontend/agent-runtime | 0 component(s) | 21 util(s) | 0 enum(s) |
+| core-engine | frontend/core-engine | 0 component(s) | 25 util(s) | 0 enum(s) |
+| web | frontend/web | 11 component(s) | 5 util(s) | 0 enum(s) |
+| packages | frontend/packages |  |  |  |
+| apps | frontend/apps |  |  |  |

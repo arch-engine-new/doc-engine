@@ -1,0 +1,513 @@
+{
+  "nodes": [
+    {
+      "id": "component:App",
+      "kind": "method",
+      "name": "App",
+      "filePath": "apps/web/src/App.vue",
+      "moduleSlug": "web"
+    },
+    {
+      "id": "component:demo-session",
+      "kind": "method",
+      "name": "demo-session",
+      "filePath": "apps/web/src/services/demo-session.ts",
+      "moduleSlug": "web"
+    },
+    {
+      "id": "component:RouterLink",
+      "kind": "method",
+      "name": "RouterLink"
+    },
+    {
+      "id": "component:RouterView",
+      "kind": "method",
+      "name": "RouterView"
+    },
+    {
+      "id": "component:main",
+      "kind": "method",
+      "name": "main",
+      "filePath": "apps/web/src/main.ts",
+      "moduleSlug": "web"
+    },
+    {
+      "id": "component:router",
+      "kind": "method",
+      "name": "router",
+      "filePath": "apps/web/src/router.ts",
+      "moduleSlug": "web"
+    },
+    {
+      "id": "component:global",
+      "kind": "method",
+      "name": "global"
+    },
+    {
+      "id": "component:StepChat",
+      "kind": "method",
+      "name": "StepChat",
+      "filePath": "apps/web/src/components/StepChat.vue",
+      "moduleSlug": "web"
+    },
+    {
+      "id": "component:http",
+      "kind": "method",
+      "name": "http",
+      "filePath": "apps/web/src/services/http.ts",
+      "moduleSlug": "web"
+    },
+    {
+      "id": "component:agent-runtime",
+      "kind": "method",
+      "name": "agent-runtime",
+      "filePath": "apps/web/src/services/agent-runtime.ts",
+      "moduleSlug": "web"
+    },
+    {
+      "id": "component:types",
+      "kind": "method",
+      "name": "types",
+      "filePath": "apps/web/src/services/types.ts",
+      "moduleSlug": "web"
+    },
+    {
+      "id": "component:index",
+      "kind": "method",
+      "name": "index",
+      "filePath": "apps/web/src/views/volume_preview/index.vue",
+      "moduleSlug": "web"
+    },
+    {
+      "id": "component:UploadToolbar",
+      "kind": "method",
+      "name": "UploadToolbar",
+      "filePath": "apps/web/src/views/job_upload/UploadToolbar.vue",
+      "moduleSlug": "web"
+    },
+    {
+      "id": "component:DocumentGapsPanel",
+      "kind": "method",
+      "name": "DocumentGapsPanel",
+      "filePath": "apps/web/src/views/project_home/DocumentGapsPanel.vue",
+      "moduleSlug": "web"
+    },
+    {
+      "id": "component:ProjectHomeDialogs",
+      "kind": "method",
+      "name": "ProjectHomeDialogs",
+      "filePath": "apps/web/src/views/project_home/ProjectHomeDialogs.vue",
+      "moduleSlug": "web"
+    },
+    {
+      "id": "component:ProjectPackTable",
+      "kind": "method",
+      "name": "ProjectPackTable",
+      "filePath": "apps/web/src/views/project_home/ProjectPackTable.vue",
+      "moduleSlug": "web"
+    },
+    {
+      "id": "component:useProjectHome",
+      "kind": "method",
+      "name": "useProjectHome",
+      "filePath": "apps/web/src/views/project_home/useProjectHome.ts",
+      "moduleSlug": "web"
+    },
+    {
+      "id": "component:SignatureConfirmDialog",
+      "kind": "method",
+      "name": "SignatureConfirmDialog",
+      "filePath": "apps/web/src/views/pending_review/SignatureConfirmDialog.vue",
+      "moduleSlug": "web"
+    },
+    {
+      "id": "component:SignatureReviewPanel",
+      "kind": "method",
+      "name": "SignatureReviewPanel",
+      "filePath": "apps/web/src/views/pending_review/SignatureReviewPanel.vue",
+      "moduleSlug": "web"
+    },
+    {
+      "id": "component:WordingReviewPanel",
+      "kind": "method",
+      "name": "WordingReviewPanel",
+      "filePath": "apps/web/src/views/pending_review/WordingReviewPanel.vue",
+      "moduleSlug": "web"
+    },
+    {
+      "id": "component:ExcelCellMappingPanel",
+      "kind": "method",
+      "name": "ExcelCellMappingPanel",
+      "filePath": "apps/web/src/views/template_annotate/ExcelCellMappingPanel.vue",
+      "moduleSlug": "web"
+    },
+    {
+      "id": "component:InheritedFieldsPanel",
+      "kind": "method",
+      "name": "InheritedFieldsPanel",
+      "filePath": "apps/web/src/views/template_annotate/InheritedFieldsPanel.vue",
+      "moduleSlug": "web"
+    },
+    {
+      "id": "component:useAnnotateCanvas",
+      "kind": "method",
+      "name": "useAnnotateCanvas",
+      "filePath": "apps/web/src/views/template_annotate/useAnnotateCanvas.ts",
+      "moduleSlug": "web"
+    },
+    {
+      "id": "component:DraftBox",
+      "kind": "method",
+      "name": "DraftBox"
+    },
+    {
+      "id": "component:EffectiveFieldBoxView",
+      "kind": "method",
+      "name": "EffectiveFieldBoxView"
+    }
+  ],
+  "edges": [
+    {
+      "from": "component:App",
+      "to": "component:demo-session",
+      "kind": "imports",
+      "confidence": "high"
+    },
+    {
+      "from": "component:App",
+      "to": "component:RouterLink",
+      "kind": "template",
+      "confidence": "high"
+    },
+    {
+      "from": "component:App",
+      "to": "component:RouterView",
+      "kind": "template",
+      "confidence": "high"
+    },
+    {
+      "from": "component:main",
+      "to": "component:App",
+      "kind": "imports",
+      "confidence": "high"
+    },
+    {
+      "from": "component:main",
+      "to": "component:router",
+      "kind": "imports",
+      "confidence": "high"
+    },
+    {
+      "from": "component:main",
+      "to": "component:global",
+      "kind": "imports",
+      "confidence": "high"
+    },
+    {
+      "from": "component:StepChat",
+      "to": "component:http",
+      "kind": "imports",
+      "confidence": "high"
+    },
+    {
+      "from": "component:agent-runtime",
+      "to": "component:http",
+      "kind": "imports",
+      "confidence": "high"
+    },
+    {
+      "from": "component:demo-session",
+      "to": "component:http",
+      "kind": "imports",
+      "confidence": "high"
+    },
+    {
+      "from": "component:demo-session",
+      "to": "component:types",
+      "kind": "imports",
+      "confidence": "high"
+    },
+    {
+      "from": "component:http",
+      "to": "component:types",
+      "kind": "imports",
+      "confidence": "high"
+    },
+    {
+      "from": "component:index",
+      "to": "component:agent-runtime",
+      "kind": "imports",
+      "confidence": "high"
+    },
+    {
+      "from": "component:index",
+      "to": "component:StepChat",
+      "kind": "imports",
+      "confidence": "high"
+    },
+    {
+      "from": "component:index",
+      "to": "component:demo-session",
+      "kind": "imports",
+      "confidence": "high"
+    },
+    {
+      "from": "component:index",
+      "to": "component:http",
+      "kind": "imports",
+      "confidence": "high"
+    },
+    {
+      "from": "component:index",
+      "to": "component:types",
+      "kind": "imports",
+      "confidence": "high"
+    },
+    {
+      "from": "component:index",
+      "to": "component:StepChat",
+      "kind": "template",
+      "confidence": "high"
+    },
+    {
+      "from": "component:index",
+      "to": "component:RouterLink",
+      "kind": "template",
+      "confidence": "high"
+    },
+    {
+      "from": "component:index",
+      "to": "component:UploadToolbar",
+      "kind": "imports",
+      "confidence": "high"
+    },
+    {
+      "from": "component:index",
+      "to": "component:UploadToolbar",
+      "kind": "template",
+      "confidence": "high"
+    },
+    {
+      "from": "component:UploadToolbar",
+      "to": "component:types",
+      "kind": "imports",
+      "confidence": "high"
+    },
+    {
+      "from": "component:DocumentGapsPanel",
+      "to": "component:types",
+      "kind": "imports",
+      "confidence": "high"
+    },
+    {
+      "from": "component:index",
+      "to": "component:DocumentGapsPanel",
+      "kind": "imports",
+      "confidence": "high"
+    },
+    {
+      "from": "component:index",
+      "to": "component:ProjectHomeDialogs",
+      "kind": "imports",
+      "confidence": "high"
+    },
+    {
+      "from": "component:index",
+      "to": "component:ProjectPackTable",
+      "kind": "imports",
+      "confidence": "high"
+    },
+    {
+      "from": "component:index",
+      "to": "component:useProjectHome",
+      "kind": "imports",
+      "confidence": "high"
+    },
+    {
+      "from": "component:index",
+      "to": "component:DocumentGapsPanel",
+      "kind": "template",
+      "confidence": "high"
+    },
+    {
+      "from": "component:index",
+      "to": "component:ProjectHomeDialogs",
+      "kind": "template",
+      "confidence": "high"
+    },
+    {
+      "from": "component:index",
+      "to": "component:ProjectPackTable",
+      "kind": "template",
+      "confidence": "high"
+    },
+    {
+      "from": "component:ProjectHomeDialogs",
+      "to": "component:types",
+      "kind": "imports",
+      "confidence": "high"
+    },
+    {
+      "from": "component:ProjectHomeDialogs",
+      "to": "component:useProjectHome",
+      "kind": "imports",
+      "confidence": "high"
+    },
+    {
+      "from": "component:ProjectPackTable",
+      "to": "component:types",
+      "kind": "imports",
+      "confidence": "high"
+    },
+    {
+      "from": "component:ProjectPackTable",
+      "to": "component:RouterLink",
+      "kind": "template",
+      "confidence": "high"
+    },
+    {
+      "from": "component:useProjectHome",
+      "to": "component:demo-session",
+      "kind": "imports",
+      "confidence": "high"
+    },
+    {
+      "from": "component:useProjectHome",
+      "to": "component:http",
+      "kind": "imports",
+      "confidence": "high"
+    },
+    {
+      "from": "component:useProjectHome",
+      "to": "component:types",
+      "kind": "imports",
+      "confidence": "high"
+    },
+    {
+      "from": "component:index",
+      "to": "component:SignatureConfirmDialog",
+      "kind": "imports",
+      "confidence": "high"
+    },
+    {
+      "from": "component:index",
+      "to": "component:SignatureReviewPanel",
+      "kind": "imports",
+      "confidence": "high"
+    },
+    {
+      "from": "component:index",
+      "to": "component:WordingReviewPanel",
+      "kind": "imports",
+      "confidence": "high"
+    },
+    {
+      "from": "component:index",
+      "to": "component:SignatureConfirmDialog",
+      "kind": "template",
+      "confidence": "high"
+    },
+    {
+      "from": "component:index",
+      "to": "component:SignatureReviewPanel",
+      "kind": "template",
+      "confidence": "high"
+    },
+    {
+      "from": "component:index",
+      "to": "component:WordingReviewPanel",
+      "kind": "template",
+      "confidence": "high"
+    },
+    {
+      "from": "component:SignatureConfirmDialog",
+      "to": "component:types",
+      "kind": "imports",
+      "confidence": "high"
+    },
+    {
+      "from": "component:SignatureReviewPanel",
+      "to": "component:types",
+      "kind": "imports",
+      "confidence": "high"
+    },
+    {
+      "from": "component:SignatureReviewPanel",
+      "to": "component:RouterLink",
+      "kind": "template",
+      "confidence": "high"
+    },
+    {
+      "from": "component:WordingReviewPanel",
+      "to": "component:http",
+      "kind": "imports",
+      "confidence": "high"
+    },
+    {
+      "from": "component:WordingReviewPanel",
+      "to": "component:types",
+      "kind": "imports",
+      "confidence": "high"
+    },
+    {
+      "from": "component:WordingReviewPanel",
+      "to": "component:RouterLink",
+      "kind": "template",
+      "confidence": "high"
+    },
+    {
+      "from": "component:ExcelCellMappingPanel",
+      "to": "component:http",
+      "kind": "imports",
+      "confidence": "high"
+    },
+    {
+      "from": "component:ExcelCellMappingPanel",
+      "to": "component:types",
+      "kind": "imports",
+      "confidence": "high"
+    },
+    {
+      "from": "component:index",
+      "to": "component:InheritedFieldsPanel",
+      "kind": "imports",
+      "confidence": "high"
+    },
+    {
+      "from": "component:index",
+      "to": "component:ExcelCellMappingPanel",
+      "kind": "imports",
+      "confidence": "high"
+    },
+    {
+      "from": "component:index",
+      "to": "component:useAnnotateCanvas",
+      "kind": "imports",
+      "confidence": "high"
+    },
+    {
+      "from": "component:index",
+      "to": "component:DraftBox",
+      "kind": "template",
+      "confidence": "high"
+    },
+    {
+      "from": "component:index",
+      "to": "component:EffectiveFieldBoxView",
+      "kind": "template",
+      "confidence": "high"
+    },
+    {
+      "from": "component:InheritedFieldsPanel",
+      "to": "component:types",
+      "kind": "imports",
+      "confidence": "high"
+    },
+    {
+      "from": "component:useAnnotateCanvas",
+      "to": "component:types",
+      "kind": "imports",
+      "confidence": "high"
+    }
+  ]
+}

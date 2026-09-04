@@ -1,0 +1,6 @@
+{
+  "id": "PrimaryButton",
+  "kind": "component",
+  "summary": "主操作按钮",
+  "framework": "vue"
+}

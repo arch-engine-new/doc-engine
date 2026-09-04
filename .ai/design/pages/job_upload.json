@@ -1,0 +1,19 @@
+{
+  "id": "job_upload",
+  "title": "上传与任务",
+  "pageType": "list",
+  "feature": "core-engine",
+  "route": "/jobs",
+  "description": "Walking Skeleton 入口：上传 PDF、Job 状态机、写入 trace_id。",
+  "logicPath": "logic/job_upload.md",
+  "manifestPath": "designs/v0/job_upload/page.manifest.json",
+  "approval": {
+    "status": "approved"
+  },
+  "regions": [
+    {
+      "id": "main",
+      "components": []
+    }
+  ]
+}

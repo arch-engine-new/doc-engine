@@ -67,140 +67,903 @@
       "name": "AgentRuntime",
       "description": "agent-runtime 对外契约：graph 作者面（GraphDefinition/CompiledGraph/NodeType/RetryPolicy）、run 生命周期（RunStatus/RunMetadata/SchedulerResult/ChannelMap）、HITL（HitlDecision/HitlInterruptStatus）、持久化（StateStore/SQLiteStateStore）、可观测（EventRow/EventType）、控制面（RunView）、工具（ToolExecutionResult）。源码载体 src/contracts/agent-runtime.ts；实现 barrel packages/agent-runtime/src/index.ts。",
       "tsFilePath": "src/contracts/agent-runtime.ts",
-      "registeredAt": "2026-08-25T11:07:00.734Z",
+      "registeredAt": "2026-08-25T12:07:00.969Z",
       "source": "manual"
     },
     {
       "name": "GraphCompileError",
       "description": "",
       "tsFilePath": "packages/agent-runtime/src/graph/compiler.ts",
-      "registeredAt": "2026-08-25T11:12:56.834Z",
+      "registeredAt": "2026-08-30T06:56:05.959Z",
       "source": "auto-scan"
     },
     {
       "name": "GraphNode",
       "description": "",
       "tsFilePath": "packages/agent-runtime/src/graph/types.ts",
-      "registeredAt": "2026-08-25T11:12:56.834Z",
+      "registeredAt": "2026-08-30T06:56:05.959Z",
       "source": "auto-scan"
     },
     {
       "name": "HitlGateway",
       "description": "",
       "tsFilePath": "packages/agent-runtime/src/hitl/gateway.ts",
-      "registeredAt": "2026-08-25T11:12:56.834Z",
+      "registeredAt": "2026-08-30T06:56:05.959Z",
       "source": "auto-scan"
     },
     {
       "name": "EventType",
       "description": "",
       "tsFilePath": "packages/agent-runtime/src/obs/event-log.ts",
-      "registeredAt": "2026-08-25T11:12:56.834Z",
+      "registeredAt": "2026-08-30T06:56:05.959Z",
       "source": "auto-scan"
     },
     {
       "name": "EventLog",
       "description": "",
       "tsFilePath": "packages/agent-runtime/src/obs/event-log.ts",
-      "registeredAt": "2026-08-25T11:12:56.834Z",
+      "registeredAt": "2026-08-30T06:56:05.959Z",
       "source": "auto-scan"
     },
     {
       "name": "SQLiteStateStore",
       "description": "",
       "tsFilePath": "packages/agent-runtime/src/persistence/sqlite-store.ts",
-      "registeredAt": "2026-08-25T11:12:56.834Z",
+      "registeredAt": "2026-08-30T06:56:05.959Z",
       "source": "auto-scan"
     },
     {
       "name": "StoredCheckpoint",
       "description": "",
       "tsFilePath": "packages/agent-runtime/src/persistence/types.ts",
-      "registeredAt": "2026-08-25T11:12:56.834Z",
+      "registeredAt": "2026-08-30T06:56:05.959Z",
       "source": "auto-scan"
     },
     {
       "name": "StoredToolCall",
       "description": "",
       "tsFilePath": "packages/agent-runtime/src/persistence/types.ts",
-      "registeredAt": "2026-08-25T11:12:56.834Z",
+      "registeredAt": "2026-08-30T06:56:05.959Z",
       "source": "auto-scan"
     },
     {
       "name": "StoredRunEvent",
       "description": "",
       "tsFilePath": "packages/agent-runtime/src/persistence/types.ts",
-      "registeredAt": "2026-08-25T11:12:56.834Z",
+      "registeredAt": "2026-08-30T06:56:05.959Z",
       "source": "auto-scan"
     },
     {
       "name": "StoredHitlInterrupt",
       "description": "",
       "tsFilePath": "packages/agent-runtime/src/persistence/types.ts",
-      "registeredAt": "2026-08-25T11:12:56.834Z",
+      "registeredAt": "2026-08-30T06:56:05.959Z",
       "source": "auto-scan"
     },
     {
       "name": "CheckpointService",
       "description": "",
       "tsFilePath": "packages/agent-runtime/src/runtime/checkpoint-service.ts",
-      "registeredAt": "2026-08-25T11:12:56.834Z",
+      "registeredAt": "2026-08-30T06:56:05.959Z",
       "source": "auto-scan"
     },
     {
       "name": "NodeResult",
       "description": "",
       "tsFilePath": "packages/agent-runtime/src/runtime/node-executors.ts",
-      "registeredAt": "2026-08-25T11:12:56.834Z",
+      "registeredAt": "2026-08-30T06:56:05.959Z",
       "source": "auto-scan"
     },
     {
       "name": "NodeExecutor",
       "description": "",
       "tsFilePath": "packages/agent-runtime/src/runtime/node-executors.ts",
-      "registeredAt": "2026-08-25T11:12:56.834Z",
+      "registeredAt": "2026-08-30T06:56:05.959Z",
       "source": "auto-scan"
     },
     {
       "name": "SchedulerOptions",
       "description": "",
       "tsFilePath": "packages/agent-runtime/src/runtime/scheduler.ts",
-      "registeredAt": "2026-08-25T11:12:56.834Z",
+      "registeredAt": "2026-08-30T06:56:05.959Z",
       "source": "auto-scan"
     },
     {
       "name": "ExecutionContext",
       "description": "",
       "tsFilePath": "packages/agent-runtime/src/runtime/state.ts",
-      "registeredAt": "2026-08-25T11:12:56.834Z",
+      "registeredAt": "2026-08-30T06:56:05.959Z",
       "source": "auto-scan"
     },
     {
       "name": "RunMetadata",
       "description": "",
       "tsFilePath": "packages/agent-runtime/src/runtime/state.ts",
-      "registeredAt": "2026-08-25T11:12:56.834Z",
+      "registeredAt": "2026-08-30T06:56:05.959Z",
       "source": "auto-scan"
     },
     {
       "name": "NodeExecutionRecord",
       "description": "",
       "tsFilePath": "packages/agent-runtime/src/runtime/state.ts",
-      "registeredAt": "2026-08-25T11:12:56.834Z",
+      "registeredAt": "2026-08-30T06:56:05.959Z",
       "source": "auto-scan"
     },
     {
       "name": "ChannelMap",
       "description": "",
       "tsFilePath": "packages/agent-runtime/src/runtime/state.ts",
-      "registeredAt": "2026-08-25T11:12:56.834Z",
+      "registeredAt": "2026-08-30T06:56:05.959Z",
       "source": "auto-scan"
     },
     {
       "name": "ToolRuntime",
       "description": "",
       "tsFilePath": "packages/agent-runtime/src/tools/runtime.ts",
-      "registeredAt": "2026-08-25T11:12:56.834Z",
+      "registeredAt": "2026-08-30T06:56:05.959Z",
+      "source": "auto-scan"
+    },
+    {
+      "name": "ZhipuLlmProvider",
+      "description": "智谱 GLM OpenAI 兼容 Chat Completions Provider：读取 .apt/agent-runtime.llm.json，POST /chat/completions。",
+      "tsFilePath": "packages/agent-runtime/src/llm/zhipu-provider.ts",
+      "registeredAt": "2026-08-26T06:34:54.943Z",
+      "source": "manual"
+    },
+    {
+      "name": "LlmRuntimeConfig",
+      "description": "LLM 运行时配置：baseUrl/model/apiKey；从 .apt/agent-runtime.llm.json 加载，不依赖 arch.secrets.json。",
+      "tsFilePath": "packages/agent-runtime/src/llm/config.ts",
+      "registeredAt": "2026-08-26T06:34:55.242Z",
+      "source": "manual"
+    },
+    {
+      "name": "LlmProvider",
+      "description": "",
+      "tsFilePath": "packages/agent-runtime/src/llm/provider.ts",
+      "registeredAt": "2026-08-30T06:56:05.959Z",
+      "source": "auto-scan"
+    },
+    {
+      "name": "JobRow",
+      "description": "PostgreSQL Job ledger row for walking skeleton pipeline",
+      "tsFilePath": "docs/schema/generated/core-engine-rows.ts",
+      "registeredAt": "2026-08-26T11:20:04.986Z",
+      "source": "manual"
+    },
+    {
+      "name": "FindingRow",
+      "description": "Rule hit row; blocking and optional clause_id for standard fit",
+      "tsFilePath": "docs/schema/generated/core-engine-rows.ts",
+      "registeredAt": "2026-08-26T11:20:06.278Z",
+      "source": "manual"
+    },
+    {
+      "name": "ConversationThreadRow",
+      "description": "Step chat thread keyed by trace_id + step for HITL",
+      "tsFilePath": "docs/schema/generated/core-engine-rows.ts",
+      "registeredAt": "2026-08-26T11:20:06.333Z",
+      "source": "manual"
+    },
+    {
+      "name": "JobPipeline",
+      "description": "Job pipeline for SLICE-1 walking skeleton: runFixtureJob, appendChat, listAudit",
+      "tsFilePath": "packages/core-engine/src/pipeline/job-pipeline.ts",
+      "registeredAt": "2026-08-26T11:35:28.089Z",
+      "source": "manual"
+    },
+    {
+      "name": "RuleInterpreter",
+      "description": "Minimal rule interpreter: required(field) and compare ISO dates; evaluate(fields, rules) → findings",
+      "tsFilePath": "packages/core-engine/src/rules/interpreter.ts",
+      "registeredAt": "2026-08-26T11:35:28.118Z",
+      "source": "manual"
+    },
+    {
+      "name": "CoreEngineStore",
+      "description": "SQLite store for SLICE-1 ledger tables using generated row field names",
+      "tsFilePath": "packages/core-engine/src/persistence/store.ts",
+      "registeredAt": "2026-08-26T11:35:46.729Z",
+      "source": "manual"
+    },
+    {
+      "name": "ExtractionRow",
+      "description": "Extraction ledger row: ocr_text + fields_json for a job",
+      "tsFilePath": "docs/schema/generated/core-engine-rows.ts",
+      "registeredAt": "2026-08-26T11:39:33.147Z",
+      "source": "manual"
+    },
+    {
+      "name": "AuditEventRow",
+      "description": "Audit event row keyed by trace_id and seq for pipeline timeline",
+      "tsFilePath": "docs/schema/generated/core-engine-rows.ts",
+      "registeredAt": "2026-08-26T11:39:34.338Z",
+      "source": "manual"
+    },
+    {
+      "name": "DocumentRow",
+      "description": "Uploaded document ledger row bound to a job",
+      "tsFilePath": "docs/schema/generated/core-engine-rows.ts",
+      "registeredAt": "2026-08-26T11:39:35.191Z",
+      "source": "manual"
+    },
+    {
+      "name": "ProjectRow",
+      "description": "Project ledger row owning jobs and spec packs",
+      "tsFilePath": "docs/schema/generated/core-engine-rows.ts",
+      "registeredAt": "2026-08-26T11:39:36.078Z",
+      "source": "manual"
+    },
+    {
+      "name": "ConversationMessageRow",
+      "description": "HITL step-chat message row under a conversation thread",
+      "tsFilePath": "docs/schema/generated/core-engine-rows.ts",
+      "registeredAt": "2026-08-26T11:39:37.102Z",
+      "source": "manual"
+    },
+    {
+      "name": "RuleVersionRow",
+      "description": "Published or draft rule version row with dsl_json and blocking",
+      "tsFilePath": "docs/schema/generated/core-engine-rows.ts",
+      "registeredAt": "2026-08-26T11:39:39.271Z",
+      "source": "manual"
+    },
+    {
+      "name": "FixtureJobResult",
+      "description": "Result of runFixtureJob: project, job, document, extraction, findings",
+      "tsFilePath": "packages/core-engine/src/pipeline/job-pipeline.ts",
+      "registeredAt": "2026-08-26T11:39:39.308Z",
+      "source": "manual"
+    },
+    {
+      "name": "AppendChatInput",
+      "description": "HITL appendChat input: traceId, step, body, optional role",
+      "tsFilePath": "packages/core-engine/src/pipeline/job-pipeline.ts",
+      "registeredAt": "2026-08-26T11:39:40.263Z",
+      "source": "manual"
+    },
+    {
+      "name": "AppendChatResult",
+      "description": "HITL appendChat result: thread plus persisted message",
+      "tsFilePath": "packages/core-engine/src/pipeline/job-pipeline.ts",
+      "registeredAt": "2026-08-26T11:39:41.099Z",
+      "source": "manual"
+    },
+    {
+      "name": "EvaluableRule",
+      "description": "Rule subset for evaluate: version_id, dsl_json, blocking",
+      "tsFilePath": "packages/core-engine/src/rules/interpreter.ts",
+      "registeredAt": "2026-08-26T11:39:42.115Z",
+      "source": "manual"
+    },
+    {
+      "name": "EvaluatedFinding",
+      "description": "Interpreter finding subset: rule_version_id, result, blocking, detail",
+      "tsFilePath": "packages/core-engine/src/rules/interpreter.ts",
+      "registeredAt": "2026-08-26T11:39:43.324Z",
+      "source": "manual"
+    },
+    {
+      "name": "ExtractionFields",
+      "description": "Extraction field map passed to the rule interpreter",
+      "tsFilePath": "packages/core-engine/src/rules/interpreter.ts",
+      "registeredAt": "2026-08-26T11:39:43.338Z",
+      "source": "manual"
+    },
+    {
+      "name": "SpecPackRow",
+      "description": "Spec pack empty-shell ledger row: name/version/groupKeys, no industry preload",
+      "tsFilePath": "docs/schema/generated/core-engine-rows.ts",
+      "registeredAt": "2026-08-26T12:10:47.036Z",
+      "source": "manual"
+    },
+    {
+      "name": "TemplateRow",
+      "description": "Template ledger row bound to a spec pack, optional page_image_uri",
+      "tsFilePath": "docs/schema/generated/core-engine-rows.ts",
+      "registeredAt": "2026-08-26T12:10:48.765Z",
+      "source": "manual"
+    },
+    {
+      "name": "FieldBoxRow",
+      "description": "Field box on a template page: field_key, value_type, page, x, y, w, h",
+      "tsFilePath": "docs/schema/generated/core-engine-rows.ts",
+      "registeredAt": "2026-08-26T12:10:48.806Z",
+      "source": "manual"
+    },
+    {
+      "name": "extractByTemplate",
+      "description": "Project fixture JSON onto FieldBox field_key list; missing keys become null and never throw",
+      "tsFilePath": "packages/core-engine/src/extract/field-box.ts",
+      "registeredAt": "2026-08-26T14:00:29.660Z",
+      "source": "manual"
+    },
+    {
+      "name": "FieldBoxKey",
+      "description": "FieldBox key picker used by extractByTemplate; field_key comes from FieldBoxRow",
+      "tsFilePath": "packages/core-engine/src/extract/field-box.ts",
+      "registeredAt": "2026-08-26T14:00:31.071Z",
+      "source": "manual"
+    },
+    {
+      "name": "FieldBoxWrite",
+      "description": "Writable FieldBox fields for saveFieldBoxes upsert: field_key value_type page x y w h",
+      "tsFilePath": "packages/core-engine/src/persistence/store.ts",
+      "registeredAt": "2026-08-26T14:00:32.139Z",
+      "source": "manual"
+    },
+    {
+      "name": "CreateSpecPackInput",
+      "description": "JobPipeline input to create an empty spec pack shell (projectId, name, version)",
+      "tsFilePath": "packages/core-engine/src/pipeline/job-pipeline.ts",
+      "registeredAt": "2026-08-26T14:01:08.685Z",
+      "source": "manual"
+    },
+    {
+      "name": "CreateTemplateInput",
+      "description": "JobPipeline input to create a template bound to a pack (packId, name, optional pageImageUri)",
+      "tsFilePath": "packages/core-engine/src/pipeline/job-pipeline.ts",
+      "registeredAt": "2026-08-26T14:01:09.665Z",
+      "source": "manual"
+    },
+    {
+      "name": "RunFixtureJobInput",
+      "description": "runFixtureJob input: fixture kind plus optional template_id for FieldBox projection",
+      "tsFilePath": "packages/core-engine/src/pipeline/job-pipeline.ts",
+      "registeredAt": "2026-08-26T14:01:09.944Z",
+      "source": "manual"
+    },
+    {
+      "name": "RuleFixtureRow",
+      "description": "Rule fixture row: pass/fail kind, payload_json, last_result for publish gate",
+      "tsFilePath": "docs/schema/generated/core-engine-rows.ts",
+      "registeredAt": "2026-08-26T14:16:59.957Z",
+      "source": "manual"
+    },
+    {
+      "name": "RuleRow",
+      "description": "Rule header row: rule_id, pack_id, title",
+      "tsFilePath": "docs/schema/generated/core-engine-rows.ts",
+      "registeredAt": "2026-08-26T14:17:28.817Z",
+      "source": "manual"
+    },
+    {
+      "name": "PublishResult",
+      "description": "Publish gate outcome: ok true with published RuleVersionRow, or ok false with reason and status unchanged",
+      "tsFilePath": "packages/core-engine/src/rules/publish.ts",
+      "registeredAt": "2026-08-26T14:28:44.575Z",
+      "source": "manual"
+    },
+    {
+      "name": "SaveDraftResult",
+      "description": "Draft save result: new RuleRow plus RuleVersionRow with status=draft",
+      "tsFilePath": "packages/core-engine/src/rules/publish.ts",
+      "registeredAt": "2026-08-26T14:28:45.671Z",
+      "source": "manual"
+    },
+    {
+      "name": "SaveDraftInput",
+      "description": "saveDraft input: packId, title, dsl, optional blocking",
+      "tsFilePath": "packages/core-engine/src/rules/publish.ts",
+      "registeredAt": "2026-08-26T14:28:46.427Z",
+      "source": "manual"
+    },
+    {
+      "name": "AddFixtureInput",
+      "description": "addFixture input: versionId, kind pass|fail, payload fields",
+      "tsFilePath": "packages/core-engine/src/rules/publish.ts",
+      "registeredAt": "2026-08-26T14:28:47.146Z",
+      "source": "manual"
+    },
+    {
+      "name": "RuleFixtureKind",
+      "description": "Rule fixture kind: pass (positive) or fail (negative)",
+      "tsFilePath": "packages/core-engine/src/rules/publish.ts",
+      "registeredAt": "2026-08-26T14:28:48.114Z",
+      "source": "manual"
+    },
+    {
+      "name": "RuleDsl",
+      "description": "SLICE-3 DSL subset: all|any|required|exists|compare|regex|eq",
+      "tsFilePath": "packages/core-engine/src/rules/interpreter.ts",
+      "registeredAt": "2026-08-26T14:28:48.759Z",
+      "source": "manual"
+    },
+    {
+      "name": "RulePublisher",
+      "description": "Configurer publish gate: saveDraft, addFixture, runFixtures, canPublish, publish",
+      "tsFilePath": "packages/core-engine/src/rules/publish.ts",
+      "registeredAt": "2026-08-26T14:33:04.912Z",
+      "source": "manual"
+    },
+    {
+      "name": "ProposalRow",
+      "description": "Pending review proposal row: wording, status pending/confirmed/rejected, optional agent_run_id",
+      "tsFilePath": "docs/schema/generated/core-engine-rows.ts",
+      "registeredAt": "2026-08-27T02:59:39.674Z",
+      "source": "manual"
+    },
+    {
+      "name": "ReceiptRow",
+      "description": "Write-path receipt row; no receipt_id means not persisted to ledger",
+      "tsFilePath": "docs/schema/generated/core-engine-rows.ts",
+      "registeredAt": "2026-08-27T02:59:46.945Z",
+      "source": "manual"
+    },
+    {
+      "name": "CheckWordingInput",
+      "description": "Cognition-port input for checkWording: jobId, wording, optional agentRunId. Writes pending Proposal only.",
+      "tsFilePath": "packages/core-engine/src/pipeline/review.ts",
+      "registeredAt": "2026-08-27T03:08:42.015Z",
+      "source": "manual"
+    },
+    {
+      "name": "ConfirmProposalResult",
+      "description": "Result of confirmProposal: confirmed ProposalRow plus ReceiptRow with non-empty receipt_id.",
+      "tsFilePath": "packages/core-engine/src/pipeline/review.ts",
+      "registeredAt": "2026-08-27T03:08:43.974Z",
+      "source": "manual"
+    },
+    {
+      "name": "ReviewDesk",
+      "description": "Review desk: checkWording writes pending Proposal; editWording keeps pending; confirmProposal inserts Receipt and audit event_type=receipt.",
+      "tsFilePath": "packages/core-engine/src/pipeline/review.ts",
+      "registeredAt": "2026-08-27T03:08:44.289Z",
+      "source": "manual"
+    },
+    {
+      "name": "VolumePreviewRow",
+      "description": "Volume preview snapshot row: preview_id, job_id, tree_json. tree_json.submitted is always false; preview only, no Receipt.",
+      "tsFilePath": "docs/schema/generated/core-engine-rows.ts",
+      "registeredAt": "2026-08-27T03:42:48.135Z",
+      "source": "manual"
+    },
+    {
+      "name": "VolumeDesk",
+      "description": "Volume preview desk: buildPreviewTree + previewVolume snapshot. tree.submitted always false; no Receipt; groupKeys from spec pack not industry presets.",
+      "tsFilePath": "packages/core-engine/src/pipeline/volume.ts",
+      "registeredAt": "2026-08-27T03:42:48.389Z",
+      "source": "manual"
+    },
+    {
+      "name": "PreviewVolumeResult",
+      "description": "previewVolume return: VolumePreviewRow plus parsed tree with submitted always false.",
+      "tsFilePath": "packages/core-engine/src/pipeline/volume.ts",
+      "registeredAt": "2026-08-27T03:42:48.879Z",
+      "source": "manual"
+    },
+    {
+      "name": "ClauseRow",
+      "description": "Clause ledger row: clause_id globally unique (use ${versionId}:humanNo); heading, body, span_json, qdrant_point_id=clause_id",
+      "tsFilePath": "docs/schema/generated/core-engine-rows.ts",
+      "registeredAt": "2026-08-27T04:34:16.417Z",
+      "source": "manual"
+    },
+    {
+      "name": "StandardLibrary",
+      "description": "Standard library orchestrator: ingest by heading, search via Qdrant/Neo4j ports + IndependentReranker (not chat complete), attach Finding.clause_id only from retrieve hits. No industry presets.",
+      "tsFilePath": "packages/core-engine/src/retrieve/library.ts",
+      "registeredAt": "2026-08-27T04:34:17.672Z",
+      "source": "manual"
+    },
+    {
+      "name": "SearchHit",
+      "description": "Retrieve/search hit: clause_id, standard_version_id, span, retrieve_path (vector|graph|exact), optional graph path edges",
+      "tsFilePath": "packages/core-engine/src/retrieve/ports.ts",
+      "registeredAt": "2026-08-27T04:34:18.795Z",
+      "source": "manual"
+    },
+    {
+      "name": "RetrieveHit",
+      "description": "Retrieve hit alias of SearchHit: clause_id + standard_version_id + span + retrieve_path and optional graph path",
+      "tsFilePath": "packages/core-engine/src/retrieve/ports.ts",
+      "registeredAt": "2026-08-27T04:34:19.940Z",
+      "source": "manual"
+    },
+    {
+      "name": "AdapterReceipt",
+      "description": "Mock adapter pending-mount receipt: non-empty receipt_id + status; writes without receipt_id must fail",
+      "tsFilePath": "packages/core-engine/src/adapter/mock.ts",
+      "registeredAt": "2026-08-27T04:34:20.164Z",
+      "source": "manual"
+    },
+    {
+      "name": "StandardDocRow",
+      "description": "",
+      "tsFilePath": "docs/schema/generated/core-engine-rows.ts",
+      "registeredAt": "2026-08-30T06:56:05.959Z",
+      "source": "auto-scan"
+    },
+    {
+      "name": "StandardVersionRow",
+      "description": "",
+      "tsFilePath": "docs/schema/generated/core-engine-rows.ts",
+      "registeredAt": "2026-08-30T06:56:05.959Z",
+      "source": "auto-scan"
+    },
+    {
+      "name": "GraphEdge",
+      "description": "",
+      "tsFilePath": "packages/agent-runtime/src/graph/types.ts",
+      "registeredAt": "2026-08-30T06:56:05.959Z",
+      "source": "auto-scan"
+    },
+    {
+      "name": "HashEmbeddings",
+      "description": "",
+      "tsFilePath": "packages/core-engine/src/retrieve/embeddings.ts",
+      "registeredAt": "2026-08-30T06:56:05.959Z",
+      "source": "auto-scan"
+    },
+    {
+      "name": "VectorPoint",
+      "description": "",
+      "tsFilePath": "packages/core-engine/src/retrieve/ports.ts",
+      "registeredAt": "2026-08-30T06:56:05.959Z",
+      "source": "auto-scan"
+    },
+    {
+      "name": "VectorHit",
+      "description": "",
+      "tsFilePath": "packages/core-engine/src/retrieve/ports.ts",
+      "registeredAt": "2026-08-30T06:56:05.959Z",
+      "source": "auto-scan"
+    },
+    {
+      "name": "VectorStore",
+      "description": "",
+      "tsFilePath": "packages/core-engine/src/retrieve/ports.ts",
+      "registeredAt": "2026-08-30T06:56:05.959Z",
+      "source": "auto-scan"
+    },
+    {
+      "name": "GraphStore",
+      "description": "",
+      "tsFilePath": "packages/core-engine/src/retrieve/ports.ts",
+      "registeredAt": "2026-08-30T06:56:05.959Z",
+      "source": "auto-scan"
+    },
+    {
+      "name": "Embeddings",
+      "description": "",
+      "tsFilePath": "packages/core-engine/src/retrieve/ports.ts",
+      "registeredAt": "2026-08-30T06:56:05.959Z",
+      "source": "auto-scan"
+    },
+    {
+      "name": "RetrievePorts",
+      "description": "",
+      "tsFilePath": "packages/core-engine/src/retrieve/ports.ts",
+      "registeredAt": "2026-08-30T06:56:05.959Z",
+      "source": "auto-scan"
+    },
+    {
+      "name": "ClauseSpan",
+      "description": "",
+      "tsFilePath": "packages/core-engine/src/retrieve/ports.ts",
+      "registeredAt": "2026-08-30T06:56:05.959Z",
+      "source": "auto-scan"
+    },
+    {
+      "name": "ChatComplete",
+      "description": "",
+      "tsFilePath": "packages/core-engine/src/retrieve/ports.ts",
+      "registeredAt": "2026-08-30T06:56:05.959Z",
+      "source": "auto-scan"
+    },
+    {
+      "name": "EdgeKind",
+      "description": "",
+      "tsFilePath": "packages/core-engine/src/retrieve/ports.ts",
+      "registeredAt": "2026-08-30T06:56:05.959Z",
+      "source": "auto-scan"
+    },
+    {
+      "name": "DemoHttpAdapter",
+      "description": "HTTP adapter request/response types and session for JobPipeline demo server",
+      "tsFilePath": "packages/core-engine/src/http/handle-request.ts",
+      "registeredAt": "2026-08-27T12:03:02.748Z",
+      "source": "manual"
+    },
+    {
+      "name": "IngestStandardResult",
+      "description": "",
+      "tsFilePath": "packages/core-engine/src/retrieve/library.ts",
+      "registeredAt": "2026-08-30T06:56:05.959Z",
+      "source": "auto-scan"
+    },
+    {
+      "name": "LedgerStore",
+      "description": "Async ledger interface wrapping SQLite tests and Postgres live",
+      "tsFilePath": "packages/core-engine/src/persistence/ledger.ts",
+      "registeredAt": "2026-08-28T06:12:44.499Z",
+      "source": "manual"
+    },
+    {
+      "name": "PostgresLedger",
+      "description": "Postgres LedgerStore: $n params, ON CONFLICT DO NOTHING, wipeLedger TRUNCATE CASCADE on t_* tables",
+      "tsFilePath": "packages/core-engine/src/persistence/pg-store.ts",
+      "registeredAt": "2026-08-28T07:09:37.512Z",
+      "source": "manual"
+    },
+    {
+      "name": "SqliteLedger",
+      "description": "SQLite LedgerStore wrapper: Promise.resolve around CoreEngineStore, no deasync",
+      "tsFilePath": "packages/core-engine/src/persistence/ledger.ts",
+      "registeredAt": "2026-08-28T07:09:37.534Z",
+      "source": "manual"
+    },
+    {
+      "name": "resolveEngineMode",
+      "description": "Resolve memory vs live engine mode from DATABASE_URL QDRANT_URL NEO4J_URI NEO4J_PASSWORD; all empty memory, any missing throws",
+      "tsFilePath": "packages/core-engine/src/persistence/live-env.ts",
+      "registeredAt": "2026-08-28T07:09:37.557Z",
+      "source": "manual"
+    },
+    {
+      "name": "runPgMigration",
+      "description": "Idempotent apply of docs/schema/generated/core-engine-migration.sql against Postgres via pg",
+      "tsFilePath": "packages/core-engine/src/persistence/pg-migrate.ts",
+      "registeredAt": "2026-08-28T07:09:38.632Z",
+      "source": "manual"
+    },
+    {
+      "name": "liveRetrievePorts",
+      "description": "Live RetrievePorts: QdrantVectorStore plus Neo4jGraphStore plus HashEmbeddings IndependentReranker FakePrequery; missing env throws at construct",
+      "tsFilePath": "packages/core-engine/src/retrieve/live-ports.ts",
+      "registeredAt": "2026-08-28T07:09:40.061Z",
+      "source": "manual"
+    },
+    {
+      "name": "EngineMode",
+      "description": "EngineMode union: memory or live with connection strings for postgres qdrant neo4j",
+      "tsFilePath": "packages/core-engine/src/persistence/live-env.ts",
+      "registeredAt": "2026-08-28T07:09:40.071Z",
+      "source": "manual"
+    },
+    {
+      "name": "StandardEdgeRow",
+      "description": "",
+      "tsFilePath": "docs/schema/generated/core-engine-rows.ts",
+      "registeredAt": "2026-08-30T06:56:05.959Z",
+      "source": "auto-scan"
+    },
+    {
+      "name": "FakePrequery",
+      "description": "",
+      "tsFilePath": "packages/core-engine/src/retrieve/prequery.ts",
+      "registeredAt": "2026-08-30T06:56:05.959Z",
+      "source": "auto-scan"
+    },
+    {
+      "name": "IndependentReranker",
+      "description": "",
+      "tsFilePath": "packages/core-engine/src/retrieve/rerank.ts",
+      "registeredAt": "2026-08-30T06:56:05.959Z",
+      "source": "auto-scan"
+    },
+    {
+      "name": "BlobStore",
+      "description": "Object store port for original uploads (MinIO in live, memory in tests). DocumentRow.file_uri holds s3:// URI after put.",
+      "tsFilePath": "packages/core-engine/src/blob/port.ts",
+      "registeredAt": "2026-08-28T21:55:45.593Z",
+      "source": "manual"
+    },
+    {
+      "name": "OcrPort",
+      "description": "OCR vendor port: recognize(bytes) returns full-page text; field parsing is parseOcrFields + extractByTemplate.",
+      "tsFilePath": "packages/core-engine/src/ocr/port.ts",
+      "registeredAt": "2026-08-28T21:55:45.621Z",
+      "source": "manual"
+    },
+    {
+      "name": "JobView",
+      "description": "",
+      "tsFilePath": "apps/web/src/services/types.ts",
+      "registeredAt": "2026-08-30T06:56:05.959Z",
+      "source": "auto-scan"
+    },
+    {
+      "name": "BlobPutInput",
+      "description": "",
+      "tsFilePath": "packages/core-engine/src/blob/port.ts",
+      "registeredAt": "2026-08-30T06:56:05.959Z",
+      "source": "auto-scan"
+    },
+    {
+      "name": "OcrRecognizeInput",
+      "description": "",
+      "tsFilePath": "packages/core-engine/src/ocr/port.ts",
+      "registeredAt": "2026-08-30T06:56:05.959Z",
+      "source": "auto-scan"
+    },
+    {
+      "name": "OcrRecognizeResult",
+      "description": "",
+      "tsFilePath": "packages/core-engine/src/ocr/port.ts",
+      "registeredAt": "2026-08-30T06:56:05.959Z",
+      "source": "auto-scan"
+    },
+    {
+      "name": "StepChatBridge",
+      "description": "Embeds agent-runtime ControlPlane for per-message step chat; returns LLM reply and optional proposal_id from check_wording Tool.",
+      "tsFilePath": "packages/core-engine/src/agent/step-chat-bridge.ts",
+      "registeredAt": "2026-08-29T01:36:39.188Z",
+      "source": "manual"
+    },
+    {
+      "name": "ControlPlane",
+      "description": "",
+      "tsFilePath": "packages/agent-runtime/src/api/control.ts",
+      "registeredAt": "2026-08-30T06:56:05.959Z",
+      "source": "auto-scan"
+    },
+    {
+      "name": "ToolRegistry",
+      "description": "",
+      "tsFilePath": "packages/agent-runtime/src/tools/registry.ts",
+      "registeredAt": "2026-08-30T06:56:05.959Z",
+      "source": "auto-scan"
+    },
+    {
+      "name": "JobStepOrchestrator",
+      "description": "Job-level HITL orchestration: startRun on cognitive steps, resumeHitl on confirm-next.",
+      "tsFilePath": "packages/core-engine/src/agent/job-step-orchestrator.ts",
+      "registeredAt": "2026-08-29T03:15:15.191Z",
+      "source": "manual"
+    },
+    {
+      "name": "AgentRuntimeFactory",
+      "description": "Shared ControlPlane factory for StepChat and JobStepOrchestrator with persistent SQLiteStateStore.",
+      "tsFilePath": "packages/core-engine/src/agent/agent-runtime-factory.ts",
+      "registeredAt": "2026-08-29T03:15:15.167Z",
+      "source": "manual"
+    },
+    {
+      "name": "FakeLlmProvider",
+      "description": "",
+      "tsFilePath": "packages/agent-runtime/src/llm/provider.ts",
+      "registeredAt": "2026-08-30T06:56:05.959Z",
+      "source": "auto-scan"
+    },
+    {
+      "name": "DocTypeRow",
+      "description": "Document type ledger row: pack_id, parent_doc_type_id, name",
+      "tsFilePath": "docs/schema/generated/core-engine-rows.ts",
+      "registeredAt": "2026-08-29T08:45:01.154Z",
+      "source": "manual"
+    },
+    {
+      "name": "FieldDefRow",
+      "description": "DocType-level field definition without coordinates; merged with template FieldBox at extraction.",
+      "tsFilePath": "docs/schema/generated/core-engine-rows.ts",
+      "registeredAt": "2026-08-29T10:30:02.796Z",
+      "source": "manual"
+    },
+    {
+      "name": "resolveEffectiveBoxes",
+      "description": "Merges ancestor FieldDefs with template FieldBoxes; box coordinates override inherited defs.",
+      "tsFilePath": "packages/core-engine/src/extract/effective-boxes.ts",
+      "registeredAt": "2026-08-29T10:30:02.844Z",
+      "source": "manual"
+    },
+    {
+      "name": "DocumentPipeline",
+      "description": "Excel gap-fill orchestration: generate xlsx, mock upload, signature tasks, document gaps",
+      "tsFilePath": "packages/core-engine/src/pipeline/document-pipeline.ts",
+      "registeredAt": "2026-08-29T15:38:59.247Z",
+      "source": "manual"
+    },
+    {
+      "name": "resolveEffectiveExcelMappings",
+      "description": "Merge FieldDef inheritance with ExcelCellMapping for fill coordinates",
+      "tsFilePath": "packages/core-engine/src/excel/effective-mappings.ts",
+      "registeredAt": "2026-08-29T15:38:59.313Z",
+      "source": "manual"
+    },
+    {
+      "name": "ExcelFillService",
+      "description": "Deterministic Excel template fill via exceljs mappings and placeholder substitution",
+      "tsFilePath": "packages/core-engine/src/excel/fill-service.ts",
+      "registeredAt": "2026-08-29T15:39:15.543Z",
+      "source": "manual"
+    },
+    {
+      "name": "DocumentArtifactRow",
+      "description": "Generated Excel document ledger row with upload receipt and trace_id",
+      "tsFilePath": "docs/schema/generated/core-engine-rows.ts",
+      "registeredAt": "2026-08-29T15:39:15.699Z",
+      "source": "manual"
+    },
+    {
+      "name": "ExcelCellMappingRow",
+      "description": "Template Excel cell to field_key mapping row",
+      "tsFilePath": "docs/schema/generated/core-engine-rows.ts",
+      "registeredAt": "2026-08-29T15:39:15.741Z",
+      "source": "manual"
+    },
+    {
+      "name": "SignatureTaskRow",
+      "description": "Pending signature task for document artifact by role",
+      "tsFilePath": "docs/schema/generated/core-engine-rows.ts",
+      "registeredAt": "2026-08-29T15:39:30.256Z",
+      "source": "manual"
+    },
+    {
+      "name": "FieldFillRuleRow",
+      "description": "DocType-level deterministic fill rule for Excel gap fill",
+      "tsFilePath": "docs/schema/generated/core-engine-rows.ts",
+      "registeredAt": "2026-08-29T15:39:30.437Z",
+      "source": "manual"
+    },
+    {
+      "name": "CompletenessRuleRow",
+      "description": "Pack-level required document type for gap scan",
+      "tsFilePath": "docs/schema/generated/core-engine-rows.ts",
+      "registeredAt": "2026-08-29T15:39:31.993Z",
+      "source": "manual"
+    },
+    {
+      "name": "uploadDocument",
+      "description": "C4 mock adapter: multipart upload Excel document to middle platform with receipt gate",
+      "tsFilePath": "packages/core-engine/src/adapter/mock.ts",
+      "registeredAt": "2026-08-29T15:47:59.792Z",
+      "source": "manual"
+    },
+    {
+      "name": "DocumentArtifactView",
+      "description": "",
+      "tsFilePath": "apps/web/src/services/types.ts",
+      "registeredAt": "2026-08-30T06:56:05.959Z",
+      "source": "auto-scan"
+    },
+    {
+      "name": "DocumentGapView",
+      "description": "",
+      "tsFilePath": "apps/web/src/services/types.ts",
+      "registeredAt": "2026-08-30T06:56:05.959Z",
+      "source": "auto-scan"
+    },
+    {
+      "name": "TemplateView",
+      "description": "",
+      "tsFilePath": "apps/web/src/services/types.ts",
+      "registeredAt": "2026-08-30T06:56:05.959Z",
+      "source": "auto-scan"
+    },
+    {
+      "name": "ExcelCellMappingWrite",
+      "description": "",
+      "tsFilePath": "apps/web/src/services/types.ts",
+      "registeredAt": "2026-08-30T06:56:05.959Z",
+      "source": "auto-scan"
+    },
+    {
+      "name": "SpecPackView",
+      "description": "",
+      "tsFilePath": "apps/web/src/services/types.ts",
+      "registeredAt": "2026-08-30T06:56:05.959Z",
+      "source": "auto-scan"
+    },
+    {
+      "name": "FieldFillRuleWrite",
+      "description": "",
+      "tsFilePath": "packages/core-engine/src/persistence/store.ts",
+      "registeredAt": "2026-08-30T06:56:05.959Z",
+      "source": "auto-scan"
+    },
+    {
+      "name": "CompletenessRuleWrite",
+      "description": "",
+      "tsFilePath": "packages/core-engine/src/persistence/store.ts",
+      "registeredAt": "2026-08-30T06:56:05.959Z",
+      "source": "auto-scan"
+    },
+    {
+      "name": "LedgerConflictError",
+      "description": "",
+      "tsFilePath": "packages/core-engine/src/pipeline/job-pipeline.ts",
+      "registeredAt": "2026-08-30T06:56:05.959Z",
       "source": "auto-scan"
     }
   ],

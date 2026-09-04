@@ -86,6 +86,7 @@ export async function uploadExcelTemplate(
   return data as { template: TemplateView };
 }
 
+/** Load Excel cell mappings for template_annotate point-and-bind UI. */
 export async function fetchExcelMappings(templateId: string): Promise<ExcelCellMappingView[]> {
   const data = await http<{ mappings: ExcelCellMappingView[] }>(
     `/api/templates/${templateId}/excel-mappings`,
@@ -93,6 +94,7 @@ export async function fetchExcelMappings(templateId: string): Promise<ExcelCellM
   return data.mappings;
 }
 
+/** Persist edited Excel cell mappings back to the template. */
 export async function saveExcelMappings(
   templateId: string,
   mappings: ExcelCellMappingWrite[],

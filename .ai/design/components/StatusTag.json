@@ -1,0 +1,6 @@
+{
+  "id": "StatusTag",
+  "kind": "component",
+  "summary": "状态标签",
+  "framework": "vue"
+}

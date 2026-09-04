@@ -1,0 +1,19 @@
+{
+  "id": "agent-runtime-control",
+  "title": "Agent Runtime 控制面",
+  "pageType": "custom",
+  "feature": "agent-runtime",
+  "route": "/internal/agent-runtime",
+  "description": "Graph runtime control plane derived from approved design spec",
+  "logicPath": "logic/agent-runtime-control.md",
+  "manifestPath": "designs/v0/agent-runtime-control/page.manifest.json",
+  "approval": {
+    "status": "approved"
+  },
+  "regions": [
+    {
+      "id": "main",
+      "components": []
+    }
+  ]
+}

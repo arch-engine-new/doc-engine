@@ -1,0 +1,19 @@
+{
+  "id": "rule_editor",
+  "title": "规则编辑与发布",
+  "pageType": "form",
+  "feature": "core-engine",
+  "route": "/packs/:id/rules",
+  "description": "DSL 草稿；缺正例+反例不得 publish。验收 A3。",
+  "logicPath": "logic/rule_editor.md",
+  "manifestPath": "designs/v0/rule_editor/page.manifest.json",
+  "approval": {
+    "status": "approved"
+  },
+  "regions": [
+    {
+      "id": "main",
+      "components": []
+    }
+  ]
+}

@@ -1,0 +1,6 @@
+{
+  "id": "FieldBoxCanvas",
+  "kind": "component",
+  "summary": "模板框选画布",
+  "framework": "vue"
+}

@@ -1,0 +1,19 @@
+{
+  "id": "audit_trace",
+  "title": "审计追踪",
+  "pageType": "custom",
+  "feature": "core-engine",
+  "route": "/audit/:traceId",
+  "description": "trace_id 串联 Job/Extraction/RuleVersion/Finding/Proposal/Receipt。验收 A9。",
+  "logicPath": "logic/audit_trace.md",
+  "manifestPath": "designs/v0/audit_trace/page.manifest.json",
+  "approval": {
+    "status": "approved"
+  },
+  "regions": [
+    {
+      "id": "main",
+      "components": []
+    }
+  ]
+}

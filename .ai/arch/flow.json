@@ -34,6 +34,146 @@
       "id": "entity:t_agent_hitl_interrupt",
       "layer": "entity",
       "name": "t_agent_hitl_interrupt"
+    },
+    {
+      "id": "entity:t_project",
+      "layer": "entity",
+      "name": "t_project"
+    },
+    {
+      "id": "entity:t_spec_pack",
+      "layer": "entity",
+      "name": "t_spec_pack"
+    },
+    {
+      "id": "entity:t_doc_type",
+      "layer": "entity",
+      "name": "t_doc_type"
+    },
+    {
+      "id": "entity:t_field_def",
+      "layer": "entity",
+      "name": "t_field_def"
+    },
+    {
+      "id": "entity:t_template",
+      "layer": "entity",
+      "name": "t_template"
+    },
+    {
+      "id": "entity:t_excel_cell_mapping",
+      "layer": "entity",
+      "name": "t_excel_cell_mapping"
+    },
+    {
+      "id": "entity:t_field_fill_rule",
+      "layer": "entity",
+      "name": "t_field_fill_rule"
+    },
+    {
+      "id": "entity:t_document_artifact",
+      "layer": "entity",
+      "name": "t_document_artifact"
+    },
+    {
+      "id": "entity:t_signature_task",
+      "layer": "entity",
+      "name": "t_signature_task"
+    },
+    {
+      "id": "entity:t_completeness_rule",
+      "layer": "entity",
+      "name": "t_completeness_rule"
+    },
+    {
+      "id": "entity:t_field_box",
+      "layer": "entity",
+      "name": "t_field_box"
+    },
+    {
+      "id": "entity:t_rule",
+      "layer": "entity",
+      "name": "t_rule"
+    },
+    {
+      "id": "entity:t_rule_version",
+      "layer": "entity",
+      "name": "t_rule_version"
+    },
+    {
+      "id": "entity:t_rule_fixture",
+      "layer": "entity",
+      "name": "t_rule_fixture"
+    },
+    {
+      "id": "entity:t_standard_doc",
+      "layer": "entity",
+      "name": "t_standard_doc"
+    },
+    {
+      "id": "entity:t_standard_version",
+      "layer": "entity",
+      "name": "t_standard_version"
+    },
+    {
+      "id": "entity:t_clause",
+      "layer": "entity",
+      "name": "t_clause"
+    },
+    {
+      "id": "entity:t_standard_edge",
+      "layer": "entity",
+      "name": "t_standard_edge"
+    },
+    {
+      "id": "entity:t_job",
+      "layer": "entity",
+      "name": "t_job"
+    },
+    {
+      "id": "entity:t_document",
+      "layer": "entity",
+      "name": "t_document"
+    },
+    {
+      "id": "entity:t_extraction",
+      "layer": "entity",
+      "name": "t_extraction"
+    },
+    {
+      "id": "entity:t_finding",
+      "layer": "entity",
+      "name": "t_finding"
+    },
+    {
+      "id": "entity:t_proposal",
+      "layer": "entity",
+      "name": "t_proposal"
+    },
+    {
+      "id": "entity:t_receipt",
+      "layer": "entity",
+      "name": "t_receipt"
+    },
+    {
+      "id": "entity:t_volume_preview",
+      "layer": "entity",
+      "name": "t_volume_preview"
+    },
+    {
+      "id": "entity:t_audit_event",
+      "layer": "entity",
+      "name": "t_audit_event"
+    },
+    {
+      "id": "entity:t_conversation_thread",
+      "layer": "entity",
+      "name": "t_conversation_thread"
+    },
+    {
+      "id": "entity:t_conversation_message",
+      "layer": "entity",
+      "name": "t_conversation_message"
     }
   ],
   "edges": []

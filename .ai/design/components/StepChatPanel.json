@@ -1,0 +1,6 @@
+{
+  "id": "StepChatPanel",
+  "kind": "component",
+  "summary": "本步 HITL 对话面板",
+  "framework": "vue"
+}

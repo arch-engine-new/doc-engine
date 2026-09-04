@@ -1,0 +1,14 @@
+[
+  {
+    "need": ".ai/design/profile.json",
+    "reason": "No design profile; Vue connect for volume_preview is blocked this slice. Backend VolumePreview + A7 tests continue without SPA.",
+    "page": "volume_preview",
+    "reportedAt": "2026-08-27T03:33:23.603Z"
+  },
+  {
+    "need": ".ai/design/profile.json",
+    "reason": "No design profile; Vue connect for standard_lib / audit_trace / check_findings is blocked. Backend RAG + mock adapter continue without SPA.",
+    "page": "standard_lib",
+    "reportedAt": "2026-08-27T04:11:39.069Z"
+  }
+]

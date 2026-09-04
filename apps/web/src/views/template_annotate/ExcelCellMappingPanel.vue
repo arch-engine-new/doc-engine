@@ -12,11 +12,13 @@ import type {
   TemplateView,
 } from "../../services/types";
 
-const props = defineProps<{
+interface ExcelCellMappingPanelProps {
   templateId: string;
   template: TemplateView;
   inheritedFields: EffectiveFieldBoxView[];
-}>();
+}
+
+const props = defineProps<ExcelCellMappingPanelProps>();
 
 const emit = defineEmits<{
   "template-updated": [template: TemplateView];

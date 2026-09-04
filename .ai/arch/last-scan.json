@@ -1,23 +1,76 @@
 {
   "version": 2,
-  "commit": "8ccf47c1e92a9ceb0b43e731d02b0c9f7e748b80",
+  "commit": "dd15e5b7c77c53cf122852a40ce57b423397e6fc",
   "branch": "master",
-  "scannedAt": "2026-08-25T11:12:56.774Z",
+  "scannedAt": "2026-09-01T06:06:06.607Z",
   "modules": {
     "agent-runtime": {
       "sourcePath": "packages/agent-runtime",
       "assetCount": 0,
       "fileHashes": {
-        "packages/agent-runtime/src/api/http.ts": "62182e39b2898a44a6eee2d9ef64fda2e14f6812f5cf2618127113b4991dbb07",
+        "packages/agent-runtime/src/api/http.ts": "ae9b844c40253be34b6291053d9ff5f93eb251e2ff97751a9993f09aebc8be53",
         "packages/agent-runtime/src/graph/compiler.ts": "10caa4b05b58671a1cc5f47d995cce89b37ad207cdf93df34ea224f99624219d",
-        "packages/agent-runtime/src/obs/otel-hooks.ts": "349ea8a4246cf34103a7df8e7b84e3289fe9ca4cd9dd88dcc4c7187a16bcef5c"
+        "packages/agent-runtime/src/obs/otel-hooks.ts": "349ea8a4246cf34103a7df8e7b84e3289fe9ca4cd9dd88dcc4c7187a16bcef5c",
+        "packages/agent-runtime/examples/crash-recovery/main.ts": "5e0d5ccae8c36f68c5ddcb28128511d5813446646a13a545c1003a8809b9c08a",
+        "packages/agent-runtime/src/api/control.ts": "415cd7f36deced8de9becf85c80b48112efff702a5775610cd4f9db9397b20e0",
+        "packages/agent-runtime/src/llm/provider.ts": "e59220007e904d38f2d4e85edea5fefe5dbefa93c7f1e793babca541e9ca8c6d",
+        "packages/agent-runtime/src/llm/config.ts": "34ef512037228cd15bf43c96da094df3e6609c5476bf881292080c0bdb1ce78c",
+        "packages/agent-runtime/src/llm/zhipu-provider.ts": "94ebe14db79984dcfd306e7fb3b7dc1d3e95cf85eaf29ecdf9674f1a1ce165a3",
+        "packages/agent-runtime/src/tools/runtime.ts": "43d0052d30bc21cd8d884f3be565b917a0696bbee2ce25d200d9d1d5e54b5c9a",
+        "packages/agent-runtime/src/tools/registry.ts": "2a6d111c070b651ec1addc461675c85786d6f4fdd40524aa544a0035f3bfde5d"
+      }
+    },
+    "packages": {
+      "sourcePath": "packages",
+      "assetCount": 0,
+      "fileHashes": {
+        "packages/core-engine/src/pipeline/seed.ts": "06d231ccc45a3ad02a0984dd5b9493a1096fbaece92cdd53180d4b264b7a4ac1",
+        "packages/core-engine/src/persistence/migrate.ts": "1d99b7c64380fac853e67c2e02b746b5ed457072fe27fedbe3e4797db19872ed",
+        "packages/core-engine/src/persistence/store.ts": "130f3caf537a5fa7b246026549e8932745fc322a25a19ed34ace8f422fbf1900",
+        "packages/core-engine/src/rules/interpreter.ts": "fa35b41081008a7a532de771f2a4ea2b0620fb32bfcdebc65f9e03e4d315242c",
+        "packages/core-engine/src/pipeline/job-pipeline.ts": "0d5a6428df797aac3e3635655cfe2c5953974273474a1811a659bd8c384300de",
+        "packages/core-engine/src/index.ts": "fa42b9290f7dd0c04db5c34949d08262556b180a900f8df72a8357926b61ceb7",
+        "packages/core-engine/src/ids.ts": "c0483f938e91c98568b9a3704302dd18d797ce682849327cbfe87f166d02dc15",
+        "packages/core-engine/src/persistence/sqlite-slice1.sql": "b83d06d9638d5b7ccb50fa5eb5fd9b168cfda50471907f45f87969116e171b75",
+        "packages/core-engine/src/types.ts": "51fe14868c6b806ab6779eba0c4ac47991c8ce1e5b645cbc1513d82ea32882f4",
+        "packages/core-engine/src/extract/field-box.ts": "d53be12b6e20f67f80c9daa4b372db69f7a5477c2db913c30812d4c93a94c173",
+        "packages/core-engine/src/rules/publish.ts": "706e0eb35ff88295426266ecb15891fd1a07fced192ae602193ea674a469e32f",
+        "packages/core-engine/src/pipeline/review.ts": "3d4a380cf021edb36d2ef7746dc807aa927918308dbfeb23dd104656c6b57be6",
+        "packages/core-engine/src/pipeline/volume.ts": "bb7d7cd5b4893f5b69eeff5825bd14b5e089d6710dcf3e723471832d9878eb81",
+        "packages/core-engine/src/retrieve/library.ts": "897f934799eb08c579e1ab4cc7249526173a9c9fc63c0717b6a664baa594921f",
+        "packages/core-engine/src/retrieve/qdrant.ts": "112cea2fb8a82dee3840e6adc5dd94a194c0280c21679609403e580e1a87304b",
+        "packages/core-engine/src/retrieve/neo4j.ts": "aaf4d721cafce70c37acf5c9b317cd8738666722a8fbdf4b8c20067d1b898bc3"
+      }
+    },
+    "core-engine": {
+      "sourcePath": "core-engine",
+      "assetCount": 0,
+      "fileHashes": {
+        "docs/schema/generated/core-engine-rows.ts": "9233b5e38c3f26d0439ad2a3d771a55ef007be66cdebd2cd67098a7da50abb9b"
+      }
+    },
+    "docs": {
+      "sourcePath": "docs",
+      "assetCount": 0,
+      "fileHashes": {
+        "docs/schema/generated/core-engine-rows.ts": "f2cdd6041669c1c8ad249f2a008873c208f2a1fe19098a2388e89f990eba6eff"
       }
     }
   },
   "packages": {
     "agent-runtime": {
       "sourcePath": "packages/agent-runtime",
-      "assetCount": 58,
+      "assetCount": 65,
+      "fileHashes": {}
+    },
+    "core-engine": {
+      "sourcePath": "packages/core-engine",
+      "assetCount": 122,
+      "fileHashes": {}
+    },
+    "web": {
+      "sourcePath": "apps/web",
+      "assetCount": 50,
       "fileHashes": {}
     }
   },

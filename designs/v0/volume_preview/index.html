@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>组卷预览</title>
+  <link rel="stylesheet" href="../styles/tokens.css" />
+  <link rel="stylesheet" href="../styles/global.css" />
+</head>
+<body data-step="previewed" data-trace="trc_ok_001">
+<nav class="app-nav">
+  <span class="brand">工程资料核心引擎</span>
+  <a href="../project_home/index.html">项目</a>
+  <a href="../template_annotate/index.html">模板</a>
+  <a href="../rule_editor/index.html">规则</a>
+  <a href="../standard_lib/index.html">标准库</a>
+  <a href="../job_upload/index.html">任务</a>
+  <a href="../pending_review/index.html">待审</a>
+  <a href="../check_findings/index.html">检查</a>
+  <a class="active" href="../volume_preview/index.html">组卷</a>
+  <a href="../audit_trace/index.html">审计</a>
+</nav>
+<div class="wrap">
+  <h1>组卷预览</h1>
+  <p class="sub">按用户配置的 groupKeys 分组。仅工作台可提交；认知层无 submit 接口。</p>
+  <div class="card tree">
+    groupKey=编号<br />
+    ├─ SH-001<br />
+    │   └─ 收货单-合规.pdf<br />
+    └─ SH-002<br />
+        └─ 收货单-日期颠倒.pdf <span class="tag warn">blocked，不进自动通过</span>
+  </div>
+  <p><button class="btn ghost" disabled title="不对 agent-runtime 开放">提交组卷（工作台专用，原型禁用）</button></p>
+</div>
+<script src="../mock/step-chat.js"></script>
+</body>
+</html>

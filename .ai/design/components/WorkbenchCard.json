@@ -1,0 +1,6 @@
+{
+  "id": "WorkbenchCard",
+  "kind": "component",
+  "summary": "工作台卡片",
+  "framework": "vue"
+}

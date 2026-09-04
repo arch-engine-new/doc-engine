@@ -1,0 +1,6 @@
+{
+  "id": "VolumeTree",
+  "kind": "component",
+  "summary": "组卷预览树",
+  "framework": "vue"
+}

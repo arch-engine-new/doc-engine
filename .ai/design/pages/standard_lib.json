@@ -1,0 +1,19 @@
+{
+  "id": "standard_lib",
+  "title": "标准库",
+  "pageType": "list",
+  "feature": "core-engine",
+  "route": "/packs/:id/standards",
+  "description": "生产级 RAG：PostgreSQL 条款账本 + Qdrant + Neo4j；预查询+rerank；跨条走图。验收 A11–A14。",
+  "logicPath": "logic/standard_lib.md",
+  "manifestPath": "designs/v0/standard_lib/page.manifest.json",
+  "approval": {
+    "status": "approved"
+  },
+  "regions": [
+    {
+      "id": "main",
+      "components": []
+    }
+  ]
+}

@@ -1,0 +1,6 @@
+{
+  "id": "GhostButton",
+  "kind": "component",
+  "summary": "次要线框按钮",
+  "framework": "vue"
+}

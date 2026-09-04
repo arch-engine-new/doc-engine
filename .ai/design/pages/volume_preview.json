@@ -1,0 +1,19 @@
+{
+  "id": "volume_preview",
+  "title": "组卷预览",
+  "pageType": "custom",
+  "feature": "core-engine",
+  "route": "/jobs/:id/volume",
+  "description": "按用户 groupKeys 预览树；不对 agent-runtime 开放 submit。验收 A7。",
+  "logicPath": "logic/volume_preview.md",
+  "manifestPath": "designs/v0/volume_preview/page.manifest.json",
+  "approval": {
+    "status": "approved"
+  },
+  "regions": [
+    {
+      "id": "main",
+      "components": []
+    }
+  ]
+}

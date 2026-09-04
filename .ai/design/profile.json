@@ -1,0 +1,127 @@
+{
+  "version": 1,
+  "adapter": "v0",
+  "styleId": "apt-skyline-clean",
+  "framework": "vue",
+  "name": "工程资料核心引擎",
+  "source": "designs/v0",
+  "tokensCss": "designs/v0/styles/tokens.css",
+  "globalCss": "designs/v0/styles/global.css",
+  "styleMd": ".ai/design/style.md",
+  "syncedAt": "2026-08-30T06:30:47.308Z",
+  "tokens": {
+    "fontDisplay": "Sora, Source Han Sans SC, sans-serif",
+    "fontBody": "Source Sans 3, Source Han Sans SC, sans-serif",
+    "fontMono": "JetBrains Mono, ui-monospace, monospace",
+    "bg": "#f3f6fa",
+    "bgElevated": "#ffffff",
+    "surface": "#e8eef5",
+    "border": "#c9d4e3",
+    "text": "#152033",
+    "textMuted": "#5b6b82",
+    "primary": "#1f5eff",
+    "primaryHover": "#1648d6",
+    "accent": "#0f9f8a",
+    "danger": "#d64545",
+    "success": "#1f9d6a",
+    "warning": "#c98500",
+    "radiusSm": "6px",
+    "radiusMd": "12px",
+    "shadow": "0 10px 30px rgba(21, 32, 51, 0.08)",
+    "focusRing": "0 0 0 3px rgba(31, 94, 255, 0.35)"
+  },
+  "cssVariables": {
+    "--apt-font-display": "Sora, Source Han Sans SC, sans-serif",
+    "--apt-font-body": "Source Sans 3, Source Han Sans SC, sans-serif",
+    "--apt-font-mono": "JetBrains Mono, ui-monospace, monospace",
+    "--apt-bg": "#f3f6fa",
+    "--apt-bg-elevated": "#ffffff",
+    "--apt-surface": "#e8eef5",
+    "--apt-border": "#c9d4e3",
+    "--apt-text": "#152033",
+    "--apt-text-muted": "#5b6b82",
+    "--apt-primary": "#1f5eff",
+    "--apt-primary-hover": "#1648d6",
+    "--apt-accent": "#0f9f8a",
+    "--apt-danger": "#d64545",
+    "--apt-success": "#1f9d6a",
+    "--apt-warning": "#c98500",
+    "--apt-radius-sm": "6px",
+    "--apt-radius-md": "12px",
+    "--apt-shadow": "0 10px 30px rgba(21, 32, 51, 0.08)",
+    "--apt-focus-ring": "0 0 0 3px rgba(31, 94, 255, 0.35)"
+  },
+  "components": [
+    "PrimaryButton",
+    "GhostButton",
+    "DataTable",
+    "StatusTag",
+    "WorkbenchCard",
+    "StepChatPanel",
+    "FieldBoxCanvas",
+    "VolumeTree",
+    "AuditTimeline"
+  ],
+  "primarySource": {
+    "tool": "v0",
+    "path": "designs/v0"
+  },
+  "sources": [
+    {
+      "tool": "v0",
+      "path": "designs/v0/agent-runtime-control",
+      "role": "page"
+    },
+    {
+      "tool": "v0",
+      "path": "designs/v0/project_home",
+      "role": "page"
+    },
+    {
+      "tool": "v0",
+      "path": "designs/v0/job_upload",
+      "role": "page"
+    },
+    {
+      "tool": "v0",
+      "path": "designs/v0/template_annotate",
+      "role": "page"
+    },
+    {
+      "tool": "v0",
+      "path": "designs/v0/audit_trace",
+      "role": "page"
+    },
+    {
+      "tool": "v0",
+      "path": "designs/v0/check_findings",
+      "role": "page"
+    },
+    {
+      "tool": "v0",
+      "path": "designs/v0/pending_review",
+      "role": "page"
+    },
+    {
+      "tool": "v0",
+      "path": "designs/v0/rule_editor",
+      "role": "page"
+    },
+    {
+      "tool": "v0",
+      "path": "designs/v0/standard_lib",
+      "role": "page"
+    },
+    {
+      "tool": "v0",
+      "path": "designs/v0/volume_preview",
+      "role": "page"
+    }
+  ],
+  "pageCount": 10,
+  "warnings": [
+    "Manifest status is \"frozen\"; query_design will report manifest-not-approved",
+    "No page.tsx implementation reference found"
+  ],
+  "sourceMtimeMs": 1788071446615.803
+}
