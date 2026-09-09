@@ -1,46 +1,17 @@
-# Task 2 Report — ExcelFillService + resolveEffectiveExcelMappings
-
-## 状态
-
-**完成** — `npm test -w core-engine -- excel-fill` 通过（4 tests）。
-
-## 变更摘要
-
-### `resolveEffectiveExcelMappings`
-- **文件:** `packages/core-engine/src/excel/effective-mappings.ts`
-- 合并 `listEffectiveFieldDefs(docTypeId)` 与 `listExcelCellMappings(templateId)`
-- 同 `field_key` 时 **ExcelCellMapping 优先**（sheet/cell/value_type/signature_role）
-- 附带 `listFieldFillRules` 的 `rule`；def-only 键 `cell=null`，`inherited=true`
-
-### `ExcelFillService`
-- **文件:** `packages/core-engine/src/excel/fill-service.ts`
-- `fill({ template, sheetName?, mappings, fieldValues, rules? })` → `Buffer`
-- `template` 支持 **文件路径** 或 **Buffer**（exceljs）
-- 按映射直写 cell；全表扫描替换 `{{fieldKey}}` 占位符
-- 填值优先级：**显式 fieldValues > FieldFillRule.default_literal > 留空**
-
-### 单测（AC-3）
-- **文件:** `packages/core-engine/test/excel-fill-service.test.ts`
-- 夹具：`docs/fixtures/excel/concrete-inspection-batch-gb50204-template.xlsx` + `concrete-inspection-batch-cell-mapping.json`
-- 断言：`B4`（project_name）、`E13`（strength_sampling_record）、`C27`（supervisor_engineer_sign）
-- 覆盖：路径/Buffer 模板、`resolveEffectiveExcelMappings` 继承合并、store 端到端
-
-### 导出
-- `packages/core-engine/src/index.ts` 导出 `resolveEffectiveExcelMappings`、`ExcelFillService` 及相关类型
-
-## 测试
-
-```
-npm test -w core-engine -- excel-fill
-
- ✓ test/excel-fill-service.test.ts (4 tests)
-
- Test Files  1 passed (1)
-      Tests  4 passed (4)
-```
-
-## 未做（Task 3+）
-
-- HTTP 路由（excel-mappings / fill-rules / generate / upload）
-- `DocumentPipeline`、`adapter/mock` upload
-- Seed 演示数据、UI
+# Task 2 Report
+## Status
+DONE_WITH_CONCERNS
+## Commits
+(pending until git commit) feat(core-engine): add pack_id to job context and shouldSearchClause
+## Tests
+- `npx tsc -p packages/core-engine --noEmit` — FAIL (pre-existing, outside whitelist; Task 2 files have 0 errors)
+- `npm test -w core-engine -- agent-connect` — PASS (4 tests, 1 file)
+## Changes
+- `query_arch` path=`frontend/core-engine/util#buildjobcontext` confirmed snapshot previously omitted `pack_id`.
+- `query_arch` path=`frontend/core-engine/util#shoulddraftwording` confirmed `shouldDraftWording` is `WORDING_STEPS` + keyword regex.
+- `JobContextSnapshot.pack_id: string | null`; `buildJobContext` copies `job.pack_id`; `formatJobContextForPrompt` emits `pack_id=...` or `pack=(none)`.
+- Exported `shouldSearchClause(step, userMessage, packId): boolean`: no pack (null/undefined/"") → false; keyword `/条款|规范|标准|查条|search_clause/` or step in `{checking, check_findings, standard_lib}` with pack → true.
+- `stepSystemPrompt` base now forbids inventing clause numbers; only cite retrieved `clause_id`, else say 未命中. `standard_lib` per-step line aligned (was “不写条款号”).
+- Tests: assertions next to `shouldDraftWording`; StepChatBridge expected strings unchanged (still `[fake-llm` / `proposal_id=`).
+## Concerns
+Package `tsc --noEmit` fails on pre-existing errors in `excel/fill-service.ts`, `http/handle-request.ts`, `http/session.ts`, `persistence/pg-store.ts`, `pipeline/seed.ts` — not in this Task whitelist, not introduced here. Agent-connect tests are green.
