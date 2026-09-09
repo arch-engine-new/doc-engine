@@ -48,12 +48,15 @@ interface StepChatWordingArgs {
 }
 
 interface StepChatAssembleInputs {
+  prep?: unknown;
   llm_text?: unknown;
   wording_result?: { proposal_id?: string };
   search_hits?: unknown;
 }
 
 const WORDING_CAP = 500;
+const EMPTY_HITS_TEXT = "未检索到条款";
+const NO_HIT_REPLY_LINE = "未命中条款，禁止编造条款号。";
 
 /**
  * Kahn scheduling counts every normal incoming edge. Exclusive branch arms that
@@ -74,7 +77,7 @@ function capWording(text: string): string {
 
 function formatHitsForPrompt(hits: unknown): string {
   if (!Array.isArray(hits) || hits.length === 0) {
-    return "未检索到条款";
+    return EMPTY_HITS_TEXT;
   }
   const lines: string[] = [];
   for (const hit of hits) {
@@ -85,7 +88,31 @@ function formatHitsForPrompt(hits: unknown): string {
       }
     }
   }
-  return lines.length > 0 ? lines.join("\n") : "未检索到条款";
+  return lines.length > 0 ? lines.join("\n") : EMPTY_HITS_TEXT;
+}
+
+function replyAlreadyMentionsMiss(text: string): boolean {
+  return text.includes("未命中") || text.includes("未检索");
+}
+
+function didAttemptSearch(prep: unknown): boolean {
+  return Boolean(
+    prep && typeof prep === "object" && (prep as StepChatPrep).should_search === "search",
+  );
+}
+
+/** When search ran but produced no citeable hits, say so instead of inventing clause_id. */
+function appendEmptySearchNotice(reply: string, inputs: StepChatAssembleInputs): string {
+  if (!didAttemptSearch(inputs.prep)) {
+    return reply;
+  }
+  if (formatHitsForPrompt(inputs.search_hits) !== EMPTY_HITS_TEXT) {
+    return reply;
+  }
+  if (replyAlreadyMentionsMiss(reply)) {
+    return reply;
+  }
+  return reply ? `${reply}\n${NO_HIT_REPLY_LINE}` : NO_HIT_REPLY_LINE;
 }
 
 function asPrep(value: unknown): StepChatPrep {
@@ -157,7 +184,10 @@ function assembleReply(inputs: StepChatAssembleInputs): {
   reply: string;
   proposalId?: string;
 } {
-  const replyBase = typeof inputs.llm_text === "string" ? inputs.llm_text : "";
+  const replyBase = appendEmptySearchNotice(
+    typeof inputs.llm_text === "string" ? inputs.llm_text : "",
+    inputs,
+  );
   const proposalId = inputs.wording_result?.proposal_id;
   if (!proposalId) {
     return { reply: replyBase, proposalId: undefined };
@@ -276,7 +306,7 @@ function buildStepChatNodes(pipeline: JobPipeline): GraphNode[] {
       id: "assemble",
       type: "fn",
       config: {
-        inputChannels: ["llm_text", "wording_result", "search_hits"],
+        inputChannels: ["prep", "llm_text", "wording_result", "search_hits"],
         outputChannel: "output",
         inlineFn: assembleReply,
       },
