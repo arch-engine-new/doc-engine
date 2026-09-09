@@ -162,7 +162,8 @@ export class LLMExecutor implements NodeExecutor {
  *
  * Configuration (node.config):
  * - toolName: string (required) - Name of the registered tool to invoke
- * - inputChannels: string[] (optional, default: ["input"]) - Channels to read input from
+ * - inputFrom: string (optional) - Channel whose object value is passed as tool args (see execute)
+ * - inputChannels: string[] (optional, default: ["input"]) - Channels to read input from when inputFrom is unset
  * - outputChannel: string (optional, default: node.id) - Channel to write output to
  * - idempotencyKey: string (optional) - Key for idempotent execution (can be a template like "{{runId}}-{{nodeId}}")
  * - retry: RetryPolicy (optional) - Override retry policy from node.retry
@@ -183,6 +184,10 @@ export class ToolExecutor implements NodeExecutor {
     this.runtime = runtime;
   }
 
+  /**
+   * Invoke the registered tool. `inputFrom` unwraps a channel object so tool
+   * schemas receive `{ packId, query }` rather than `{ search_args: {...} }`.
+   */
   async execute(node: GraphNode, context: ExecutionContext): Promise<NodeResult> {
     const config = node.config ?? {};
 
@@ -192,15 +197,8 @@ export class ToolExecutor implements NodeExecutor {
       throw new Error(`tool node "${node.id}" requires config.toolName`);
     }
 
-    // Resolve input channels
-    const inputChannels: string[] = (config.inputChannels as string[]) ?? ["input"];
     const outputChannel: string = (config.outputChannel as string) ?? node.id;
-
-    // Build input object from channels
-    const input: Record<string, unknown> = {};
-    for (const ch of inputChannels) {
-      input[ch] = getChannel(context.channels, ch);
-    }
+    const input = this.resolveToolInput(node.id, config, context.channels);
 
     // Resolve idempotency key with template substitution
     let idempotencyKey: string | undefined;
@@ -223,6 +221,34 @@ export class ToolExecutor implements NodeExecutor {
     return {
       updates: { [outputChannel]: result.output },
     };
+  }
+
+  /**
+   * Why: tool schemas expect flattened args like `{ packId, query }`, not
+   * `{ search_args: {...} }`. Missing/non-object must throw so graphs fail loud.
+   */
+  private resolveToolInput(
+    nodeId: string,
+    config: Record<string, unknown>,
+    channels: ExecutionContext["channels"],
+  ): Record<string, unknown> {
+    const inputFrom = config.inputFrom;
+    if (typeof inputFrom === "string") {
+      const value = getChannel(channels, inputFrom);
+      if (value === null || typeof value !== "object" || Array.isArray(value)) {
+        throw new Error(
+          `tool node "${nodeId}" config.inputFrom="${inputFrom}" must be a non-null object`,
+        );
+      }
+      return value as Record<string, unknown>;
+    }
+
+    const inputChannels: string[] = (config.inputChannels as string[]) ?? ["input"];
+    const input: Record<string, unknown> = {};
+    for (const ch of inputChannels) {
+      input[ch] = getChannel(channels, ch);
+    }
+    return input;
   }
 
   /**

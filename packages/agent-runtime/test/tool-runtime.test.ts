@@ -7,6 +7,13 @@ import { ToolRegistry, getDefaultRegistry, setDefaultRegistry } from "../src/too
 import { ToolRuntime, ToolExecutionError, type RetryPolicy } from "../src/tools/runtime.js";
 import { SQLiteStateStore } from "../src/persistence/sqlite-store.js";
 import { runMigrationOnDb } from "../src/persistence/migrate.js";
+import { ToolExecutor } from "../src/runtime/node-executors.js";
+import {
+  createInitialChannels,
+  mergeChannels,
+  type ExecutionContext,
+} from "../src/runtime/state.js";
+import type { CompiledGraph, GraphNode } from "../src/graph/types.js";
 
 // Test helpers
 function createTestStore(): SQLiteStateStore {
@@ -522,5 +529,109 @@ describe("Default registry", () => {
     const custom = new ToolRegistry();
     setDefaultRegistry(custom);
     expect(getDefaultRegistry()).toBe(custom);
+  });
+});
+
+const searchArgsSchema = {
+  input: {
+    type: "object",
+    properties: {
+      packId: { type: "string" },
+      query: { type: "string" },
+    },
+    required: ["packId", "query"],
+    additionalProperties: false,
+  },
+  output: {
+    type: "object",
+  },
+};
+
+const wrappedArgsSchema = {
+  input: {
+    type: "object",
+    properties: {
+      search_args: { type: "object" },
+    },
+    required: ["search_args"],
+  },
+  output: {
+    type: "object",
+  },
+};
+
+/** ToolExecutor does not walk graph topology; compiledGraph is a type stub. */
+function stubCompiledGraph(): CompiledGraph {
+  return {
+    graphId: "test",
+    nodes: new Map(),
+    edges: [],
+    entryNodeId: "start",
+    terminalNodeIds: [],
+    adjacency: new Map(),
+    definition: { nodes: [], edges: [] },
+  };
+}
+
+function createExecutorContext(channelUpdates: Record<string, unknown>): ExecutionContext {
+  const channels = createInitialChannels({});
+  mergeChannels(channels, channelUpdates);
+  return {
+    compiledGraph: stubCompiledGraph(),
+    channels,
+    metadata: {
+      runId: "run-1",
+      graphId: "test",
+      status: "running",
+      createdAt: new Date().toISOString(),
+      input: {},
+      nodeHistory: [],
+    },
+    abortSignal: new AbortController().signal,
+    runId: "run-1",
+    threadId: undefined,
+    attempt: 1,
+  };
+}
+
+describe("ToolExecutor inputFrom", () => {
+  it("passes the channel object as tool args when inputFrom is set", async () => {
+    const registry = new ToolRegistry();
+    const handler = vi.fn(async (input: { packId: string; query: string }) => input);
+    registry.register("search_clause", searchArgsSchema, handler);
+
+    const executor = new ToolExecutor(new ToolRuntime(registry));
+    const args = { packId: "p1", query: "1.1" };
+    const node: GraphNode = {
+      id: "search",
+      type: "tool",
+      config: { toolName: "search_clause", inputFrom: "search_args" },
+    };
+
+    const result = await executor.execute(node, createExecutorContext({ search_args: args }));
+
+    expect(handler).toHaveBeenCalledTimes(1);
+    expect(handler).toHaveBeenCalledWith(args);
+    expect(result.updates.search).toEqual(args);
+  });
+
+  it("wraps channel values by name when inputFrom is unset", async () => {
+    const registry = new ToolRegistry();
+    const handler = vi.fn(async (input: { search_args: { packId: string; query: string } }) => input);
+    registry.register("search_clause", wrappedArgsSchema, handler);
+
+    const executor = new ToolExecutor(new ToolRuntime(registry));
+    const args = { packId: "p1", query: "1.1" };
+    const node: GraphNode = {
+      id: "search",
+      type: "tool",
+      config: { toolName: "search_clause", inputChannels: ["search_args"] },
+    };
+
+    const result = await executor.execute(node, createExecutorContext({ search_args: args }));
+
+    expect(handler).toHaveBeenCalledTimes(1);
+    expect(handler).toHaveBeenCalledWith({ search_args: args });
+    expect(result.updates.search).toEqual({ search_args: args });
   });
 });
