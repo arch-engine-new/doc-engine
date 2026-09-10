@@ -19,6 +19,7 @@
   },
   "scripts": {
     "test": "vitest run",
+    "test:adapter-openapi": "vitest run adapter-mock",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "http": "node --import tsx src/http/server.ts"
   },
