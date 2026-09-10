@@ -11,18 +11,31 @@ import { blobObjectUri, safeName } from "../blob/minio.js";
 import type { BlobStore } from "../blob/port.js";
 import type { DocTypeRow, FieldDefRow, TemplateRow } from "../types.js";
 
+/**
+ * WHY: CoreEngineStore (sqlite) is sync; LedgerStore / PostgresLedger return Promise.
+ * Seed helpers `await Promise.resolve(...)` so both implementations satisfy the same store type.
+ */
+export type MaybeAsync<T> = T | Promise<T>;
+
+/** Strip Promise from seed-store methods for the sync sqlite `seedPublishedRules` path. */
+type SyncSeedStore<T> = {
+  [K in keyof T]: T[K] extends (...args: infer A) => MaybeAsync<infer R>
+    ? (...args: A) => R
+    : T[K];
+};
+
 export interface DocTypeSeedStore {
-  getDocType(docTypeId: string): DocTypeRow | null;
+  getDocType(docTypeId: string): MaybeAsync<DocTypeRow | null>;
   insertDocType(input: {
     pack_id: string;
     name: string;
     parent_doc_type_id?: string | null;
     doc_type_id?: string;
-  }): DocTypeRow;
+  }): MaybeAsync<DocTypeRow>;
   saveFieldDefs(
     docTypeId: string,
     defs: Array<{ field_key: string; value_type: string; required: number }>,
-  ): FieldDefRow[];
+  ): MaybeAsync<FieldDefRow[]>;
 }
 
 export type ConcreteCellMappingWrite = {
@@ -50,9 +63,9 @@ export type ConcreteCompletenessRuleWrite = {
 };
 
 export interface ConcreteExcelSeedStore extends DocTypeSeedStore {
-  listDocTypesByPack(packId: string): DocTypeRow[];
-  getTemplate(templateId: string): TemplateRow | null;
-  listTemplatesByDocType(docTypeId: string): TemplateRow[];
+  listDocTypesByPack(packId: string): MaybeAsync<DocTypeRow[]>;
+  getTemplate(templateId: string): MaybeAsync<TemplateRow | null>;
+  listTemplatesByDocType(docTypeId: string): MaybeAsync<TemplateRow[]>;
   insertTemplate(input: {
     pack_id: string;
     name: string;
@@ -61,7 +74,7 @@ export interface ConcreteExcelSeedStore extends DocTypeSeedStore {
     layout_kind?: string;
     excel_template_uri?: string | null;
     excel_sheet_name?: string | null;
-  }): TemplateRow;
+  }): MaybeAsync<TemplateRow>;
   updateTemplateExcel(
     templateId: string,
     input: {
@@ -69,14 +82,28 @@ export interface ConcreteExcelSeedStore extends DocTypeSeedStore {
       excel_template_uri?: string | null;
       excel_sheet_name?: string | null;
     },
-  ): TemplateRow;
+  ): MaybeAsync<TemplateRow>;
   saveExcelCellMappings(
     templateId: string,
     mappings: ConcreteCellMappingWrite[],
-  ): unknown[];
-  saveFieldFillRules(docTypeId: string, rules: ConcreteFillRuleWrite[]): unknown[];
-  listExcelCellMappings(templateId: string): unknown[];
-  saveCompletenessRules(packId: string, rules: ConcreteCompletenessRuleWrite[]): unknown[];
+  ): MaybeAsync<unknown[]>;
+  saveFieldFillRules(docTypeId: string, rules: ConcreteFillRuleWrite[]): MaybeAsync<unknown[]>;
+  listExcelCellMappings(templateId: string): MaybeAsync<unknown[]>;
+  saveCompletenessRules(
+    packId: string,
+    rules: ConcreteCompletenessRuleWrite[],
+  ): MaybeAsync<unknown[]>;
+}
+
+type SyncDocTypeSeedStore = SyncSeedStore<DocTypeSeedStore>;
+type SyncConcreteExcelSeedStore = SyncSeedStore<ConcreteExcelSeedStore>;
+
+const DEFAULT_BLOB_BUCKET = "docengine";
+
+/** BlobStore has no `bucket` field; MemoryBlobStore/MinIO may expose one at runtime. */
+function blobBucketName(blob: BlobStore): string {
+  const maybe = blob as { bucket?: string };
+  return typeof maybe.bucket === "string" ? maybe.bucket : DEFAULT_BLOB_BUCKET;
 }
 
 export const PACK_ID = "pack_slice1";
@@ -168,7 +195,7 @@ export interface SeedDemoDocTypesInput {
 }
 
 /** Idempotent parent/child DocType + FieldDef seed for demo pack (AC-2 / AC-5). */
-export function seedDemoDocTypes(store: DocTypeSeedStore, input: SeedDemoDocTypesInput): void {
+export function seedDemoDocTypes(store: SyncDocTypeSeedStore, input: SeedDemoDocTypesInput): void {
   const existing = store.getDocType(input.parentId);
   if (existing) {
     return;
@@ -291,13 +318,13 @@ function pickConcreteTemplate(templates: TemplateRow[]): TemplateRow | null {
   );
 }
 
-function findConcreteDocTypeInPack(store: ConcreteExcelSeedStore, packId: string): DocTypeRow | null {
+function findConcreteDocTypeInPack(store: SyncConcreteExcelSeedStore, packId: string): DocTypeRow | null {
   return (
     store.listDocTypesByPack(packId).find((row) => row.name === "混凝土施工检验批") ?? null
   );
 }
 
-function resolveConcreteDocTypeId(store: ConcreteExcelSeedStore, packId: string): string | undefined {
+function resolveConcreteDocTypeId(store: SyncConcreteExcelSeedStore, packId: string): string | undefined {
   const inPack = findConcreteDocTypeInPack(store, packId);
   if (inPack) {
     return inPack.doc_type_id;
@@ -357,7 +384,7 @@ async function tryExistingConcreteSeed(
 }
 
 function tryExistingConcreteSeedSync(
-  store: ConcreteExcelSeedStore,
+  store: SyncConcreteExcelSeedStore,
   packId: string,
 ): SeedConcreteInspectionBatchResult | null {
   const docType = findConcreteDocTypeInPack(store, packId);
@@ -450,9 +477,10 @@ async function applyConcreteLedgerSeed(
 /**
  * Idempotent ledger seed: DocType, excel template row, cell mappings (≥20), fill rules.
  * Sync wrapper for CoreEngineStore.seedPublishedRules.
+ * Invariant: store methods are synchronous (sqlite); do not pass LedgerStore here.
  */
 export function seedConcreteInspectionBatchLedger(
-  store: ConcreteExcelSeedStore,
+  store: SyncConcreteExcelSeedStore,
   input: Pick<SeedConcreteInspectionBatchInput, "packId">,
 ): SeedConcreteInspectionBatchResult {
   const existing = tryExistingConcreteSeedSync(store, input.packId);
@@ -513,10 +541,7 @@ async function uploadConcreteTemplateBytes(
 ): Promise<TemplateRow> {
   const xlsxBytes = readFileSync(CONCRETE_FIXTURE_XLSX);
   const key = `templates/${templateId}/${safeName(CONCRETE_TEMPLATE_XLSX_FILE)}`;
-  const bucket =
-    typeof (blob as { bucket?: string }).bucket === "string"
-      ? (blob as { bucket: string }).bucket
-      : "docengine";
+  const bucket = blobBucketName(blob);
   await blob.ensureBucket();
   await blob.put({
     key,

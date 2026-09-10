@@ -238,8 +238,8 @@ function fillRulesFromBody(body: unknown): FieldFillRuleWrite[] {
       field_key: String(row.field_key ?? row.fieldKey ?? ""),
       required: row.required === undefined ? 0 : Number(row.required),
       pattern: row.pattern == null || row.pattern === "" ? null : String(row.pattern),
-      min_num: row.min_num ?? row.minNum ?? null,
-      max_num: row.max_num ?? row.maxNum ?? null,
+      min_num: optionalBodyStr(row.min_num ?? row.minNum),
+      max_num: optionalBodyStr(row.max_num ?? row.maxNum),
       default_generator:
         row.default_generator ?? row.defaultGenerator
           ? String(row.default_generator ?? row.defaultGenerator)
@@ -250,6 +250,11 @@ function fillRulesFromBody(body: unknown): FieldFillRuleWrite[] {
           : null,
     };
   });
+}
+
+/** Empty / missing JSON fields become null so they match FieldFillRuleWrite string | null. */
+function optionalBodyStr(value: unknown): string | null {
+  return value == null || value === "" ? null : String(value);
 }
 
 function completenessRulesFromBody(body: unknown): CompletenessRuleWrite[] {

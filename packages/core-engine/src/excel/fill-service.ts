@@ -6,7 +6,8 @@ import ExcelJS from "exceljs";
 import type { FieldFillRuleRow } from "../types.js";
 import type { EffectiveExcelMapping } from "./effective-mappings.js";
 
-export type ExcelFillTemplate = string | Buffer;
+/** Path, Node Buffer, or bytes. exceljs `load` wants ArrayBuffer, not `Buffer<ArrayBufferLike>`. */
+export type ExcelFillTemplate = string | Buffer | Uint8Array;
 
 export interface ExcelFillInput {
   template: ExcelFillTemplate;
@@ -25,7 +26,7 @@ export class ExcelFillService {
     if (typeof input.template === "string") {
       await workbook.xlsx.readFile(input.template);
     } else {
-      await workbook.xlsx.load(input.template);
+      await workbook.xlsx.load(toExcelLoadBytes(input.template));
     }
 
     const rulesByKey = buildRulesIndex(input.rules, input.mappings);
@@ -48,6 +49,12 @@ export class ExcelFillService {
     const out = await workbook.xlsx.writeBuffer();
     return Buffer.from(out);
   }
+}
+
+/** Copy into a standalone ArrayBuffer so exceljs Buffer (extends ArrayBuffer) type-checks. */
+function toExcelLoadBytes(template: Buffer | Uint8Array): ArrayBuffer {
+  const copy = Uint8Array.from(template);
+  return copy.buffer.slice(0, copy.byteLength);
 }
 
 function buildRulesIndex(
