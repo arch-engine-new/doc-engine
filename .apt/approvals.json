@@ -47,5 +47,12 @@
     "at": "2026-09-14T08:10:00.000Z",
     "by": "apt-auto-brainstorm",
     "risk": "low"
+  },
+  {
+    "spec": "docs/superpowers/specs/2026-09-14-paddleocr-aistudio-replace-design.md",
+    "approval": "approved",
+    "at": "2026-09-14T11:23:00.000Z",
+    "by": "user",
+    "risk": "high"
   }
 ]

@@ -2,7 +2,7 @@
 
 > **Spec:** `docs/superpowers/specs/2026-09-14-paddleocr-aistudio-replace-design.md`
 > **Command:** `/plan-from-spec`
-> **Status:** draft
+> **Status:** approved
 > **projectType:** component（跳过 v0 freeze 与 UI 设计 Task）
 > **specRisk:** high（改动 >8 文件；红队 3 轮，material 7 已 [a] 结案，unresolved=0）
 

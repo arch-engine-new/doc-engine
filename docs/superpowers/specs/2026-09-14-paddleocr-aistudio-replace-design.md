@@ -1,9 +1,11 @@
 ---
 title: 全部真实 OCR 替换为 PaddleOCR AI Studio 在线任务
 date: 2026-09-14
-status: draft
+status: approved
 risk: high
-phase: spec_pending_approval
+phase: approved
+approvedAt: 2026-09-14T11:23:00.000Z
+approvedBy: user
 topic: paddleocr-aistudio-replace
 mode: apt-auto-brainstorm
 feature: core-engine
