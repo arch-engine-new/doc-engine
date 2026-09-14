@@ -188,9 +188,9 @@ export type {
   OcrPort,
 } from "./ocr/port.js";
 export { FakeOcr } from "./ocr/fake.js";
-export { BaiduOcr, fromEnv as baiduOcrFromEnv } from "./ocr/baidu.js";
-export type { BaiduOcrApi, BaiduOcrEnvConfig } from "./ocr/env.js";
-export { DEFAULT_BAIDU_OCR_API, readBaiduOcrEnv } from "./ocr/env.js";
+export { PaddleOcr, fromEnv as paddleOcrFromEnv } from "./ocr/paddleocr.js";
+export type { PaddleOcrEnvConfig } from "./ocr/env.js";
+export { readPaddleOcrEnv } from "./ocr/env.js";
 
 export { extractOcrByTemplate, parseOcrFields } from "./extract/ocr-fields.js";
 

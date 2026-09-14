@@ -8,7 +8,7 @@ export const DEFAULT_FAKE_OCR_TEXT =
   "编号：SH-002\n日期A：2026-08-20\n日期B：2026-08-01";
 
 /**
- * Deterministic OcrPort for unit tests and CI. Never fetches, never reads BAIDU_* env.
+ * Deterministic OcrPort for unit tests and CI. Never fetches, never reads PADDLEOCR_* env.
  * Constructor text is returned as-is so callers inject 编号/日期 samples without parsing here.
  */
 export class FakeOcr implements OcrPort {
