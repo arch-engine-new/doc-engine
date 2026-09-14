@@ -1,12 +1,16 @@
 /**
  * Task 7: openUploadJob — MemoryBlobStore + FakeOcr, validation gate, standard-fit skip.
+ * Task 5: PDF Unicode text-layer gate — examples skip OCR; empty layer calls recognize.
  */
 
+import { readdirSync, readFileSync } from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { MemoryBlobStore } from "../src/blob/memory.js";
 import { blobObjectUri, uploadObjectKey } from "../src/blob/minio.js";
 import { FakeOcr } from "../src/ocr/fake.js";
-import type { OcrPort } from "../src/ocr/port.js";
+import type { OcrPort, OcrRecognizeInput, OcrRecognizeResult } from "../src/ocr/port.js";
 import {
   JobPipeline,
   MAX_UPLOAD_BYTES,
@@ -15,6 +19,49 @@ import {
 import { DOC_TYPE_PARENT_ID, PACK_ID, RULE_R2_VERSION_ID } from "../src/pipeline/seed.js";
 
 const JPEG_BYTES = new Uint8Array([0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10]);
+const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../..");
+const EXAMPLES_DIR = path.join(REPO_ROOT, "examples");
+
+function resolveExamplePdf(): string {
+  const names = readdirSync(EXAMPLES_DIR).filter((name) => name.toLowerCase().endsWith(".pdf"));
+  if (names.length === 0) {
+    throw new Error(`no PDF under ${EXAMPLES_DIR}`);
+  }
+  const ranked = names
+    .map((name) => {
+      const full = path.join(EXAMPLES_DIR, name);
+      return { full, size: readFileSync(full).byteLength };
+    })
+    .sort((a, b) => a.size - b.size);
+  return ranked[0]!.full;
+}
+
+/** One blank page, no ToUnicode / Tj — a scan-like fixture. */
+function emptyPagePdf(): Uint8Array {
+  const header = "%PDF-1.4\n";
+  const obj1 = "1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n";
+  const obj2 = "2 0 obj\n<< /Type /Pages /Kids [3 0 R] /Count 1 >>\nendobj\n";
+  const obj3 = "3 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 200 200] >>\nendobj\n";
+  const o1 = Buffer.byteLength(header);
+  const o2 = o1 + Buffer.byteLength(obj1);
+  const o3 = o2 + Buffer.byteLength(obj2);
+  const after = o3 + Buffer.byteLength(obj3);
+  const pad = (n: number) => `${String(n).padStart(10, "0")} 00000 n \n`;
+  const xref = "xref\n0 4\n0000000000 65535 f \n" + pad(o1) + pad(o2) + pad(o3);
+  const trailer = `trailer\n<< /Size 4 /Root 1 0 R >>\nstartxref\n${after}\n%%EOF\n`;
+  return new Uint8Array(Buffer.from(header + obj1 + obj2 + obj3 + xref + trailer));
+}
+
+class SpyOcr implements OcrPort {
+  calls = 0;
+  lastInput: OcrRecognizeInput | undefined;
+  constructor(private readonly inner: OcrPort = new FakeOcr()) {}
+  async recognize(input: OcrRecognizeInput): Promise<OcrRecognizeResult> {
+    this.calls += 1;
+    this.lastInput = input;
+    return this.inner.recognize(input);
+  }
+}
 
 describe("openUploadJob", () => {
   let pipeline: JobPipeline;
@@ -130,4 +177,46 @@ describe("openUploadJob", () => {
     const audit = await pipeline.listAudit(jobs[0]!.trace_id);
     expect(audit.some((e) => e.event_type === "ocr_error")).toBe(true);
   });
+
+  it("calls ocr.recognize for a PDF with no usable text layer", async () => {
+    const spy = new SpyOcr();
+    const input = await baseInput({
+      fileName: "scan.pdf",
+      mime: "application/pdf",
+      bytes: emptyPagePdf(),
+    });
+
+    const result = await pipeline.openUploadJob(input, { blob, ocr: spy });
+
+    expect(spy.calls).toBe(1);
+    expect(spy.lastInput?.mime).toBe("application/pdf");
+    expect(result.job.status).toBe("checking");
+  });
+
+  it("does not call ocr.recognize for an examples PDF with a usable text layer", async () => {
+    const spy = new SpyOcr();
+    const pdfPath = resolveExamplePdf();
+    const bytes = new Uint8Array(readFileSync(pdfPath));
+    const input = await baseInput({
+      fileName: path.basename(pdfPath),
+      mime: "application/pdf",
+      bytes,
+    });
+
+    const result = await pipeline.openUploadJob(input, { blob, ocr: spy });
+
+    expect(spy.calls).toBe(0);
+    const ocrText = result.extraction.ocr_text ?? "";
+    const han = Array.from(ocrText.matchAll(/\p{Script=Han}/gu)).length;
+    expect(han).toBeGreaterThanOrEqual(8);
+    const extractionAudit = (await pipeline.listAudit(result.job.trace_id)).find(
+      (e) => e.event_type === "extraction",
+    );
+    const payloadRaw = extractionAudit?.payload_json;
+    const payload =
+      typeof payloadRaw === "string"
+        ? (JSON.parse(payloadRaw) as Record<string, unknown>)
+        : ((payloadRaw ?? {}) as Record<string, unknown>);
+    expect(payload.ocr_vendor).toBe("pdf-text");
+  }, 30_000);
 });

@@ -10,6 +10,7 @@ import { extractByTemplate } from "../extract/field-box.js";
 import { resolveEffectiveBoxes, type EffectiveFieldBox } from "../extract/effective-boxes.js";
 import { extractOcrByTemplate, parseOcrFields } from "../extract/ocr-fields.js";
 import type { OcrPort } from "../ocr/port.js";
+import { extractPdfUnicodeText, hasUsablePdfTextLayer } from "../ocr/pdf-text.js";
 import { SqliteLedger, type LedgerStore } from "../persistence/ledger.js";
 import { resolveEngineMode } from "../persistence/live-env.js";
 import { runMigrationOnDb } from "../persistence/migrate.js";
@@ -983,41 +984,20 @@ function standardFitQueryFromFields(fields: Record<string, unknown>): string {
 }
 
 /**
- * PDF text layer only — no Baidu quota. Scanned/image-only PDFs return null
- * so openUploadJob can fail with ocr_error instead of silent garbage text.
+ * PDF: Unicode text-layer first (unpdf). Usable copy → vendor=pdf-text and skip OCR.
+ * Empty / below-threshold layers fall through to OcrPort so scans are not labelled
+ * pdf-text garbage. JPEG/PNG never take the PDF branch.
  */
-function extractPdfTextLayer(bytes: Uint8Array): string | null {
-  const raw = Buffer.from(bytes).toString("latin1");
-  const chunks: string[] = [];
-  const parenRe = /\(([^\\)]*(?:\\.[^\\)]*)*)\)/g;
-  let match: RegExpExecArray | null;
-  while ((match = parenRe.exec(raw)) !== null) {
-    const decoded = match[1]!
-      .replace(/\\n/g, "\n")
-      .replace(/\\r/g, "\r")
-      .replace(/\\t/g, "\t")
-      .replace(/\\\(/g, "(")
-      .replace(/\\\)/g, ")")
-      .replace(/\\\\/g, "\\");
-    if (decoded.trim().length > 0) {
-      chunks.push(decoded);
-    }
-  }
-  const text = chunks.join("\n").trim();
-  return text.length >= 3 ? text : null;
-}
-
 async function recognizeUploadText(
   input: Pick<OpenUploadJobInput, "bytes" | "mime" | "fileName">,
   ocr: OcrPort,
 ): Promise<{ text: string; vendor: string }> {
   const mime = normalizeMime(input.mime);
   if (mime === PDF_MIME) {
-    const text = extractPdfTextLayer(input.bytes);
-    if (text === null) {
-      throw new Error("扫描件 PDF 无法本地抽字，请先导出首页为 JPEG 或 PNG");
+    const decoded = await extractPdfUnicodeText(input.bytes);
+    if (hasUsablePdfTextLayer(decoded)) {
+      return { text: decoded, vendor: "pdf-text" };
     }
-    return { text, vendor: "pdf-text" };
   }
   const result = await ocr.recognize({
     bytes: input.bytes,
