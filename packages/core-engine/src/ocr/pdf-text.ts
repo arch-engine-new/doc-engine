@@ -1,8 +1,13 @@
 /**
- * OCR text helpers shared by Paddle VL flatten and (Task 4) Unicode PDF
- * text-layer extraction. Flatten lives here so later PDF decoding can land
- * in the same module without moving the Paddle success-path call.
+ * OCR text helpers shared by Paddle VL flatten and Unicode PDF text-layer
+ * extraction. Flatten and PDF decoding share this module so JobPipeline can
+ * import one place without moving the Paddle success-path call.
  */
+
+import { extractText, getDocumentProxy } from "unpdf";
+
+const MIN_HAN_FOR_TEXT_LAYER = 8;
+const MIN_LETTERS_WITH_HAN = 40;
 
 /**
  * Strip Paddle VL markdown so the frozen parseOcrFields regex can still see
@@ -27,4 +32,43 @@ function flattenOcrMarkdownLine(line: string): string {
   out = out.replace(/[*_]/g, "");
   out = out.replace(/\|/g, " ");
   return out.replace(/[ \t]+/g, " ").trim();
+}
+
+/**
+ * Decode the PDF Unicode text layer via unpdf (PDF.js), including CJK CMaps.
+ * Must not use latin1 parenthesis regex: that treats binary as copy and would
+ * mark scanned examples as vendor=pdf-text garbage. Empty / undecodable input
+ * returns "" so the usable-layer gate can fall through to OCR.
+ */
+export async function extractPdfUnicodeText(bytes: Uint8Array): Promise<string> {
+  if (bytes == null || bytes.byteLength === 0) {
+    return "";
+  }
+  try {
+    const data = Uint8Array.from(bytes);
+    const pdf = await getDocumentProxy(data);
+    const result = await extractText(pdf, { mergePages: true });
+    return typeof result.text === "string" ? result.text : result.text.join("\n");
+  } catch {
+    return "";
+  }
+}
+
+/**
+ * True only when decoded text is readable copy: Han ≥ 8, or Unicode letters
+ * ≥ 40 with at least one Han. Zero-Han parenthesis / latin1 soup must stay
+ * false so scanned PDFs go to OcrPort instead of vendor=pdf-text.
+ */
+export function hasUsablePdfTextLayer(text: string): boolean {
+  const source = typeof text === "string" ? text : "";
+  const han = countUnicode(source, /\p{Script=Han}/gu);
+  if (han >= MIN_HAN_FOR_TEXT_LAYER) {
+    return true;
+  }
+  const letters = countUnicode(source, /\p{L}/gu);
+  return letters >= MIN_LETTERS_WITH_HAN && han >= 1;
+}
+
+function countUnicode(text: string, pattern: RegExp): number {
+  return Array.from(text.matchAll(pattern)).length;
 }

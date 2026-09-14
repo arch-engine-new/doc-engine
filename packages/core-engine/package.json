@@ -30,7 +30,8 @@
     "better-sqlite3": "^11.7.2",
     "exceljs": "^4.4.0",
     "neo4j-driver": "^5.28.1",
-    "pg": "^8.23.0"
+    "pg": "^8.23.0",
+    "unpdf": "^1.8.1"
   },
   "devDependencies": {
     "@types/better-sqlite3": "^7.6.12",
