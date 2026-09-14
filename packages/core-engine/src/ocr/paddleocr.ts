@@ -1,4 +1,5 @@
 import { readPaddleOcrEnv, type PaddleOcrEnvConfig } from "./env.js";
+import { flattenOcrMarkdown } from "./pdf-text.js";
 import type { OcrPort, OcrRecognizeInput, OcrRecognizeResult } from "./port.js";
 
 const VENDOR = "paddleocr-vl";
@@ -183,7 +184,8 @@ export class PaddleOcr implements OcrPort {
     this.assertWithinLocalLimit(input.bytes);
     const jobId = await this.submitJob(input);
     const done = await this.pollUntilDone(jobId);
-    const text = await this.readResultMarkdown(done);
+    // VL markdown wraps labels; parseOcrFields regex is frozen, so strip marks here.
+    const text = flattenOcrMarkdown(await this.readResultMarkdown(done));
     return { text, vendor: VENDOR, raw: { jobId } };
   }
 

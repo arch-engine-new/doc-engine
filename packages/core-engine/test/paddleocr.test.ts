@@ -4,8 +4,10 @@
  */
 
 import { describe, expect, it } from "vitest";
+import { parseOcrFields } from "../src/extract/ocr-fields.js";
 import type { PaddleOcrEnvConfig } from "../src/ocr/env.js";
 import { PaddleOcr } from "../src/ocr/paddleocr.js";
+import { flattenOcrMarkdown } from "../src/ocr/pdf-text.js";
 import type { OcrRecognizeInput } from "../src/ocr/port.js";
 
 const TOKEN = "test-token-must-not-leak";
@@ -13,6 +15,7 @@ const JOB_URL = "https://paddleocr.test/api/v2/ocr/jobs";
 const JOB_ID = "job-fixture-42";
 const JSON_URL = "https://paddleocr.test/results/job-fixture-42.jsonl";
 const PAGE_TEXT = "编号：SH-002\n日期A：2026-08-20";
+const VL_MARKDOWN = "# 表\n**编号：** SH-002\n日期A：2026-08-20\n日期B：2026-08-01";
 const AISTUDIO_HOST = "aistudio-app.com";
 const MAX_LOCAL_FILE_BYTES = 50 * 1024 * 1024;
 
@@ -265,5 +268,37 @@ describe("PaddleOcr.recognize", () => {
     const message = await expectRecognizeError(() => createAdapter(fetch).recognize(oversized));
     expect(message).toMatch(/50\s*MB|体积|过大/);
     expect(calls.length).toBe(0);
+  });
+
+  it("flattens VL markdown on the success path so parseOcrFields can read labels", async () => {
+    const { fetch } = createRecorder(async (call) => {
+      if (call.method === "POST") {
+        return jsonResponse({ code: 0, data: { jobId: JOB_ID } });
+      }
+      if (call.url === `${JOB_URL}/${JOB_ID}`) {
+        return jsonResponse(jobStatusBody("done", { resultUrl: { jsonUrl: JSON_URL } }));
+      }
+      if (call.url === JSON_URL) {
+        return new Response(jsonlWithResult(VL_MARKDOWN), { status: 200 });
+      }
+      throw new Error(`unexpected ${call.method} ${call.url}`);
+    });
+
+    const result = await createAdapter(fetch).recognize(INPUT);
+    const fields = parseOcrFields(result.text);
+    expect(fields["编号"]).toBe("SH-002");
+    expect(fields["日期A"]).toBe("2026-08-20");
+    expect(fields["日期B"]).toBe("2026-08-01");
+    expect(result.text).not.toContain("#");
+    expect(result.text).not.toContain("*");
+  });
+});
+
+describe("flattenOcrMarkdown", () => {
+  it("lets parseOcrFields extract 编号/日期A/日期B from VL markdown", () => {
+    const fields = parseOcrFields(flattenOcrMarkdown(VL_MARKDOWN));
+    expect(fields["编号"]).toBe("SH-002");
+    expect(fields["日期A"]).toBe("2026-08-20");
+    expect(fields["日期B"]).toBe("2026-08-01");
   });
 });
