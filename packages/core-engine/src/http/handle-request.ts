@@ -5,11 +5,12 @@
  * Request bodies also accept camelCase aliases. Chat never confirms, publishes, or submits.
  */
 
-import { mockPendingMount, uploadDocument, type FieldBoxWrite } from "../index.js";
+import { mockPendingMount, uploadDocument } from "../adapter/mock.js";
 import type {
-  ExcelCellMappingWrite,
-  FieldFillRuleWrite,
   CompletenessRuleWrite,
+  ExcelCellMappingWrite,
+  FieldBoxWrite,
+  FieldFillRuleWrite,
 } from "../persistence/store.js";
 import { NoOpenHitlError } from "../agent/job-step-orchestrator.js";
 import { LedgerConflictError, UploadValidationError } from "../pipeline/job-pipeline.js";

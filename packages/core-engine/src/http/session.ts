@@ -7,29 +7,29 @@
 import { QdrantClient } from "@qdrant/js-client-rest";
 import neo4j from "neo4j-driver";
 import pg from "pg";
+import { resetAdapterWrites } from "../adapter/mock.js";
 import { MemoryBlobStore } from "../blob/memory.js";
-import { fromEnv as minioFromEnv } from "../blob/minio.js";
-import { fromEnv as baiduFromEnv } from "../ocr/baidu.js";
-import { readBaiduOcrEnv } from "../ocr/env.js";
+import { blobObjectUri, fromEnv as minioFromEnv, safeName } from "../blob/minio.js";
+import { readPaddleOcrEnv } from "../ocr/env.js";
 import { FakeOcr } from "../ocr/fake.js";
-import {
-  CHECK_WORDING_FIXTURE,
-  EMPTY_PACK_NAME,
-  JobPipeline,
-  PACK_ID,
-  resetAdapterWrites,
-  seedConcreteInspectionBatchExcelDemo,
-  type FixtureJobResult,
-  type IngestStandardResult,
-  type ProjectRow,
-  type SpecPackRow,
-  type TemplateRow,
-} from "../index.js";
-import { blobObjectUri, safeName } from "../blob/minio.js";
+import { PaddleOcr } from "../ocr/paddleocr.js";
 import type { LedgerStore } from "../persistence/ledger.js";
 import { DocumentPipeline } from "../pipeline/document-pipeline.js";
-import type { OpenUploadJobInput, OpenUploadJobResult } from "../pipeline/job-pipeline.js";
+import {
+  JobPipeline,
+  type FixtureJobResult,
+  type OpenUploadJobInput,
+  type OpenUploadJobResult,
+} from "../pipeline/job-pipeline.js";
+import { CHECK_WORDING_FIXTURE } from "../pipeline/review.js";
+import {
+  EMPTY_PACK_NAME,
+  PACK_ID,
+  seedConcreteInspectionBatchExcelDemo,
+} from "../pipeline/seed.js";
 import { resolveEngineMode, type LiveEngineMode } from "../persistence/live-env.js";
+import type { IngestStandardResult } from "../retrieve/library.js";
+import type { ProjectRow, SpecPackRow, TemplateRow } from "../types.js";
 import { StepChatBridge } from "../agent/step-chat-bridge.js";
 import { AgentRuntimeFactory } from "../agent/agent-runtime-factory.js";
 import type { JobStepOrchestrator } from "../agent/job-step-orchestrator.js";
@@ -74,7 +74,7 @@ export interface DemoHealth {
 }
 
 /**
- * Thrown when live mode lacks MinIO or Baidu OCR assembly so HTTP returns 503
+ * Thrown when live mode lacks MinIO or a PaddleOCR token so HTTP returns 503
  * instead of silently falling back to FakeOcr / MemoryBlobStore on real uploads.
  */
 export class UploadServiceUnavailableError extends Error {
@@ -226,14 +226,14 @@ export class DemoHttpSession {
       probeQdrant(live.qdrantUrl),
       probeNeo4j(live.neo4jUri, live.neo4jUser, live.neo4jPassword),
       probeMinio(),
-      probeBaiduOcr(),
+      probePaddleOcr(),
     ]);
     return { mode: "live", postgres, qdrant, neo4j: neo4jStatus, minio, ocr, llm };
   }
 
   /**
    * HTTP upload wrapper: memory tests use MemoryBlobStore + FakeOcr; live mode
-   * requires both MinIO and Baidu from env — missing either throws 503, not Fake.
+   * requires both MinIO and PaddleOCR.fromEnv — missing either throws 503, not Fake.
    */
   async openUploadJob(
     input: Omit<OpenUploadJobInput, "projectId"> & { projectId?: string },
@@ -266,7 +266,7 @@ export class DemoHttpSession {
 
   private resolveUploadDeps(): { blob: MemoryBlobStore; ocr: FakeOcr } | {
     blob: NonNullable<ReturnType<typeof minioFromEnv>>;
-    ocr: NonNullable<ReturnType<typeof baiduFromEnv>>;
+    ocr: NonNullable<ReturnType<typeof PaddleOcr.fromEnv>>;
   } {
     if (this.mode === "memory") {
       if (!this.memoryBlob) this.memoryBlob = new MemoryBlobStore();
@@ -274,10 +274,10 @@ export class DemoHttpSession {
       return { blob: this.memoryBlob, ocr: this.memoryOcr };
     }
     const blob = minioFromEnv();
-    const ocr = baiduFromEnv();
+    const ocr = PaddleOcr.fromEnv();
     if (!blob || !ocr) {
       throw new UploadServiceUnavailableError(
-        "Real upload not configured: MinIO and Baidu OCR must both be available in live mode",
+        "Real upload not configured: MinIO and PaddleOCR token must both be available in live mode",
       );
     }
     return { blob, ocr };
@@ -434,21 +434,22 @@ async function probeMinio(): Promise<DemoHealthProbe> {
   }
 }
 
-async function probeBaiduOcr(): Promise<DemoHealthProbe> {
-  const config = readBaiduOcrEnv();
+/**
+ * Auth-only health: GET a path that must not exist as a job. 404 means the
+ * token was accepted; 401/403 means it was not. Never POST /ocr/jobs here.
+ */
+async function probePaddleOcr(): Promise<DemoHealthProbe> {
+  const config = readPaddleOcrEnv();
   if (!config) return "skip";
   try {
-    const form = new URLSearchParams();
-    form.set("grant_type", "client_credentials");
-    form.set("client_id", config.apiKey);
-    form.set("client_secret", config.secretKey);
-    const response = await fetch("https://aip.baidubce.com/oauth/2.0/token", {
-      method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body: form,
+    const url = `${config.jobUrl.replace(/\/+$/, "")}/__health_probe`;
+    const response = await fetch(url, {
+      method: "GET",
+      headers: { Authorization: `bearer ${config.token}` },
     });
-    const json = (await response.json()) as { access_token?: unknown };
-    return typeof json.access_token === "string" && json.access_token.length > 0 ? "ok" : "fail";
+    if (response.status === 401 || response.status === 403) return "fail";
+    if (response.status === 404) return "ok";
+    return response.ok ? "ok" : "fail";
   } catch {
     return "fail";
   }
