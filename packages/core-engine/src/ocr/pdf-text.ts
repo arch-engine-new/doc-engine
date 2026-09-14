@@ -47,8 +47,9 @@ export async function extractPdfUnicodeText(bytes: Uint8Array): Promise<string> 
   try {
     const data = Uint8Array.from(bytes);
     const pdf = await getDocumentProxy(data);
+    // mergePages:true overload is `text: string`; `.join` would type as never.
     const result = await extractText(pdf, { mergePages: true });
-    return typeof result.text === "string" ? result.text : result.text.join("\n");
+    return result.text;
   } catch {
     return "";
   }
