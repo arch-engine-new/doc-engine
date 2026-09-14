@@ -28,5 +28,24 @@
     "approval": "approved",
     "at": "2026-08-29T06:54:00.000Z",
     "by": "user"
+  },
+  {
+    "spec": "docs/superpowers/specs/2026-08-29-excel-gap-fill-design.md",
+    "approval": "approved",
+    "at": "2026-08-29T14:16:00.000Z",
+    "by": "user"
+  },
+  {
+    "spec": "docs/superpowers/specs/2026-09-09-agent-native-graph-search-clause-design.md",
+    "approval": "approved",
+    "at": "2026-09-09T15:44:00.000Z",
+    "by": "user"
+  },
+  {
+    "spec": "docs/superpowers/specs/2026-09-14-operator-corpus-kb-test-design.md",
+    "approval": "auto_approved",
+    "at": "2026-09-14T08:10:00.000Z",
+    "by": "apt-auto-brainstorm",
+    "risk": "low"
   }
 ]
