@@ -1,6 +1,6 @@
 /**
  * Bytes handed to OCR so the vendor can read the original without a second upload.
- * mime/fileName exist so Baidu can pick general_basic vs PDF text extract; FakeOcr ignores them.
+ * mime/fileName exist so Paddle can name the multipart file; FakeOcr ignores them.
  */
 export interface OcrRecognizeInput {
   bytes: Uint8Array;
@@ -10,7 +10,7 @@ export interface OcrRecognizeInput {
 
 /**
  * Full-page OCR text only. Field projection is extractByTemplate (Task 6), not this port.
- * vendor distinguishes Fake vs Baidu so health/audit never treat injected text as live OCR.
+ * vendor distinguishes Fake vs Paddle so health/audit never treat injected text as live OCR.
  */
 export interface OcrRecognizeResult {
   text: string;
@@ -19,7 +19,7 @@ export interface OcrRecognizeResult {
 }
 
 /**
- * Swap BaiduOcr vs FakeOcr at assembly time (Task 7) so CI never hits the network.
+ * Swap PaddleOcr vs FakeOcr at assembly time (Task 7) so CI never hits the network.
  * recognize must not parse 编号/日期 fields — that belongs to parseOcrFields + extractByTemplate.
  */
 export interface OcrPort {
