@@ -1,49 +1,41 @@
-# Task 9 Report — logic 同步 + arch 闭环准备
+# Task 9 Report — 包级回归
 
 ## Status
 DONE
 
-## Plan
-`docs/apt/plans/2026-08-29-excel-gap-fill-plan.md` — Task 9
+## Commits
+`8c5413ff5b20ef21ec3b18383303ff3061c305d1` fix(ocr): type extractPdfUnicodeText against unpdf mergePages string
+
+BASE_SHA: `e811f6a8f033577a1f0d3282c034743b43f947d5`（开始时即 `HEAD`，Task 8 无新 commit）。
+
+未恢复 `BaiduOcr`。未改 latin1 括号抽字。未提交 `.ai/`（工作区该树原先已脏）。未调用 `audit_arch_changes`。
 
 ## Changes
+- MCP 只读：`query_project_status` → `projectType=component`，无 blockers。`query_contract` `PaddleOcr` / `OcrPort` 命中。`search_arch` 命中 `flattenOcrMarkdown` / `PaddleOcr` / `JobPipeline` / `getSharedSession`。`query_arch` `frontend/core-engine/util#extractPdfUnicodeText` 命中。未 `report_missing`。
+- `packages/core-engine/src/ocr/pdf-text.ts`：`extractText(..., { mergePages: true })` 的 unpdf overload 将 `text` 标为 `string`，原 `result.text.join("\n")` 落在 `never` 上，tsc 失败。改为直接返回 `result.text`。运行时仍走 Unicode 文本层，不回 latin1 括号正则。
 
-### `designs/v0/project_home/page.logic.md`
-- 新增操作：`listDocumentGaps`、`generateInspectionBatch`、`fillDocumentGap`
-- 主流程补充缺表扫描（CompletenessRule vs DocumentArtifact）与 Excel 生成上传
-- 约束：CompletenessRule 语义、generate 前置条件（excel 模板）
-- 依赖扩展：CompletenessRule、DocumentArtifact 及相关 REST API；验收 AC-3/AC-5/AC-8
+## Tests / Verify
 
-### `designs/v0/template_annotate/page.logic.md`
-- 新增操作：`loadExcelMappings`、`saveExcelMappings`、`uploadExcelTemplate`
-- 主流程按 `layout_kind` 分支：`raster` 画布 vs `excel` 映射面板
-- 约束：API 分支、映射字段与合并格锚点
-- 依赖扩展：ExcelCellMapping、excel-mappings / excel-template API；验收 AC-1/AC-2
+| Command | First run | After fix |
+|---------|-----------|-----------|
+| `npm test -w core-engine` | exit 0；22 files passed / 1 skipped；116 passed / 4 skipped（vitest 3.2.7，15.89s） | exit 0；同口径 116 passed / 4 skipped（16.08s） |
+| `npm run typecheck -w core-engine` | **exit 2** | exit 0 |
 
-### `designs/v0/pending_review/page.logic.md`
-- 新增 Tab 与操作：`listSignatureTasks`、`confirmSignatureTask`
-- 合并重复「主流程」段落；措辞待审 / 资料待签双 Tab 流程
-- 依赖扩展：SignatureTask、DocumentArtifact；验收 AC-5/AC-7
+首次失败摘要：
 
-### `packages/core-engine/src/index.ts`
-- 导出 Excel gap-fill 相关 row 类型：`CompletenessRuleRow`、`DocTypeRow`、`DocumentArtifactRow`、`ExcelCellMappingRow`、`FieldDefRow`、`FieldFillRuleRow`、`SignatureTaskRow`
-- 导出 write 类型：`ExcelCellMappingWrite`、`FieldFillRuleWrite`、`CompletenessRuleWrite`
-- 导出 pipeline 类型：`DocumentGap`、`DocumentGapsResult`
+```
+src/ocr/pdf-text.ts(51,72): error TS2339: Property 'join' does not exist on type 'never'.
+```
 
-## Verify
+`check_code_quality` PASS（0 issue）。Rn: R4、R8。
 
-| Command | Result |
-|---------|--------|
-| `npm test -w core-engine` | PASS (97 passed, 4 skipped) |
+## APT Micro-closeout
+- ContractsRegistered: none（无新类型；既有 `extractPdfUnicodeText` 签名未变）
+- AssetsRefreshed:
+  - `packages/core-engine/src/ocr/pdf-text.ts` → `frontend/core-engine/util/extractPdfUnicodeText`（action=updated）
+  - 同上 → `frontend/core-engine/util/pdf-text`（action=updated）
+- AssetsRemoved: none
+- `audit_arch_changes`: not called
 
-## Commit
-`docs: sync page.logic for excel gap-fill (task 9)`
-
-## Deferred (main agent / finish-feature)
-- MCP `register_contract` 新类型/服务
-- MCP `audit_arch_changes` → `refresh_asset`
-- `/verify docs/apt/plans/2026-08-29-excel-gap-fill-plan.md` 全量 AC 对照
-
-## Notes
-- raster 回归由全量 core-engine 测试覆盖（R9）
-- document-gaps 与 http-adapter excel flow 用例均通过（AC-8、AC-4/5/7 回归）
+## Concerns
+无。`.ai/` 索引已由 MCP 更新但未进本 commit。现有 `.apt/orchestration/task-9-report.md` 曾是更早「excel gap-fill」任务残留，本文件已按本 Task 覆盖。
