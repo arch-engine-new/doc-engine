@@ -1,0 +1,18 @@
+{
+  "schema": "apt/spec-redteam",
+  "version": 1,
+  "specPath": "docs/superpowers/specs/2026-09-14-paddleocr-aistudio-replace-design.md",
+  "round": 3,
+  "findings": [],
+  "resolution": {
+    "delta": [
+      "r1-M1/r2-D1: Unicode PDF decoder; examples pdf-text with CJK; scan fixture OCR",
+      "r1-M2: flattenOcrMarkdown + R10",
+      "r1-M3: jsonl line.result.layoutParsingResults",
+      "r1-M4/r2-D2: split 10010 vs timeout copy; no invented cancel",
+      "r1-M5: corpus spec R3/R4"
+    ],
+    "user": [],
+    "unresolved": []
+  }
+}

@@ -1,0 +1,21 @@
+{
+  "schema": "apt/spec-redteam",
+  "version": 1,
+  "specPath": "docs/superpowers/specs/2026-09-14-paddleocr-aistudio-replace-design.md",
+  "round": 2,
+  "findings": [
+    {
+      "lens": "形状≠行为",
+      "attack": "D1 闸门公式（BT 且 CJK≥8 或拉丁词≥8）对 examples 仍为 true，继续 pdf-text 乱码永不打 Paddle；P5 却要求同一函数为 false；pypdf 证明这些文件有 440–1089 汉字。跟公式则 R1 成立，跟 P5 则有字资料被送去 VL",
+      "evidence": "spec 澄清§5、P5、R5；extractPdfTextLayer 括号正则；6份 examples：includes(BT)=true、CJK=0、拉丁词2.8k-25.8k、抽出78k-752k → 公式gate=true；pypdf 首页3页 chars853-2213 han440-1089；语料 spec 现状表「样例有文字层 1.8k-2.1k」",
+      "severity": "high"
+    },
+    {
+      "lens": "册外",
+      "attack": "P6 把官方 10010/12002「请稍后重试」（submit 常无 jobId）与轮询超时「勿重复提交、远端仍在跑」捆成同一文案；L2 不覆盖 HTTP 200 + code=10010",
+      "evidence": "spec P6/R6；官方错误码 10010 queue full retry later（未标 HTTP 400）；12002=429 retry later；提交响应 code=0 为成功；jobs API 无 DELETE",
+      "severity": "medium"
+    }
+  ],
+  "resolution": { "delta": [], "user": [], "unresolved": [] }
+}

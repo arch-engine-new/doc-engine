@@ -25,7 +25,7 @@ feature: core-engine
 - 不把公路/水利/房建规范包写入产品 seed / 默认文案（style.md 与 `rejectIndustrySpecPackName` 已禁 pack 名含「公路|水利|房建」）。
 - 不新增第 10 页；不改冻结 9 页信息架构。
 - 不验收「JTG F80/1 评得对不对」、不写行业 DSL 规则包。
-- 不把 90MB 扫描件法规 PDF 塞进 `openUploadJob`（4MB 上限 + 无文字层会抛「扫描件 PDF 无法本地抽字」）。
+- 不把 90MB 扫描件法规 PDF 塞进 `openUploadJob`（4MB 上限）。≤4MB 扫描资料改走 `OcrPort`（见 `2026-09-14-paddleocr-aistudio-replace-design.md`）。
 - 不新增对外 HTTP 契约；标准入库仍走现有 `POST /api/standards/ingest` 的 `text` 字段。
 - 默认 CI 不打真实 Qdrant / Neo4j / 百度 OCR。
 
@@ -68,7 +68,7 @@ feature: core-engine
 ```
 rules/*.pdf  --OCR/摘录--> excerpt.txt --ingestStandard--> clauses[]
                                                       |
-examples/*.pdf --extractPdfTextLayer--> openUploadJob --> job + extraction
+examples/*.pdf --Unicode 文字层--> openUploadJob vendor=pdf-text → job + extraction
                                                       |
                          searchStandard(query from 桩号/分项名) --> RetrieveHit
                                                       |
@@ -81,9 +81,9 @@ examples/*.pdf --extractPdfTextLayer--> openUploadJob --> job + extraction
 
 | 情况 | 行为 |
 |------|------|
-| 法规扫描件直接 `openUploadJob` | 保持现状：抽字失败抛错；测试**断言此路径失败**，证明 Troops 未混用 |
+| 法规全书 `rules/` PDF 直接 `openUploadJob` | 体积约 90MB ≫ `MAX_UPLOAD_BYTES`（4MB）→ `UploadValidationError`，不插 Job（Troops 隔离靠体积闸门，不靠「凡扫描件必失败」） |
 | 摘录切出 0 条 | 测试失败（ingest 行为证据），再评估是否扩 `splitClauses` |
-| 样例 PDF 无文字层 | manifest 标记；该文件 skip 或改 JPEG 首页夹具；不得静默当成功 |
+| `examples/` 有真实文字层 | Unicode 解码走 `pdf-text`；断言抽出汉字，不得走括号乱码 |
 | 样例 >4MB | 当前 6 份均 <4MB；若超限，测试断言 `UploadValidationError` 且不插 Job |
 | 发明条款号 | `attachHit` / 检索未命中不得写入 `clause_id`（沿用 A11） |
 | live OCR 无凭证 | opt-in 脚本 skip，默认 CI 仍绿 |
@@ -213,8 +213,8 @@ S3 缺口：法规扫描件 → text 的生产路径在 HTTP 层仍是「先有 
 |----|----------|------|--------------------|--------|
 | R1 | 操作员法规以 text 经 `ingestStandard` 按条款切分入库 | 用户明示 | 摘录 ingest 后 `clauses.length ≥ 3`，每条 `clause_id` 形如 `${version_id}:${clauseNo}`，`qdrant_point_id === clause_id`，且不是按 512 token 切（沿用 split 不变量） | must |
 | R2 | 检索挂条只允许库内 clause | 追问确认（A11 查证） | exact 查询摘录中某 `clauseNo` 得 1 hit；`getClause(hit.clause_id)` 存在；对「第999条」不 insert finding / 不发明 id | must |
-| R3 | `examples/` 6 份 PDF 走 upload 文字层并生成 Job | 用户明示 | 每份 `openUploadJob({ mime: application/pdf, bytes })` 成功；`job.trace_id` 非空；`vendor` 为 `pdf-text` 或抽取文本长度 ≥ 3 | must |
-| R4 | 法规扫描件不得被当成资料 Job 成功 | 追问确认 | 对 `rules/` PDF（或无文字层夹具）调用 `openUploadJob` 抛错；`listJobs` 不增加（或 status=failed 且无假 clause_id，以实现时现有 throw 为准） | must |
+| R3 | `examples/` 6 份 PDF 走 upload 并生成 Job | 用户明示 | 每份 `openUploadJob({ mime: application/pdf, bytes })` 成功；`job.trace_id` 非空；`vendor` 为 `pdf-text`；`ocr_text` 含汉字（≥8），**禁止**括号乱码（0 汉字却 length 巨大）当成功 | must |
+| R4 | 法规全书不得被当成资料 Job 成功 | 追问确认 + 2026-09-14 OCR 替换修订 | 对 `rules/` PDF 调用 `openUploadJob` 因超过 4MB 抛 `UploadValidationError`；`listJobs` 不增加。不再用「任意无文字层夹具必须失败」当隔离证据 | must |
 | R5 | 测试 pack 不使用行业预置命名、不改产品 seed | 追问确认 + style.md | `createSpecPack` 名称无「公路」「水利」「房建」；不修改 `pipeline/seed.ts` 默认包 | must |
 | R6 | 默认 CI 不依赖 live OCR/三库 | AI 假设未确认→已降级 | opt-in 脚本无凭证时 skip；默认 `npm test -w core-engine` 不含网络 OCR | nice |
 | R7 | 全书 OCR 后切条 | AI 假设未确认 | 有凭证时 cache 中 headed clause ≥ 1 | nice |

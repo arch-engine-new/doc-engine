@@ -1,0 +1,39 @@
+{
+  "schema": "apt/spec-redteam",
+  "version": 1,
+  "specPath": "docs/superpowers/specs/2026-09-14-paddleocr-aistudio-replace-design.md",
+  "round": 1,
+  "findings": [
+    {
+      "lens": "形状≠行为",
+      "attack": "P5/R5 复用 extractPdfTextLayer 括号抽字；仓库 examples/*.pdf 均无 /BT 却被判有文字层，扫描件永不进 Paddle；无 /BT 夹具会假绿",
+      "evidence": "job-pipeline.ts 966-997; spec L34/L67/L264; 对 examples/ 6 份 PDF 用同一函数实测 hasBT=false 且 extractNull=false（extractLen 78k-752k 乱码）",
+      "severity": "high"
+    },
+    {
+      "lens": "形状≠行为",
+      "attack": "P4 只验收拼接 VL markdown.text；parseOcrFields 只认「编号：」标签行，无 VL markdown 夹具证明字段仍能抽出",
+      "evidence": "ocr-fields.ts 33-37,70-80; fake.ts 7-8; spec L22/L66/L70; 官方示例 markdown.text; 已批准 U3 未读到则 null",
+      "severity": "medium"
+    },
+    {
+      "lens": "册外",
+      "attack": "P4 把 jsonl 写成顶层 layoutParsingResults[]，官方是 line.result.layoutParsingResults；L2 按 P4 mock 会绿、真网抽空",
+      "evidence": "spec P4/数据流 L66,L102-104; 官方异步示例 json.loads(line)[\"result\"][\"layoutParsingResults\"]",
+      "severity": "medium"
+    },
+    {
+      "lens": "YAGNI 反向",
+      "attack": "180s 墙钟超时含 pending 排队且不取消远端 job，与 R6「避免烧额度」及官方 10010/12002「请稍后重试」冲突",
+      "evidence": "spec L77,L129,L134,R6 L265; openUploadJob 523-570; vite-plugin-core-engine.ts 37-43; http.ts 179; 官方错误码 10010/12002 与 state=pending",
+      "severity": "medium"
+    },
+    {
+      "lens": "用户意图错位",
+      "attack": "已批准语料 spec R4 与本片 P5 冲突只写风险，拟改动文件不含语料测试；FakeOcr 下无文字层夹具会变成成功 Job",
+      "evidence": "operator-corpus-kb-test-design.md status=approved R4 L217/L84; 本 spec L275,L279-291; session.ts 271-274 FakeOcr",
+      "severity": "medium"
+    }
+  ],
+  "resolution": { "delta": [], "user": [], "unresolved": [] }
+}
