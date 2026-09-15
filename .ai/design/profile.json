@@ -8,7 +8,7 @@
   "tokensCss": "designs/v0/styles/tokens.css",
   "globalCss": "designs/v0/styles/global.css",
   "styleMd": ".ai/design/style.md",
-  "syncedAt": "2026-08-30T06:30:47.308Z",
+  "syncedAt": "2026-09-15T15:42:26.653Z",
   "tokens": {
     "fontDisplay": "Sora, Source Han Sans SC, sans-serif",
     "fontBody": "Source Sans 3, Source Han Sans SC, sans-serif",
@@ -123,5 +123,5 @@
     "Manifest status is \"frozen\"; query_design will report manifest-not-approved",
     "No page.tsx implementation reference found"
   ],
-  "sourceMtimeMs": 1788071446615.803
+  "sourceMtimeMs": 1789485895755.4648
 }

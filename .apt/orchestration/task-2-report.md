@@ -1,47 +1,34 @@
-# Task 2 Report — PaddleOcr 适配器（注入 fetch）
+## Task 2 Report
 
-## Status
-DONE_WITH_CONCERNS
+**Status:** DONE
 
-## Commits
-`0c0c9a6db5130b73b79baff8fc0fff3bbdd1c6ab` feat(ocr): add PaddleOcr adapter with injectable fetch
+### Tests
+- Before: `query_design(page=standard_lib)` logicMarkdown 无 `tick` / `file_name` / `unit_id`（8/30 旧稿）。
+- CLI: `node C:\Users\weilt\.apt\arch-engine\dist\cli-design-sync.js D:\software\doc-engine --adapter v0`（先 `-h`；全量 sync，未用 `--incremental`）。exit 0；`pagesWritten: 10`；`syncedAt=2026-09-15T15:42:26.653Z`。
+- After `audit_design_changes`: `stale: []`；`profile.syncedAt=2026-09-15T15:42:26.653Z`。`ok:false` 仅因 `no-implementation-ref`（本 Task 不修）。
+- After `query_design(page=standard_lib)`：`logicMarkdown` 含 `tick`、`file_name`、`unit_id`；`stale: false`。
+- TDD RED/GREEN: N/A（无业务代码）
 
-BASE_SHA: `916162069ca898640ad6705701cc4cdd153240bf`
+### APT Micro-closeout
+- ContractsRegistered: 无（本 Task 无新对外 TS 类型）
+- AssetsRefreshed: 无。本 Task 无架构资产变更（design 知识不是 arch asset；禁止 `audit_arch_changes`）
+- AssetsRemoved: 无
 
-未 add `apps/web/.env`。未改 `baidu.ts` / `session.ts` / `index.ts`。未提交 `.ai/`（工作区该树原先已脏）。
+### FilesChanged
+- `.ai/design/profile.json`（CLI：`syncedAt` 刷新为 2026-09-15T15:42:26.653Z）
+- `.ai/design/logic/standard_lib.md`（含 tick / file_name / unit_id）
+- `.ai/design/logic/pending_review.md`
+- `.ai/design/logic/project_home.md`
+- `.ai/design/logic/template_annotate.md`
+- `.ai/design/design-vectors.db`（CLI embedding 重建）
+- `.apt/orchestration/task-2-report.md`
 
-## Changes
-- MCP 只读：`query_contract` name=`OcrPort` → `packages/core-engine/src/ocr/port.ts`；`recognize({bytes,mime,fileName})→{text,vendor,raw?}`。未读 `.ai/` 猜类型。
-- `packages/core-engine/src/ocr/paddleocr.ts`（新）：`PaddleOcr` 实现 `OcrPort`。
-  - 构造器：`PaddleOcrEnvConfig` + 可选 `{ fetch, now, sleep, pollIntervalMs }`。默认真实 `fetch` / `Date.now` / sleep 5s。
-  - `Authorization: bearer <token>`；本地 multipart `file` + `model` + `optionalPayload` JSON 字符串（三开关均为 false）。
-  - POST 一次 `/ocr/jobs` → 轮询 GET `{jobUrl}/{jobId}` → `state=done` 后 GET `resultUrl.jsonUrl`（jsonl 不带 token）。
-  - jsonl 必须走 `line.result.layoutParsingResults[].markdown.text`；缺 `result` 或无 markdown →「PaddleOCR 未返回可抽取文本」，禁止空串当成功。
-  - `vendor="paddleocr-vl"`。本 Task 不 flatten（留给 Task 3），成功路径返回原始 markdown。
-  - `bytes.byteLength > 50MB` 抛中文体积错，不 POST。
-  - HTTP 200 + `code=10010`/`12002` 或 HTTP≠200/429：文案「队列繁忙或限流，请稍后手动重试」；无「远端仍在执行」；不捏造 jobId。
-  - 已有 jobId 后超时：文案含 jobId +「请勿立即重复提交」；不 DELETE；失败路径 POST `/ocr/jobs` 恰好 1 次。
-  - `PaddleOcr.fromEnv` / `fromEnv`：无 token → `null`。Error 文案不含 token。
-- `packages/core-engine/src/ocr/port.ts`：注释 Baidu → Paddle（签名未改）。
-- `packages/core-engine/test/paddleocr.test.ts`（新）：mock fetch，jobUrl 为 `paddleocr.test`，URL 含 `aistudio-app.com` 即失败。
+未手写 `.ai/design/`。未改业务代码 / `designs/v0` / `.ai/arch`。
 
-## Tests / Verify
-```
-npm test -w core-engine -- paddleocr
-→ exit 0; Test Files 1 passed; Tests 6 passed (vitest 3.2.7, 33ms)
-```
+### Commits
+- `6cab4cb` chore(design): sync v0 recipes after C2 logic align
 
-覆盖：pending→running→done + `result` 包裹；仅顶层 `layoutParsingResults` 失败；HTTP 200+`code=10010` 含「请稍后手动重试」且不含「远端仍在执行」；超时含 jobId 与「请勿立即重复提交」且 POST 1 次、无 DELETE；`fromEnv` 无 token 为 null；>50MB 中文体积错且 0 次 fetch。Rn: R3、R4、R6、R11。
-
-## APT Micro-closeout
-- ContractsRegistered: `PaddleOcr` → `packages/core-engine/src/ocr/paddleocr.ts`
-- AssetsRefreshed:
-  - `packages/core-engine/src/ocr/paddleocr.ts` → `frontend/core-engine/util/PaddleOcr`（`kind=util`，`module=core-engine`）
-  - `packages/core-engine/src/ocr/port.ts` → `frontend/core-engine/util/OcrPort`（注释 Baidu→Paddle）
-- AssetsRemoved: none
-- `audit_arch_changes`: not called
-
-## Concerns
-- `baidu.ts` / `session.ts` / `index.ts` 仍引用已删除的百度 env 导出，本 Task 白名单禁止改它们；Task 6/7 接上前 `tsc` 会红。符合 brief。
-- flatten 留给 Task 3：成功路径目前返回原始 markdown，未调用 `flattenOcrMarkdown` / `parseOcrFields`。
-- `.ai/` 契约/资产更新未进本 commit（仓库该树原先已有大量未提交变更）。
+### Blockers / Concerns
+- `audit_design_changes.ok` 仍为 false：10 页 `blockingPageGaps` / `undeclared_implementations` 均为 `no-implementation-ref`（warn）。plan 明确不要求本轮清除。
+- CLI warning：`Manifest status is "frozen"`；`No page.tsx implementation reference found`。`query_design(standard_lib).approval.status` 仍为 `approved`。
+- 仅 4 页 logic 文件有 diff（standard_lib + Task 1 三页）；其余 6 页 recipe 磁盘已与源一致，未产生额外 JSON/md 改动。
