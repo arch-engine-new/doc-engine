@@ -22,13 +22,16 @@ import { MemoryGraphStore } from "./memory-graph.js";
 import { MemoryVectorStore } from "./memory-vector.js";
 import { FakePrequery } from "./prequery.js";
 import type {
+  ChunkKind,
   ClauseSpan,
   EdgeKind,
   GraphEdge,
+  PrequeryResult,
   RetrieveHit,
   RetrievePath,
   RetrievePorts,
   SearchHit,
+  VectorHit,
 } from "./ports.js";
 import { IndependentReranker } from "./rerank.js";
 
@@ -72,6 +75,29 @@ export interface AddStandardEdgeInput {
 }
 
 const DEFAULT_PAGE = 1;
+
+const GRAPH_KIND_SUPERSEDES = /替代|废止|supersede/i;
+const GRAPH_KIND_REQUIRES = /requires/i;
+const GRAPH_KIND_APPLIES = /applies/i;
+
+function vectorHitUnitId(item: VectorHit): string {
+  const unitId = item.payload?.unit_id;
+  if (typeof unitId === "string" && unitId.length > 0) return unitId;
+  return item.id;
+}
+
+function asChunkKind(value: string): ChunkKind {
+  if (value === "clause" || value === "table" || value === "annex") return value;
+  return "clause";
+}
+
+/** queryPath must always receive a kind; untyped walks let PARENT_OF steal A13. */
+function inferGraphKind(rewritten: string): EdgeKind {
+  if (GRAPH_KIND_SUPERSEDES.test(rewritten)) return "SUPERSEDES";
+  if (GRAPH_KIND_REQUIRES.test(rewritten)) return "REQUIRES";
+  if (GRAPH_KIND_APPLIES.test(rewritten)) return "APPLIES_TO";
+  return "CITES";
+}
 
 function fileNameFromUri(fileUri: string): string {
   const noQuery = (fileUri.trim().split(/[?#]/, 1)[0] ?? fileUri).replace(/\\/g, "/");
@@ -219,16 +245,42 @@ export class StandardLibrary {
     return (await this.store.listEffectiveStandardVersions(packId)).map((row) => row.version_id);
   }
 
+  /**
+   * Graph targets may live in a sibling pack. Pack-only versionIds drop those
+   * hits even when CITES/SUPERSEDES already exist (R29).
+   */
+  async resolveProjectEffectiveVersionIds(packId: string): Promise<string[]> {
+    const pack = await this.store.getSpecPack(packId);
+    if (!pack) {
+      throw new Error(`spec pack not found: ${packId}`);
+    }
+    const seen = new Set<string>();
+    const ids: string[] = [];
+    for (const other of await this.store.listSpecPacks(pack.project_id)) {
+      for (const versionId of await this.resolveEffectiveVersionIds(other.pack_id)) {
+        if (seen.has(versionId)) continue;
+        seen.add(versionId);
+        ids.push(versionId);
+      }
+    }
+    return ids;
+  }
+
+  /**
+   * Graph uses project-wide effective versions so a CITES target in a sibling
+   * pack is not dropped. Exact/semantic stay on the caller's pack versions.
+   */
   async searchStandard(input: SearchStandardInput): Promise<RetrieveHit[]> {
-    const versionIds = await this.resolveEffectiveVersionIds(input.packId);
     const pre = await this.ports.prequery.rewrite(input.query);
     let hits: RetrieveHit[] = [];
-    if (pre.intent === "exact") {
-      hits = await this.searchExact(versionIds, pre.clauseNo ?? pre.rewritten);
-    } else if (pre.intent === "graph") {
-      hits = await this.searchGraph(versionIds, pre.clauseNo, pre.toClauseNo);
+    if (pre.intent === "graph") {
+      hits = await this.searchGraph(input.packId, pre);
     } else {
-      hits = await this.searchSemantic(versionIds, pre.rewritten);
+      const versionIds = await this.resolveEffectiveVersionIds(input.packId);
+      hits =
+        pre.intent === "exact"
+          ? await this.searchExact(versionIds, pre.clauseNo ?? pre.rewritten)
+          : await this.searchSemantic(versionIds, pre.rewritten);
     }
 
     if (input.jobId) {
@@ -338,50 +390,119 @@ export class StandardLibrary {
 
   private async searchSemantic(versionIds: string[], rewritten: string): Promise<RetrieveHit[]> {
     const queryVector = this.ports.embed.embed(rewritten);
-    const collected: RetrieveHit[] = [];
+    const scoredTables: Array<{ score: number; hit: RetrieveHit }> = [];
+    const clauseHits: RetrieveHit[] = [];
     for (const versionId of versionIds) {
-      const neighbors = await this.ports.vector.search(queryVector, { versionId, topK: 8 });
-      const candidates: Array<{
-        clause_id: string;
-        text: string;
-        vector?: number[];
-        clause: ClauseRow;
-      }> = [];
-      for (const item of neighbors) {
-        const clause = await this.store.getClause(item.id);
-        if (!clause || clause.version_id !== versionId) continue;
-        candidates.push({
-          clause_id: clause.clause_id,
-          text: `${clause.heading ?? ""}\n${clause.body}`,
-          vector: item.vector,
-          clause,
-        });
-      }
-      if (candidates.length === 0) continue;
-      const ordered = await this.ports.rerank.rerank(rewritten, candidates);
-      const topId = ordered[0];
-      const top = candidates.find((item) => item.clause_id === topId) ?? candidates[0];
-      if (top) collected.push(this.toHit(top.clause, "vector"));
+      const split = await this.semanticHitsForVersion(versionId, rewritten, queryVector);
+      scoredTables.push(...split.tables);
+      clauseHits.push(...split.clauses);
     }
-    return collected;
+    scoredTables.sort((a, b) => b.score - a.score);
+    return [...scoredTables.map((item) => item.hit), ...clauseHits];
   }
 
-  private async searchGraph(
-    versionIds: string[],
-    fromNo?: string,
-    toNo?: string,
+  private async semanticHitsForVersion(
+    versionId: string,
+    rewritten: string,
+    queryVector: number[],
+  ): Promise<{ tables: Array<{ score: number; hit: RetrieveHit }>; clauses: RetrieveHit[] }> {
+    const neighbors = await this.ports.vector.search(queryVector, { versionId, topK: 8 });
+    const tables: Array<{ score: number; hit: RetrieveHit }> = [];
+    const candidates: Array<{
+      clause_id: string;
+      text: string;
+      vector?: number[];
+      clause: ClauseRow;
+    }> = [];
+    for (const item of neighbors) {
+      const classified = await this.classifySemanticNeighbor(item, versionId);
+      if (!classified) continue;
+      if (classified.kind === "table") {
+        tables.push({ score: item.score, hit: classified.hit });
+      } else {
+        candidates.push(classified.candidate);
+      }
+    }
+    return { tables, clauses: await this.rerankClauseHits(rewritten, candidates) };
+  }
+
+  private async classifySemanticNeighbor(
+    item: VectorHit,
+    versionId: string,
+  ): Promise<
+    | { kind: "table"; hit: RetrieveHit }
+    | {
+        kind: "clause";
+        candidate: {
+          clause_id: string;
+          text: string;
+          vector?: number[];
+          clause: ClauseRow;
+        };
+      }
+    | null
+  > {
+    const unit = await this.store.getLayoutUnit(vectorHitUnitId(item));
+    if (!unit || unit.version_id !== versionId) return null;
+    if (unit.chunk_kind === "table" || unit.chunk_kind === "annex") {
+      const supported =
+        unit.chunk_kind === "table" ? await this.supportedClauseIds(unit.unit_id) : undefined;
+      return { kind: "table", hit: this.toUnitHit(unit, "vector", supported) };
+    }
+    if (unit.chunk_kind !== "clause" || !unit.clause_id) return null;
+    const clause = await this.store.getClause(unit.clause_id);
+    if (!clause || clause.version_id !== versionId) return null;
+    return {
+      kind: "clause",
+      candidate: {
+        clause_id: clause.clause_id,
+        text: `${clause.heading ?? ""}\n${clause.body}`,
+        vector: item.vector,
+        clause,
+      },
+    };
+  }
+
+  private async rerankClauseHits(
+    rewritten: string,
+    candidates: Array<{
+      clause_id: string;
+      text: string;
+      vector?: number[];
+      clause: ClauseRow;
+    }>,
   ): Promise<RetrieveHit[]> {
-    const fromClause = fromNo ? await this.findByNumber(versionIds, fromNo) : null;
+    if (candidates.length === 0) return [];
+    const ordered = await this.ports.rerank.rerank(rewritten, candidates);
+    const hits: RetrieveHit[] = [];
+    for (const clauseId of ordered) {
+      const match = candidates.find((item) => item.clause_id === clauseId);
+      if (match) hits.push(this.toHit(match.clause, "vector"));
+    }
+    return hits;
+  }
+
+  private async supportedClauseIds(unitId: string): Promise<string[]> {
+    const edges = await this.ports.graph.queryPath(unitId, "SUPPORTS");
+    return edges.map((edge) => edge.to);
+  }
+
+  private async searchGraph(packId: string, pre: PrequeryResult): Promise<RetrieveHit[]> {
+    const versionIds = await this.resolveProjectEffectiveVersionIds(packId);
+    const fromClause = pre.clauseNo ? await this.findByNumber(versionIds, pre.clauseNo) : null;
     if (!fromClause) return [];
     let path: GraphEdge[] = [];
-    if (toNo) {
-      const toClause = await this.findByNumber(versionIds, toNo);
+    if (pre.toClauseNo) {
+      const toClause = await this.findByNumber(versionIds, pre.toClauseNo);
       if (toClause) {
         path = await this.ports.graph.shortestPath(fromClause.clause_id, toClause.clause_id);
       }
     }
     if (path.length === 0) {
-      path = await this.ports.graph.queryPath(fromClause.clause_id);
+      path = await this.ports.graph.queryPath(
+        fromClause.clause_id,
+        inferGraphKind(pre.rewritten),
+      );
     }
     if (path.length === 0) return [];
     const targetId = path[path.length - 1]!.to;
@@ -403,7 +524,7 @@ export class StandardLibrary {
 
   /**
    * Hits must carry file/page/unit or citation UI cannot show provenance.
-   * Table hits are Task 6; this path only builds clause hits from t_clause.
+   * Clause-only builder; table/annex hits go through toUnitHit so clause_id stays null.
    */
   private toHit(clause: ClauseRow, retrieve_path: RetrievePath): RetrieveHit {
     const pageStart = clause.page_start && clause.page_start > 0 ? clause.page_start : DEFAULT_PAGE;
@@ -418,6 +539,29 @@ export class StandardLibrary {
       page_end: pageEnd,
       standard_version_id: clause.version_id,
       span: parseSpan(clause.span_json),
+      retrieve_path,
+    };
+  }
+
+  /** Table/annex hits keep clause_id null so attachHit cannot treat a unit as a clause. */
+  private toUnitHit(
+    unit: LayoutUnitRow,
+    retrieve_path: RetrievePath,
+    supportedClauseIds?: string[],
+  ): RetrieveHit {
+    const pageStart = unit.page_start > 0 ? unit.page_start : DEFAULT_PAGE;
+    const pageEnd = unit.page_end >= pageStart ? unit.page_end : pageStart;
+    const kind = asChunkKind(unit.chunk_kind);
+    return {
+      clause_id: kind === "clause" ? unit.clause_id : null,
+      unit_id: unit.unit_id,
+      chunk_kind: kind,
+      file_name: unit.file_name.length > 0 ? unit.file_name : "unknown",
+      page_start: pageStart,
+      page_end: pageEnd,
+      supported_clause_ids: supportedClauseIds,
+      standard_version_id: unit.version_id,
+      span: null,
       retrieve_path,
     };
   }

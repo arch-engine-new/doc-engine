@@ -384,4 +384,68 @@ describe("layout ingest SUPPORTS / CITES", () => {
     );
     expect(supports).toHaveLength(0);
   });
+
+  it("search 见表 keeps table hit with SUPPORTS clause ids (M3)", async () => {
+    const { pack, ingested, idOf } = await ingestText(GFM_TABLE_TEXT);
+    const hits = await pipeline.searchStandard({ packId: pack.pack_id, query: "见表" });
+    const tableHit = hits.find((hit) => hit.chunk_kind === "table");
+    expect(tableHit).toBeTruthy();
+    expect(hits[0]?.chunk_kind).toBe("table");
+    expect(tableHit?.clause_id).toBeNull();
+    expect(tableHit?.unit_id).toBe(ingested.layoutUnits.find((u) => u.chunk_kind === "table")?.unit_id);
+    expect(tableHit?.file_name).toBe("leave.md");
+    expect(tableHit?.page_start).toBe(1);
+    expect(tableHit?.page_end).toBe(1);
+    expect(tableHit?.supported_clause_ids?.length).toBeGreaterThanOrEqual(2);
+    expect([...(tableHit?.supported_clause_ids ?? [])].sort()).toEqual(
+      [idOf("1.1"), idOf("2.1")].sort(),
+    );
+  });
+
+  it("FakePrequery does not exact-match table captions (M12/R20)", () => {
+    expect(new FakePrequery().rewrite("表 8.5.1-1").intent).not.toBe("exact");
+    expect(new FakePrequery().rewrite("见表 8.5.1-1").intent).toBe("semantic");
+    expect(new FakePrequery().rewrite("附表 8.5.1-1").intent).toBe("semantic");
+  });
+
+  it("packA graph retrieve hits packB clause in the same project (R29)", async () => {
+    const project = await pipeline.createProject();
+    const packA = await pipeline.createSpecPack({
+      projectId: project.project_id,
+      name: "包A",
+      version: "1",
+    });
+    const packB = await pipeline.createSpecPack({
+      projectId: project.project_id,
+      name: "包B",
+      version: "1",
+    });
+    const ingestedA = await pipeline.ingestStandard({
+      packId: packA.pack_id,
+      title: "标准A",
+      fileUri: "fixture://pack-a.md",
+      text: `1.1 事假须提前申请。\n须提前书面申请。\n`,
+    });
+    const ingestedB = await pipeline.ingestStandard({
+      packId: packB.pack_id,
+      title: "标准B",
+      fileUri: "fixture://pack-b.md",
+      text: `2.1 审批时限为三个工作日。\n主管须书面回复。\n`,
+    });
+    const fromId = `${ingestedA.version.version_id}:1.1`;
+    const toId = `${ingestedB.version.version_id}:2.1`;
+    await pipeline.addStandardEdge({ from: fromId, to: toId, kind: "CITES" });
+
+    const hits = await pipeline.searchStandard({
+      packId: packA.pack_id,
+      query: "1.1引用哪条",
+    });
+    expect(hits[0]?.retrieve_path).toBe("graph");
+    expect(hits[0]?.clause_id).toBe(toId);
+    expect(hits[0]?.unit_id).toBe(toId);
+    expect(hits[0]?.file_name).toBe("pack-b.md");
+    expect(hits[0]?.page_start).toBe(1);
+    expect(hits[0]?.page_end).toBe(1);
+    expect(hits[0]?.path).toEqual([{ from: fromId, to: toId, kind: "CITES" }]);
+  });
 });
