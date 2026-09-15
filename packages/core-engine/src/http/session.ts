@@ -467,11 +467,16 @@ async function deleteQdrantCollection(qdrantUrl: string): Promise<void> {
   }
 }
 
+/**
+ * Demo reset must drop LayoutUnit as well as Clause. Clause-only DETACH
+ * left SUPPORTS sources behind so the next ingest reused dirty table nodes.
+ */
 async function deleteNeo4jClauses(uri: string, user: string, password: string): Promise<void> {
   const driver = neo4j.driver(uri, neo4j.auth.basic(user, password));
   const session = driver.session();
   try {
     await session.run("MATCH (c:Clause) DETACH DELETE c");
+    await session.run("MATCH (n:LayoutUnit) DETACH DELETE n");
   } finally {
     await session.close();
     await driver.close();
