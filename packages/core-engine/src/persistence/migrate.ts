@@ -42,6 +42,10 @@ const LEDGER_TABLES = [
   "t_standard_version",
   "t_clause",
   "t_standard_edge",
+  "t_layout_unit",
+  "t_layout_edge",
+  "t_ingest_run",
+  "t_ingest_page",
 ] as const;
 
 /** @deprecated Use LEDGER_TABLES; kept so SLICE-1 callers keep compiling. */
@@ -75,12 +79,32 @@ function ensureExcelGapFillColumns(db: Database.Database): void {
   }
 }
 
+/** Add layout provenance columns on legacy SQLite ledgers created before RAG ingest. */
+function ensureRagLayoutColumns(db: Database.Database): void {
+  if (!tableHasColumn(db, "t_clause", "clause_id")) {
+    return;
+  }
+  if (!tableHasColumn(db, "t_clause", "file_name")) {
+    db.exec(`ALTER TABLE t_clause ADD COLUMN file_name VARCHAR(512) NULL`);
+  }
+  if (!tableHasColumn(db, "t_clause", "page_start")) {
+    db.exec(`ALTER TABLE t_clause ADD COLUMN page_start INTEGER NULL`);
+  }
+  if (!tableHasColumn(db, "t_clause", "page_end")) {
+    db.exec(`ALTER TABLE t_clause ADD COLUMN page_end INTEGER NULL`);
+  }
+  db.exec(`CREATE INDEX IF NOT EXISTS idx_t_clause_file_page ON t_clause(file_name, page_start)`);
+}
+
 export function runMigrationOnDb(db: Database.Database): void {
   const sql = readFileSync(MIGRATION_FILE, "utf-8");
   db.pragma("foreign_keys = ON");
+  // ALTER t_clause before CREATE INDEX in sqlite-slice1.sql so old DBs do not fail.
+  ensureRagLayoutColumns(db);
   db.exec(sql);
   ensureDocTypeColumns(db);
   ensureExcelGapFillColumns(db);
+  ensureRagLayoutColumns(db);
 }
 
 export async function runMigration(dbPath: string): Promise<void> {

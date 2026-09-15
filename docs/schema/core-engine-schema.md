@@ -8,8 +8,8 @@
 
 ## 变更摘要
 
-- 新建表：`t_project`, `t_spec_pack`, `t_doc_type`, `t_field_def`, `t_template`, `t_excel_cell_mapping`, `t_field_fill_rule`, `t_document_artifact`, `t_signature_task`, `t_completeness_rule`, `t_field_box`, `t_rule`, `t_rule_version`, `t_rule_fixture`, `t_standard_doc`, `t_standard_version`, `t_clause`, `t_standard_edge`, `t_job`, `t_document`, `t_extraction`, `t_finding`, `t_proposal`, `t_receipt`, `t_volume_preview`, `t_audit_event`, `t_conversation_thread`, `t_conversation_message`
-- 变更表：`t_template` 增 `doc_type_id`、`layout_kind`、`excel_template_uri`、`excel_sheet_name`；`t_job` 增 `doc_type_id`
+- 新建表：`t_project`, `t_spec_pack`, `t_doc_type`, `t_field_def`, `t_template`, `t_excel_cell_mapping`, `t_field_fill_rule`, `t_document_artifact`, `t_signature_task`, `t_completeness_rule`, `t_field_box`, `t_rule`, `t_rule_version`, `t_rule_fixture`, `t_standard_doc`, `t_standard_version`, `t_clause`, `t_standard_edge`, `t_layout_unit`, `t_layout_edge`, `t_ingest_run`, `t_ingest_page`, `t_job`, `t_document`, `t_extraction`, `t_finding`, `t_proposal`, `t_receipt`, `t_volume_preview`, `t_audit_event`, `t_conversation_thread`, `t_conversation_message`
+- 变更表：`t_template` 增 `doc_type_id`、`layout_kind`、`excel_template_uri`、`excel_sheet_name`；`t_job` 增 `doc_type_id`；`t_clause` 增 `file_name`、`page_start`、`page_end`
 - 复用表：`t_agent_graph`, `t_agent_run`, `t_agent_node_execution`, `t_agent_checkpoint`, `t_agent_tool_call`, `t_agent_run_event`, `t_agent_hitl_interrupt`（见 `docs/schema/agent-runtime-schema.md`）
 - 实体处置：`Project/SpecPack/DocType/FieldDef/Template/FieldBox/Rule/RuleVersion/StandardDoc/Clause/Job/Document/Extraction/Finding/Proposal/Receipt/VolumePreview/AuditEvent/ConversationThread=create`；`AgentRun/HitlInterrupt=reuse`
 
@@ -351,7 +351,7 @@ SLICE-1 先 apply：`t_project`, `t_job`, `t_document`, `t_extraction`, `t_rule`
 - 表名：`t_clause`
 - 处置：create
 - 主键：`id`
-- 索引：`uk_t_clause_clause_id` / `idx_t_clause_version_id`
+- 索引：`uk_t_clause_clause_id` / `idx_t_clause_version_id` / `idx_t_clause_file_page`
 
 | 字段名 | 类型 | 可空 | 说明 |
 |--------|------|------|------|
@@ -363,6 +363,9 @@ SLICE-1 先 apply：`t_project`, `t_job`, `t_document`, `t_extraction`, `t_rule`
 | body | TEXT | NO | 条款正文 |
 | span_json | JSON | YES | 原文 span |
 | qdrant_point_id | VARCHAR(64) | YES | 向量主键，等于 clause_id |
+| file_name | VARCHAR(512) | YES | ingest 后非空，来源文件名 |
+| page_start | INTEGER | YES | 1-based 起始页 |
+| page_end | INTEGER | YES | ≥ page_start |
 | created_at | DATETIME | NO | 创建时间 |
 | updated_at | DATETIME | NO | 更新时间 |
 | creator | VARCHAR(64) | NO | 创建人 |
@@ -381,6 +384,92 @@ SLICE-1 先 apply：`t_project`, `t_job`, `t_document`, `t_extraction`, `t_rule`
 | from_clause_id | VARCHAR(64) | NO | 边起点 |
 | to_clause_id | VARCHAR(64) | NO | 边终点 |
 | kind | VARCHAR(32) | NO | CITES/SUPERSEDES/APPLIES_TO/REQUIRES |
+| created_at | DATETIME | NO | 创建时间 |
+| updated_at | DATETIME | NO | 更新时间 |
+| creator | VARCHAR(64) | NO | 创建人 |
+| updater | VARCHAR(64) | NO | 更新人 |
+| deleted | TINYINT(1) | NO | 逻辑删除 0/1 |
+
+### 表 `t_layout_unit`
+- 表名：`t_layout_unit`
+- 处置：create
+- 主键：`id`
+- 索引：`uk_t_layout_unit_unit_id` / `idx_t_layout_unit_version_id`
+
+| 字段名 | 类型 | 可空 | 说明 |
+|--------|------|------|------|
+| id | BIGINT | NO | 主键 |
+| unit_id | VARCHAR(64) | NO | 版式单元，向量主键 |
+| version_id | VARCHAR(64) | NO | 所属标准版本 |
+| chunk_kind | VARCHAR(16) | NO | clause/table/annex |
+| clause_id | VARCHAR(64) | YES | 表/附件为空，禁止回填 |
+| file_name | VARCHAR(512) | NO | 来源文件名 |
+| page_start | INTEGER | NO | 1-based 起始页 |
+| page_end | INTEGER | NO | ≥ page_start |
+| heading | VARCHAR(256) | YES | 标题；表块可空 |
+| body_markdown | TEXT | NO | 须能含 `\|`，禁止拍平 |
+| qdrant_point_id | VARCHAR(64) | NO | 等于 unit_id |
+| ingest_run_id | VARCHAR(64) | YES | 所属 ingest 批次 |
+| created_at | DATETIME | NO | 创建时间 |
+| updated_at | DATETIME | NO | 更新时间 |
+| creator | VARCHAR(64) | NO | 创建人 |
+| updater | VARCHAR(64) | NO | 更新人 |
+| deleted | TINYINT(1) | NO | 逻辑删除 0/1 |
+
+### 表 `t_layout_edge`
+- 表名：`t_layout_edge`
+- 处置：create
+- 主键：`id`
+- 索引：`idx_t_layout_edge_from` / `idx_t_layout_edge_to`
+
+| 字段名 | 类型 | 可空 | 说明 |
+|--------|------|------|------|
+| id | BIGINT | NO | 主键 |
+| from_unit_id | VARCHAR(64) | NO | 边起点 unit |
+| to_unit_id | VARCHAR(64) | NO | 边终点 unit |
+| kind | VARCHAR(32) | NO | PARENT_OF/BELONGS_TO/SUPPORTS/CITES |
+| link_method | VARCHAR(16) | NO | caption/cell_ref/manual |
+| confidence | DOUBLE | YES | 规则链接置信度，默认 1.0，禁止 LLM 分 |
+| created_at | DATETIME | NO | 创建时间 |
+| updated_at | DATETIME | NO | 更新时间 |
+| creator | VARCHAR(64) | NO | 创建人 |
+| updater | VARCHAR(64) | NO | 更新人 |
+| deleted | TINYINT(1) | NO | 逻辑删除 0/1 |
+
+### 表 `t_ingest_run`
+- 表名：`t_ingest_run`
+- 处置：create
+- 主键：`id`
+- 索引：`uk_t_ingest_run_ingest_run_id`
+
+| 字段名 | 类型 | 可空 | 说明 |
+|--------|------|------|------|
+| id | BIGINT | NO | 主键 |
+| ingest_run_id | VARCHAR(64) | NO | 摄入批次标识 |
+| doc_id | VARCHAR(64) | NO | 所属标准文档 |
+| pack_id | VARCHAR(64) | NO | 所属规范包 |
+| status | VARCHAR(32) | NO | pending/running/done/error |
+| file_name | VARCHAR(512) | NO | 来源文件名 |
+| created_at | DATETIME | NO | 创建时间 |
+| updated_at | DATETIME | NO | 更新时间 |
+| creator | VARCHAR(64) | NO | 创建人 |
+| updater | VARCHAR(64) | NO | 更新人 |
+| deleted | TINYINT(1) | NO | 逻辑删除 0/1 |
+
+### 表 `t_ingest_page`
+- 表名：`t_ingest_page`
+- 处置：create
+- 主键：`id`
+- 索引：`uk_t_ingest_page_run_page`
+
+| 字段名 | 类型 | 可空 | 说明 |
+|--------|------|------|------|
+| id | BIGINT | NO | 主键 |
+| ingest_run_id | VARCHAR(64) | NO | 所属摄入批次 |
+| doc_id | VARCHAR(64) | NO | 所属标准文档 |
+| page_no | INTEGER | NO | 1-based 页码 |
+| status | VARCHAR(16) | NO | pending/ok/ocr_error/index_error；无 CHECK，index_error 必须可写 |
+| error | VARCHAR(512) | YES | 失败原因 |
 | created_at | DATETIME | NO | 创建时间 |
 | updated_at | DATETIME | NO | 更新时间 |
 | creator | VARCHAR(64) | NO | 创建人 |
@@ -615,6 +704,11 @@ SLICE-1 先 apply：`t_project`, `t_job`, `t_document`, `t_extraction`, `t_rule`
 | t_standard_version | t_standard_doc | many-to-one |
 | t_clause | t_standard_version | many-to-one |
 | t_standard_edge | t_clause | many-to-many |
+| t_layout_unit | t_standard_version | many-to-one |
+| t_layout_unit | t_clause | many-to-one |
+| t_layout_edge | t_layout_unit | many-to-many |
+| t_ingest_run | t_standard_doc | many-to-one |
+| t_ingest_page | t_ingest_run | many-to-one |
 | t_job | t_project | many-to-one |
 | t_job | t_doc_type | many-to-one |
 | t_document | t_job | many-to-one |
@@ -654,6 +748,11 @@ erDiagram
   t_standard_doc ||--o{ t_standard_version : versions
   t_standard_version ||--o{ t_clause : clauses
   t_clause ||--o{ t_standard_edge : from
+  t_standard_version ||--o{ t_layout_unit : units
+  t_clause |o--o{ t_layout_unit : optional
+  t_layout_unit ||--o{ t_layout_edge : from
+  t_standard_doc ||--o{ t_ingest_run : ingest
+  t_ingest_run ||--o{ t_ingest_page : pages
   t_project ||--o{ t_job : has
   t_doc_type ||--o{ t_job : classifies
   t_job ||--o{ t_document : files

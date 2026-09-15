@@ -69,6 +69,19 @@ async function ensureExcelGapFillColumns(client: pg.Client): Promise<void> {
   }
 }
 
+/** Add layout provenance columns on legacy Postgres ledgers created before RAG ingest. */
+async function ensureRagLayoutColumns(client: pg.Client): Promise<void> {
+  if (!(await tableExists(client, "t_clause"))) {
+    return;
+  }
+  await client.query(`ALTER TABLE t_clause ADD COLUMN IF NOT EXISTS file_name VARCHAR(512) NULL`);
+  await client.query(`ALTER TABLE t_clause ADD COLUMN IF NOT EXISTS page_start INTEGER NULL`);
+  await client.query(`ALTER TABLE t_clause ADD COLUMN IF NOT EXISTS page_end INTEGER NULL`);
+  await client.query(
+    `CREATE INDEX IF NOT EXISTS idx_t_clause_file_page ON t_clause(file_name, page_start)`,
+  );
+}
+
 /** Apply generated IF NOT EXISTS DDL instead of a hand-written live schema. */
 export async function runPgMigration(databaseUrl: string): Promise<void> {
   const sql = readFileSync(MIGRATION_FILE, "utf-8");
@@ -79,6 +92,7 @@ export async function runPgMigration(databaseUrl: string): Promise<void> {
     // Legacy ledgers may lack doc_type_id before new tables/indexes are applied.
     await ensureDocTypeColumns(client);
     await ensureExcelGapFillColumns(client);
+    await ensureRagLayoutColumns(client);
     for (const statement of statements) {
       await client.query(statement);
     }

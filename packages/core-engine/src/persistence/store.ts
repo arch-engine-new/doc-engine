@@ -23,7 +23,11 @@ import type {
   FieldDefRow,
   FieldFillRuleRow,
   FindingRow,
+  IngestPageRow,
+  IngestRunRow,
   JobRow,
+  LayoutEdgeRow,
+  LayoutUnitRow,
   ProjectRow,
   ProposalRow,
   ReceiptRow,
@@ -86,7 +90,63 @@ export type CompletenessRuleWrite = Pick<
   "doc_type_id" | "label" | "required"
 > & { rule_id?: string };
 
+/** Layout unit write; body_markdown must keep table pipes, not flattened OCR. */
+export type LayoutUnitWrite = {
+  unit_id?: string;
+  version_id: string;
+  chunk_kind: string;
+  clause_id?: string | null;
+  file_name: string;
+  page_start: number;
+  page_end: number;
+  heading?: string | null;
+  body_markdown: string;
+  qdrant_point_id?: string | null;
+  ingest_run_id?: string | null;
+};
+
+/** Auto layout edges (PARENT_OF/SUPPORTS); not human CITES on t_standard_edge. */
+export type LayoutEdgeWrite = {
+  from_unit_id: string;
+  to_unit_id: string;
+  kind: string;
+  link_method: string;
+  confidence?: number | null;
+};
+
+/** Creating a run also inserts N pending pages so index_error can be recorded later. */
+export type IngestRunWrite = {
+  ingest_run_id?: string;
+  doc_id: string;
+  pack_id: string;
+  status?: string;
+  file_name: string;
+  page_count: number;
+};
+
+/** Page tick; status may be index_error (vector fail) which is not ocr_error. */
+export type IngestPageUpdate = {
+  ingest_run_id: string;
+  page_no: number;
+  status: string;
+  error?: string | null;
+};
+
 const SYSTEM = "system";
+
+function insertPendingIngestPages(
+  db: Database.Database,
+  input: { ingest_run_id: string; doc_id: string; page_count: number; ts: string },
+): void {
+  const stmt = db.prepare(
+    `INSERT INTO t_ingest_page
+      (ingest_run_id, doc_id, page_no, status, error, created_at, updated_at, creator, updater, deleted)
+     VALUES (?, ?, ?, 'pending', NULL, ?, ?, ?, ?, 0)`,
+  );
+  for (let pageNo = 1; pageNo <= input.page_count; pageNo += 1) {
+    stmt.run(input.ingest_run_id, input.doc_id, pageNo, input.ts, input.ts, SYSTEM, SYSTEM);
+  }
+}
 
 export class CoreEngineStore {
   constructor(private readonly db: Database.Database) {}
@@ -331,14 +391,17 @@ export class CoreEngineStore {
     body: string;
     span_json?: string | null;
     qdrant_point_id?: string | null;
+    file_name?: string | null;
+    page_start?: number | null;
+    page_end?: number | null;
   }): ClauseRow {
     const ts = nowIso();
     this.db
       .prepare(
         `INSERT INTO t_clause
           (clause_id, version_id, parent_clause_id, heading, body, span_json, qdrant_point_id,
-           created_at, updated_at, creator, updater, deleted)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0)`,
+           file_name, page_start, page_end, created_at, updated_at, creator, updater, deleted)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0)`,
       )
       .run(
         input.clause_id,
@@ -348,6 +411,9 @@ export class CoreEngineStore {
         input.body,
         input.span_json ?? null,
         input.qdrant_point_id ?? input.clause_id,
+        input.file_name ?? null,
+        input.page_start ?? null,
+        input.page_end ?? null,
         ts,
         ts,
         SYSTEM,
@@ -400,6 +466,164 @@ export class CoreEngineStore {
     return this.db
       .prepare(`SELECT * FROM t_standard_edge WHERE deleted = 0 ORDER BY id ASC`)
       .all() as StandardEdgeRow[];
+  }
+
+  /**
+   * Layout units are the ingest/search grain. Table/annex chunks stay here with
+   * null clause_id so t_clause never receives a fabricated id.
+   */
+  insertLayoutUnit(input: LayoutUnitWrite): LayoutUnitRow {
+    const ts = nowIso();
+    const unit_id = input.unit_id ?? newId("lu");
+    const qdrant_point_id = input.qdrant_point_id ?? unit_id;
+    this.db
+      .prepare(
+        `INSERT INTO t_layout_unit
+          (unit_id, version_id, chunk_kind, clause_id, file_name, page_start, page_end,
+           heading, body_markdown, qdrant_point_id, ingest_run_id,
+           created_at, updated_at, creator, updater, deleted)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0)`,
+      )
+      .run(
+        unit_id,
+        input.version_id,
+        input.chunk_kind,
+        input.clause_id ?? null,
+        input.file_name,
+        input.page_start,
+        input.page_end,
+        input.heading ?? null,
+        input.body_markdown,
+        qdrant_point_id,
+        input.ingest_run_id ?? null,
+        ts,
+        ts,
+        SYSTEM,
+        SYSTEM,
+      );
+    return this.getLayoutUnit(unit_id)!;
+  }
+
+  getLayoutUnit(unitId: string): LayoutUnitRow | null {
+    const row = this.db
+      .prepare(`SELECT * FROM t_layout_unit WHERE unit_id = ? AND deleted = 0`)
+      .get(unitId) as LayoutUnitRow | undefined;
+    return row ?? null;
+  }
+
+  listLayoutUnits(versionId: string): LayoutUnitRow[] {
+    return this.db
+      .prepare(
+        `SELECT * FROM t_layout_unit WHERE version_id = ? AND deleted = 0 ORDER BY id ASC`,
+      )
+      .all(versionId) as LayoutUnitRow[];
+  }
+
+  /**
+   * Auto PARENT_OF/BELONGS_TO/SUPPORTS live here so t_standard_edge stays
+   * human-edited CITES/SUPERSEDES.
+   */
+  insertLayoutEdge(input: LayoutEdgeWrite): LayoutEdgeRow {
+    const ts = nowIso();
+    const result = this.db
+      .prepare(
+        `INSERT INTO t_layout_edge
+          (from_unit_id, to_unit_id, kind, link_method, confidence,
+           created_at, updated_at, creator, updater, deleted)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0)`,
+      )
+      .run(
+        input.from_unit_id,
+        input.to_unit_id,
+        input.kind,
+        input.link_method,
+        input.confidence ?? 1.0,
+        ts,
+        ts,
+        SYSTEM,
+        SYSTEM,
+      );
+    return this.db
+      .prepare(`SELECT * FROM t_layout_edge WHERE id = ?`)
+      .get(Number(result.lastInsertRowid)) as LayoutEdgeRow;
+  }
+
+  /**
+   * Inserts the run and N pending pages together. Later ticks can set
+   * index_error (vector upsert failed) without confusing it with ocr_error.
+   */
+  insertIngestRun(input: IngestRunWrite): IngestRunRow {
+    const ts = nowIso();
+    const ingest_run_id = input.ingest_run_id ?? newId("ing");
+    this.db
+      .prepare(
+        `INSERT INTO t_ingest_run
+          (ingest_run_id, doc_id, pack_id, status, file_name,
+           created_at, updated_at, creator, updater, deleted)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0)`,
+      )
+      .run(
+        ingest_run_id,
+        input.doc_id,
+        input.pack_id,
+        input.status ?? "pending",
+        input.file_name,
+        ts,
+        ts,
+        SYSTEM,
+        SYSTEM,
+      );
+    insertPendingIngestPages(this.db, {
+      ingest_run_id,
+      doc_id: input.doc_id,
+      page_count: input.page_count,
+      ts,
+    });
+    const row = this.db
+      .prepare(`SELECT * FROM t_ingest_run WHERE ingest_run_id = ? AND deleted = 0`)
+      .get(ingest_run_id) as IngestRunRow;
+    return row;
+  }
+
+  listIngestPages(ingestRunId: string): IngestPageRow[] {
+    return this.db
+      .prepare(
+        `SELECT * FROM t_ingest_page WHERE ingest_run_id = ? AND deleted = 0 ORDER BY page_no ASC`,
+      )
+      .all(ingestRunId) as IngestPageRow[];
+  }
+
+  /**
+   * index_error means Qdrant upsert failed after OCR succeeded; ocr_error is a
+   * different recovery path and must not be reused for indexing failures (R28).
+   */
+  updateIngestPage(input: IngestPageUpdate): IngestPageRow {
+    const ts = nowIso();
+    this.db
+      .prepare(
+        `UPDATE t_ingest_page
+         SET status = ?, error = ?, updated_at = ?, updater = ?
+         WHERE ingest_run_id = ? AND page_no = ? AND deleted = 0`,
+      )
+      .run(
+        input.status,
+        input.error ?? null,
+        ts,
+        SYSTEM,
+        input.ingest_run_id,
+        input.page_no,
+      );
+    const row = this.db
+      .prepare(
+        `SELECT * FROM t_ingest_page WHERE ingest_run_id = ? AND page_no = ? AND deleted = 0`,
+      )
+      .get(input.ingest_run_id, input.page_no) as IngestPageRow | undefined;
+    if (!row) {
+      throw new Error(
+        `ingest page not found: ${input.ingest_run_id} page ${input.page_no}`,
+      );
+    }
+    return row;
   }
 
   getDocType(docTypeId: string): DocTypeRow | null {

@@ -3,7 +3,8 @@
 -- Table names match production: t_project, t_spec_pack, t_doc_type, t_field_def, t_template, t_field_box, t_job, t_document,
 -- t_extraction, t_rule, t_rule_version, t_rule_fixture, t_finding, t_proposal, t_receipt,
 -- t_volume_preview, t_audit_event, t_conversation_thread, t_conversation_message,
--- t_standard_doc, t_standard_version, t_clause, t_standard_edge.
+-- t_standard_doc, t_standard_version, t_clause, t_standard_edge,
+-- t_layout_unit, t_layout_edge, t_ingest_run, t_ingest_page.
 -- Not a substitute for docs/schema/generated/core-engine-migration.sql (PostgreSQL).
 
 PRAGMA foreign_keys = ON;
@@ -452,6 +453,9 @@ CREATE TABLE IF NOT EXISTS t_clause (
   body TEXT NOT NULL,
   span_json TEXT NULL,
   qdrant_point_id VARCHAR(64) NULL,
+  file_name VARCHAR(512) NULL,
+  page_start INTEGER NULL,
+  page_end INTEGER NULL,
   created_at TEXT NOT NULL,
   updated_at TEXT NOT NULL,
   creator VARCHAR(64) NOT NULL DEFAULT 'system',
@@ -460,6 +464,7 @@ CREATE TABLE IF NOT EXISTS t_clause (
 );
 CREATE UNIQUE INDEX IF NOT EXISTS uk_t_clause_clause_id ON t_clause(clause_id);
 CREATE INDEX IF NOT EXISTS idx_t_clause_version_id ON t_clause(version_id);
+CREATE INDEX IF NOT EXISTS idx_t_clause_file_page ON t_clause(file_name, page_start);
 
 CREATE TABLE IF NOT EXISTS t_standard_edge (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -474,3 +479,71 @@ CREATE TABLE IF NOT EXISTS t_standard_edge (
 );
 CREATE INDEX IF NOT EXISTS idx_t_standard_edge_from ON t_standard_edge(from_clause_id);
 CREATE INDEX IF NOT EXISTS idx_t_standard_edge_to ON t_standard_edge(to_clause_id);
+
+CREATE TABLE IF NOT EXISTS t_layout_unit (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  unit_id VARCHAR(64) NOT NULL,
+  version_id VARCHAR(64) NOT NULL,
+  chunk_kind VARCHAR(16) NOT NULL,
+  clause_id VARCHAR(64) NULL,
+  file_name VARCHAR(512) NOT NULL,
+  page_start INTEGER NOT NULL,
+  page_end INTEGER NOT NULL,
+  heading VARCHAR(256) NULL,
+  body_markdown TEXT NOT NULL,
+  qdrant_point_id VARCHAR(64) NOT NULL,
+  ingest_run_id VARCHAR(64) NULL,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL,
+  creator VARCHAR(64) NOT NULL DEFAULT 'system',
+  updater VARCHAR(64) NOT NULL DEFAULT 'system',
+  deleted INTEGER NOT NULL DEFAULT 0
+);
+CREATE UNIQUE INDEX IF NOT EXISTS uk_t_layout_unit_unit_id ON t_layout_unit(unit_id);
+CREATE INDEX IF NOT EXISTS idx_t_layout_unit_version_id ON t_layout_unit(version_id);
+
+CREATE TABLE IF NOT EXISTS t_layout_edge (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  from_unit_id VARCHAR(64) NOT NULL,
+  to_unit_id VARCHAR(64) NOT NULL,
+  kind VARCHAR(32) NOT NULL,
+  link_method VARCHAR(16) NOT NULL,
+  confidence REAL NULL DEFAULT 1.0,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL,
+  creator VARCHAR(64) NOT NULL DEFAULT 'system',
+  updater VARCHAR(64) NOT NULL DEFAULT 'system',
+  deleted INTEGER NOT NULL DEFAULT 0
+);
+CREATE INDEX IF NOT EXISTS idx_t_layout_edge_from ON t_layout_edge(from_unit_id);
+CREATE INDEX IF NOT EXISTS idx_t_layout_edge_to ON t_layout_edge(to_unit_id);
+
+CREATE TABLE IF NOT EXISTS t_ingest_run (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  ingest_run_id VARCHAR(64) NOT NULL,
+  doc_id VARCHAR(64) NOT NULL,
+  pack_id VARCHAR(64) NOT NULL,
+  status VARCHAR(32) NOT NULL,
+  file_name VARCHAR(512) NOT NULL,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL,
+  creator VARCHAR(64) NOT NULL DEFAULT 'system',
+  updater VARCHAR(64) NOT NULL DEFAULT 'system',
+  deleted INTEGER NOT NULL DEFAULT 0
+);
+CREATE UNIQUE INDEX IF NOT EXISTS uk_t_ingest_run_ingest_run_id ON t_ingest_run(ingest_run_id);
+
+CREATE TABLE IF NOT EXISTS t_ingest_page (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  ingest_run_id VARCHAR(64) NOT NULL,
+  doc_id VARCHAR(64) NOT NULL,
+  page_no INTEGER NOT NULL,
+  status VARCHAR(16) NOT NULL,
+  error VARCHAR(512) NULL,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL,
+  creator VARCHAR(64) NOT NULL DEFAULT 'system',
+  updater VARCHAR(64) NOT NULL DEFAULT 'system',
+  deleted INTEGER NOT NULL DEFAULT 0
+);
+CREATE UNIQUE INDEX IF NOT EXISTS uk_t_ingest_page_run_page ON t_ingest_page(ingest_run_id, page_no);

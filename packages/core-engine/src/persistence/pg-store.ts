@@ -22,7 +22,11 @@ import type {
   FieldDefRow,
   FieldFillRuleRow,
   FindingRow,
+  IngestPageRow,
+  IngestRunRow,
   JobRow,
+  LayoutEdgeRow,
+  LayoutUnitRow,
   ProjectRow,
   ProposalRow,
   ReceiptRow,
@@ -60,6 +64,10 @@ import type {
   ExcelCellMappingWrite,
   FieldBoxWrite,
   FieldFillRuleWrite,
+  IngestPageUpdate,
+  IngestRunWrite,
+  LayoutEdgeWrite,
+  LayoutUnitWrite,
 } from "./store.js";
 
 const SYSTEM = "system";
@@ -439,6 +447,9 @@ function mapClause(row: QueryResultRow): ClauseRow {
     body: String(row.body),
     span_json: asJsonStringOrNull(row.span_json),
     qdrant_point_id: row.qdrant_point_id == null ? null : String(row.qdrant_point_id),
+    file_name: row.file_name == null ? null : String(row.file_name),
+    page_start: row.page_start == null ? null : asNumber(row.page_start),
+    page_end: row.page_end == null ? null : asNumber(row.page_end),
   };
 }
 
@@ -449,6 +460,70 @@ function mapStandardEdge(row: QueryResultRow): StandardEdgeRow {
     to_clause_id: String(row.to_clause_id),
     kind: String(row.kind),
   };
+}
+
+function mapLayoutUnit(row: QueryResultRow): LayoutUnitRow {
+  return {
+    ...mapAudit(row),
+    unit_id: String(row.unit_id),
+    version_id: String(row.version_id),
+    chunk_kind: String(row.chunk_kind),
+    clause_id: row.clause_id == null ? null : String(row.clause_id),
+    file_name: String(row.file_name),
+    page_start: asNumber(row.page_start),
+    page_end: asNumber(row.page_end),
+    heading: row.heading == null ? null : String(row.heading),
+    body_markdown: String(row.body_markdown),
+    qdrant_point_id: String(row.qdrant_point_id),
+    ingest_run_id: row.ingest_run_id == null ? null : String(row.ingest_run_id),
+  };
+}
+
+function mapLayoutEdge(row: QueryResultRow): LayoutEdgeRow {
+  return {
+    ...mapAudit(row),
+    from_unit_id: String(row.from_unit_id),
+    to_unit_id: String(row.to_unit_id),
+    kind: String(row.kind),
+    link_method: String(row.link_method),
+    confidence: row.confidence == null ? null : asNumber(row.confidence),
+  };
+}
+
+function mapIngestRun(row: QueryResultRow): IngestRunRow {
+  return {
+    ...mapAudit(row),
+    ingest_run_id: String(row.ingest_run_id),
+    doc_id: String(row.doc_id),
+    pack_id: String(row.pack_id),
+    status: String(row.status),
+    file_name: String(row.file_name),
+  };
+}
+
+function mapIngestPage(row: QueryResultRow): IngestPageRow {
+  return {
+    ...mapAudit(row),
+    ingest_run_id: String(row.ingest_run_id),
+    doc_id: String(row.doc_id),
+    page_no: asNumber(row.page_no),
+    status: String(row.status),
+    error: row.error == null ? null : String(row.error),
+  };
+}
+
+async function insertPendingIngestPages(
+  q: (text: string, values?: unknown[]) => Promise<QueryResult>,
+  input: { ingest_run_id: string; doc_id: string; page_count: number; ts: string },
+): Promise<void> {
+  for (let pageNo = 1; pageNo <= input.page_count; pageNo += 1) {
+    await q(
+      `INSERT INTO t_ingest_page
+        (ingest_run_id, doc_id, page_no, status, error, created_at, updated_at, creator, updater, deleted)
+       VALUES ($1, $2, $3, 'pending', NULL, $4, $5, $6, $7, 0)`,
+      [input.ingest_run_id, input.doc_id, pageNo, input.ts, input.ts, SYSTEM, SYSTEM],
+    );
+  }
 }
 
 export class PostgresLedger implements LedgerStore {
@@ -728,14 +803,17 @@ export class PostgresLedger implements LedgerStore {
     body: string;
     span_json?: string | null;
     qdrant_point_id?: string | null;
+    file_name?: string | null;
+    page_start?: number | null;
+    page_end?: number | null;
   }): Promise<ClauseRow> {
     const ts = nowIso();
     const qdrant_point_id = input.qdrant_point_id ?? input.clause_id;
     const result = await this.q(
       `INSERT INTO t_clause
         (clause_id, version_id, parent_clause_id, heading, body, span_json, qdrant_point_id,
-         created_at, updated_at, creator, updater, deleted)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, 0)
+         file_name, page_start, page_end, created_at, updated_at, creator, updater, deleted)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, 0)
        ON CONFLICT (clause_id) DO UPDATE SET
          version_id = EXCLUDED.version_id,
          parent_clause_id = EXCLUDED.parent_clause_id,
@@ -743,6 +821,9 @@ export class PostgresLedger implements LedgerStore {
          body = EXCLUDED.body,
          span_json = EXCLUDED.span_json,
          qdrant_point_id = EXCLUDED.qdrant_point_id,
+         file_name = EXCLUDED.file_name,
+         page_start = EXCLUDED.page_start,
+         page_end = EXCLUDED.page_end,
          updated_at = EXCLUDED.updated_at,
          updater = EXCLUDED.updater,
          deleted = 0
@@ -755,6 +836,9 @@ export class PostgresLedger implements LedgerStore {
         input.body,
         input.span_json ?? null,
         qdrant_point_id,
+        input.file_name ?? null,
+        input.page_start ?? null,
+        input.page_end ?? null,
         ts,
         ts,
         SYSTEM,
@@ -809,6 +893,156 @@ export class PostgresLedger implements LedgerStore {
       `SELECT * FROM t_standard_edge WHERE deleted = 0 ORDER BY id ASC`,
     );
     return result.rows.map(mapStandardEdge);
+  }
+
+  /**
+   * Layout units are the ingest/search grain. Table/annex chunks stay here with
+   * null clause_id so t_clause never receives a fabricated id.
+   */
+  async insertLayoutUnit(input: LayoutUnitWrite): Promise<LayoutUnitRow> {
+    const ts = nowIso();
+    const unit_id = input.unit_id ?? newId("lu");
+    const qdrant_point_id = input.qdrant_point_id ?? unit_id;
+    const result = await this.q(
+      `INSERT INTO t_layout_unit
+        (unit_id, version_id, chunk_kind, clause_id, file_name, page_start, page_end,
+         heading, body_markdown, qdrant_point_id, ingest_run_id,
+         created_at, updated_at, creator, updater, deleted)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, 0)
+       RETURNING *`,
+      [
+        unit_id,
+        input.version_id,
+        input.chunk_kind,
+        input.clause_id ?? null,
+        input.file_name,
+        input.page_start,
+        input.page_end,
+        input.heading ?? null,
+        input.body_markdown,
+        qdrant_point_id,
+        input.ingest_run_id ?? null,
+        ts,
+        ts,
+        SYSTEM,
+        SYSTEM,
+      ],
+    );
+    return mapLayoutUnit(result.rows[0]);
+  }
+
+  async getLayoutUnit(unitId: string): Promise<LayoutUnitRow | null> {
+    const result = await this.q(
+      `SELECT * FROM t_layout_unit WHERE unit_id = $1 AND deleted = 0`,
+      [unitId],
+    );
+    return result.rows[0] ? mapLayoutUnit(result.rows[0]) : null;
+  }
+
+  async listLayoutUnits(versionId: string): Promise<LayoutUnitRow[]> {
+    const result = await this.q(
+      `SELECT * FROM t_layout_unit WHERE version_id = $1 AND deleted = 0 ORDER BY id ASC`,
+      [versionId],
+    );
+    return result.rows.map(mapLayoutUnit);
+  }
+
+  /**
+   * Auto PARENT_OF/BELONGS_TO/SUPPORTS live here so t_standard_edge stays
+   * human-edited CITES/SUPERSEDES.
+   */
+  async insertLayoutEdge(input: LayoutEdgeWrite): Promise<LayoutEdgeRow> {
+    const ts = nowIso();
+    const result = await this.q(
+      `INSERT INTO t_layout_edge
+        (from_unit_id, to_unit_id, kind, link_method, confidence,
+         created_at, updated_at, creator, updater, deleted)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 0)
+       RETURNING *`,
+      [
+        input.from_unit_id,
+        input.to_unit_id,
+        input.kind,
+        input.link_method,
+        input.confidence ?? 1.0,
+        ts,
+        ts,
+        SYSTEM,
+        SYSTEM,
+      ],
+    );
+    return mapLayoutEdge(result.rows[0]);
+  }
+
+  /**
+   * Inserts the run and N pending pages together. Later ticks can set
+   * index_error (vector upsert failed) without confusing it with ocr_error.
+   */
+  async insertIngestRun(input: IngestRunWrite): Promise<IngestRunRow> {
+    const ts = nowIso();
+    const ingest_run_id = input.ingest_run_id ?? newId("ing");
+    const result = await this.q(
+      `INSERT INTO t_ingest_run
+        (ingest_run_id, doc_id, pack_id, status, file_name,
+         created_at, updated_at, creator, updater, deleted)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 0)
+       RETURNING *`,
+      [
+        ingest_run_id,
+        input.doc_id,
+        input.pack_id,
+        input.status ?? "pending",
+        input.file_name,
+        ts,
+        ts,
+        SYSTEM,
+        SYSTEM,
+      ],
+    );
+    await insertPendingIngestPages((text, values) => this.q(text, values), {
+      ingest_run_id,
+      doc_id: input.doc_id,
+      page_count: input.page_count,
+      ts,
+    });
+    return mapIngestRun(result.rows[0]);
+  }
+
+  async listIngestPages(ingestRunId: string): Promise<IngestPageRow[]> {
+    const result = await this.q(
+      `SELECT * FROM t_ingest_page WHERE ingest_run_id = $1 AND deleted = 0 ORDER BY page_no ASC`,
+      [ingestRunId],
+    );
+    return result.rows.map(mapIngestPage);
+  }
+
+  /**
+   * index_error means Qdrant upsert failed after OCR succeeded; ocr_error is a
+   * different recovery path and must not be reused for indexing failures (R28).
+   */
+  async updateIngestPage(input: IngestPageUpdate): Promise<IngestPageRow> {
+    const ts = nowIso();
+    const result = await this.q(
+      `UPDATE t_ingest_page
+       SET status = $1, error = $2, updated_at = $3, updater = $4
+       WHERE ingest_run_id = $5 AND page_no = $6 AND deleted = 0
+       RETURNING *`,
+      [
+        input.status,
+        input.error ?? null,
+        ts,
+        SYSTEM,
+        input.ingest_run_id,
+        input.page_no,
+      ],
+    );
+    const row = result.rows[0];
+    if (!row) {
+      throw new Error(
+        `ingest page not found: ${input.ingest_run_id} page ${input.page_no}`,
+      );
+    }
+    return mapIngestPage(row);
   }
 
   async getDocType(docTypeId: string): Promise<DocTypeRow | null> {

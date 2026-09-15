@@ -157,12 +157,53 @@ export interface ClauseRow extends AuditColumns {
   body: string;
   span_json: JsonValue | null;
   qdrant_point_id: string | null;
+  file_name: string | null;
+  page_start: number | null;
+  page_end: number | null;
 }
 
 export interface StandardEdgeRow extends AuditColumns {
   from_clause_id: string;
   to_clause_id: string;
   kind: string;
+}
+
+export interface LayoutUnitRow extends AuditColumns {
+  unit_id: string;
+  version_id: string;
+  chunk_kind: string;
+  clause_id: string | null;
+  file_name: string;
+  page_start: number;
+  page_end: number;
+  heading: string | null;
+  body_markdown: string;
+  qdrant_point_id: string;
+  ingest_run_id: string | null;
+}
+
+export interface LayoutEdgeRow extends AuditColumns {
+  from_unit_id: string;
+  to_unit_id: string;
+  kind: string;
+  link_method: string;
+  confidence: number | null;
+}
+
+export interface IngestRunRow extends AuditColumns {
+  ingest_run_id: string;
+  doc_id: string;
+  pack_id: string;
+  status: string;
+  file_name: string;
+}
+
+export interface IngestPageRow extends AuditColumns {
+  ingest_run_id: string;
+  doc_id: string;
+  page_no: number;
+  status: string;
+  error: string | null;
 }
 
 export interface JobRow extends AuditColumns {

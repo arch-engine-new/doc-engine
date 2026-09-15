@@ -20,7 +20,11 @@ import type {
   FieldDefRow,
   FieldFillRuleRow,
   FindingRow,
+  IngestPageRow,
+  IngestRunRow,
   JobRow,
+  LayoutEdgeRow,
+  LayoutUnitRow,
   ProjectRow,
   ProposalRow,
   ReceiptRow,
@@ -42,6 +46,10 @@ import {
   type ExcelCellMappingWrite,
   type FieldBoxWrite,
   type FieldFillRuleWrite,
+  type IngestPageUpdate,
+  type IngestRunWrite,
+  type LayoutEdgeWrite,
+  type LayoutUnitWrite,
 } from "./store.js";
 
 export interface LedgerStore {
@@ -88,6 +96,9 @@ export interface LedgerStore {
     body: string;
     span_json?: string | null;
     qdrant_point_id?: string | null;
+    file_name?: string | null;
+    page_start?: number | null;
+    page_end?: number | null;
   }): Promise<ClauseRow>;
   getClause(clauseId: string): Promise<ClauseRow | null>;
   listClauses(versionId: string): Promise<ClauseRow[]>;
@@ -97,6 +108,29 @@ export interface LedgerStore {
     kind: string;
   }): Promise<StandardEdgeRow>;
   listStandardEdges(fromClauseId?: string): Promise<StandardEdgeRow[]>;
+  /**
+   * Layout units are the ingest/search grain. Table/annex chunks stay here with
+   * null clause_id so t_clause never receives a fabricated id.
+   */
+  insertLayoutUnit(input: LayoutUnitWrite): Promise<LayoutUnitRow>;
+  getLayoutUnit(unitId: string): Promise<LayoutUnitRow | null>;
+  listLayoutUnits(versionId: string): Promise<LayoutUnitRow[]>;
+  /**
+   * Auto PARENT_OF/BELONGS_TO/SUPPORTS live here so t_standard_edge stays
+   * human-edited CITES/SUPERSEDES.
+   */
+  insertLayoutEdge(input: LayoutEdgeWrite): Promise<LayoutEdgeRow>;
+  /**
+   * Inserts the run and N pending pages together. Later ticks can set
+   * index_error (vector upsert failed) without confusing it with ocr_error.
+   */
+  insertIngestRun(input: IngestRunWrite): Promise<IngestRunRow>;
+  listIngestPages(ingestRunId: string): Promise<IngestPageRow[]>;
+  /**
+   * index_error means Qdrant upsert failed after OCR succeeded; ocr_error is a
+   * different recovery path and must not be reused for indexing failures (R28).
+   */
+  updateIngestPage(input: IngestPageUpdate): Promise<IngestPageRow>;
   getDocType(docTypeId: string): Promise<DocTypeRow | null>;
   listDocTypesByPack(packId: string): Promise<DocTypeRow[]>;
   insertDocType(input: {
@@ -395,6 +429,9 @@ export class SqliteLedger implements LedgerStore {
     body: string;
     span_json?: string | null;
     qdrant_point_id?: string | null;
+    file_name?: string | null;
+    page_start?: number | null;
+    page_end?: number | null;
   }): Promise<ClauseRow> {
     return Promise.resolve(this.inner.insertClause(input));
   }
@@ -417,6 +454,34 @@ export class SqliteLedger implements LedgerStore {
 
   listStandardEdges(fromClauseId?: string): Promise<StandardEdgeRow[]> {
     return Promise.resolve(this.inner.listStandardEdges(fromClauseId));
+  }
+
+  insertLayoutUnit(input: LayoutUnitWrite): Promise<LayoutUnitRow> {
+    return Promise.resolve(this.inner.insertLayoutUnit(input));
+  }
+
+  getLayoutUnit(unitId: string): Promise<LayoutUnitRow | null> {
+    return Promise.resolve(this.inner.getLayoutUnit(unitId));
+  }
+
+  listLayoutUnits(versionId: string): Promise<LayoutUnitRow[]> {
+    return Promise.resolve(this.inner.listLayoutUnits(versionId));
+  }
+
+  insertLayoutEdge(input: LayoutEdgeWrite): Promise<LayoutEdgeRow> {
+    return Promise.resolve(this.inner.insertLayoutEdge(input));
+  }
+
+  insertIngestRun(input: IngestRunWrite): Promise<IngestRunRow> {
+    return Promise.resolve(this.inner.insertIngestRun(input));
+  }
+
+  listIngestPages(ingestRunId: string): Promise<IngestPageRow[]> {
+    return Promise.resolve(this.inner.listIngestPages(ingestRunId));
+  }
+
+  updateIngestPage(input: IngestPageUpdate): Promise<IngestPageRow> {
+    return Promise.resolve(this.inner.updateIngestPage(input));
   }
 
   getDocType(docTypeId: string): Promise<DocTypeRow | null> {
