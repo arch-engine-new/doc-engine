@@ -74,7 +74,17 @@ export interface AddStandardEdgeInput {
   kind: EdgeKind;
 }
 
+/** Provenance copied onto every Finding from one table so N rows stay grounded. */
+interface FindingTableSource {
+  unit_id: string;
+  file_name: string;
+  page_start: number;
+  page_end: number;
+  heading: string | null;
+}
+
 const DEFAULT_PAGE = 1;
+const MAX_TABLE_FIT_FINDINGS = 20;
 
 const GRAPH_KIND_SUPERSEDES = /替代|废止|supersede/i;
 const GRAPH_KIND_REQUIRES = /requires/i;
@@ -302,7 +312,10 @@ export class StandardLibrary {
     return hits;
   }
 
-  async attachStandardFitFinding(input: AttachStandardFitInput): Promise<FindingRow> {
+  /**
+   * Table hits are 1:N. Writing only hits[0] would drop grounded SUPPORTS clauses.
+   */
+  async attachStandardFitFinding(input: AttachStandardFitInput): Promise<FindingRow[]> {
     const job = await this.store.getJob(input.jobId);
     if (!job) {
       throw new Error(`job not found: ${input.jobId}`);
@@ -316,22 +329,31 @@ export class StandardLibrary {
       query: input.query,
       jobId: input.jobId,
     });
-    const hit = hits[0];
-    if (!hit) {
+    if (hits.length === 0) {
       throw new Error("no retrieve hit to attach");
     }
-    return this.attachHit(job.job_id, job.trace_id, hit, input.ruleVersionId);
+    const tableHit = hits.find((hit) => hit.chunk_kind === "table");
+    if (tableHit) {
+      return this.attachTableSupportedFindings(job.job_id, job.trace_id, tableHit, input.ruleVersionId);
+    }
+    const clauseHit = hits.find((hit) => hit.chunk_kind === "clause");
+    if (!clauseHit) {
+      throw new Error("no retrieve hit to attach");
+    }
+    return [await this.attachHit(job.job_id, job.trace_id, clauseHit, input.ruleVersionId)];
   }
 
   /**
-   * Attach a retrieve hit only. Invented clause_id (not in t_clause) is rejected.
+   * Finding.clause_id must be t_clause. Table/annex unit ids are provenance, not clauses.
    */
   async attachHit(
     jobId: string,
     traceId: string,
     hit: RetrieveHit,
     ruleVersionId?: string,
+    source?: FindingTableSource,
   ): Promise<FindingRow> {
+    await this.assertClauseHitAttachable(hit);
     if (typeof hit.clause_id !== "string" || hit.clause_id.length === 0) {
       throw new Error(`invented clause_id: ${hit.clause_id}`);
     }
@@ -357,6 +379,7 @@ export class StandardLibrary {
         span: hit.span,
         heading: clause.heading,
         retrieve_path: hit.retrieve_path,
+        ...(source ? { source } : {}),
       }),
       clause_id: clause.clause_id,
       standard_version_id: version.version_id,
@@ -374,6 +397,49 @@ export class StandardLibrary {
       },
     });
     return finding;
+  }
+
+  /** Table unit ids must not land in Finding.clause_id even if chunk_kind is spoofed. */
+  private async assertClauseHitAttachable(hit: RetrieveHit): Promise<void> {
+    if (hit.chunk_kind === "table" || hit.chunk_kind === "annex") {
+      throw new Error(`cannot attach table/annex unit as clause_id: ${hit.unit_id}`);
+    }
+    if (typeof hit.clause_id !== "string" || hit.clause_id.length === 0) return;
+    const unit = await this.store.getLayoutUnit(hit.clause_id);
+    if (unit && unit.chunk_kind !== "clause") {
+      throw new Error(`cannot attach table/annex unit as clause_id: ${hit.clause_id}`);
+    }
+  }
+
+  private async attachTableSupportedFindings(
+    jobId: string,
+    traceId: string,
+    tableHit: RetrieveHit,
+    ruleVersionId?: string,
+  ): Promise<FindingRow[]> {
+    const source = await this.tableFindingSource(tableHit);
+    const clauseIds = (tableHit.supported_clause_ids ?? []).slice(0, MAX_TABLE_FIT_FINDINGS);
+    const rows: FindingRow[] = [];
+    for (const clauseId of clauseIds) {
+      const clause = await this.store.getClause(clauseId);
+      if (!clause) {
+        throw new Error(`invented clause_id: ${clauseId}`);
+      }
+      const hit = this.toHit(clause, tableHit.retrieve_path);
+      rows.push(await this.attachHit(jobId, traceId, hit, ruleVersionId, source));
+    }
+    return rows;
+  }
+
+  private async tableFindingSource(hit: RetrieveHit): Promise<FindingTableSource> {
+    const unit = await this.store.getLayoutUnit(hit.unit_id);
+    return {
+      unit_id: hit.unit_id,
+      file_name: hit.file_name,
+      page_start: hit.page_start,
+      page_end: hit.page_end,
+      heading: unit?.heading ?? null,
+    };
   }
 
   private async searchExact(versionIds: string[], clauseNo: string): Promise<RetrieveHit[]> {

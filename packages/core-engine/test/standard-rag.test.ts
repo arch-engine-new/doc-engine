@@ -114,11 +114,13 @@ describe("SLICE-6 standard RAG", () => {
     expect(hits[0]?.span).toBeTruthy();
     expect((await pipeline.getClause(hits[0]!.clause_id!))?.clause_id).toBe(hits[0]!.clause_id);
 
-    const finding = await pipeline.attachStandardFitFinding({
+    const findings = await pipeline.attachStandardFitFinding({
       jobId: job.job_id,
       query: "1.1",
       ruleVersionId: RULE_R1_VERSION_ID,
     });
+    expect(findings).toHaveLength(1);
+    const finding = findings[0]!;
     expect(finding.clause_id).toBe(hits[0]!.clause_id);
     expect(finding.standard_version_id).toBe(ingested.version.version_id);
     expect(finding.retrieve_path).toBe("exact");
@@ -447,5 +449,60 @@ describe("layout ingest SUPPORTS / CITES", () => {
     expect(hits[0]?.page_start).toBe(1);
     expect(hits[0]?.page_end).toBe(1);
     expect(hits[0]?.path).toEqual([{ from: fromId, to: toId, kind: "CITES" }]);
+  });
+
+  it("attachHit rejects table unit_id as clause_id (M4)", async () => {
+    const { pack, ingested } = await ingestText(GFM_TABLE_TEXT);
+    const table = ingested.layoutUnits.find((unit) => unit.chunk_kind === "table");
+    expect(table).toBeTruthy();
+    const job = await pipeline.openJobForPack({
+      projectId: pack.project_id,
+      packId: pack.pack_id,
+    });
+    await expect(
+      pipeline.library.attachHit(
+        job.job_id,
+        job.trace_id,
+        {
+          clause_id: table!.unit_id,
+          unit_id: table!.unit_id,
+          chunk_kind: "clause",
+          file_name: table!.file_name,
+          page_start: table!.page_start,
+          page_end: table!.page_end,
+          standard_version_id: ingested.version.version_id,
+          span: null,
+          retrieve_path: "vector",
+        },
+        RULE_R1_VERSION_ID,
+      ),
+    ).rejects.toThrow(/table|unit/i);
+  });
+
+  it("attach 见表 expands table SUPPORTS into distinct clause findings (M13)", async () => {
+    const { pack, ingested } = await ingestText(GFM_TABLE_TEXT);
+    const table = ingested.layoutUnits.find((unit) => unit.chunk_kind === "table");
+    expect(table).toBeTruthy();
+    const job = await pipeline.openJobForPack({
+      projectId: pack.project_id,
+      packId: pack.pack_id,
+    });
+    const findings = await pipeline.attachStandardFitFinding({
+      jobId: job.job_id,
+      query: "见表",
+      ruleVersionId: RULE_R1_VERSION_ID,
+    });
+    expect(findings.length).toBeGreaterThanOrEqual(2);
+    const clauseIds = findings.map((row) => row.clause_id);
+    expect(new Set(clauseIds).size).toBe(clauseIds.length);
+    for (const clauseId of clauseIds) {
+      expect(clauseId).toBeTruthy();
+      expect((await pipeline.getClause(clauseId!))?.clause_id).toBe(clauseId);
+    }
+    const sources = findings.map((row) => JSON.parse(row.detail ?? "{}").source);
+    expect(sources.every((source) => source?.unit_id === table!.unit_id)).toBe(true);
+    expect(sources.every((source) => source?.file_name === table!.file_name)).toBe(true);
+    expect(sources.every((source) => source?.page_start === table!.page_start)).toBe(true);
+    expect(sources.every((source) => source?.page_end === table!.page_end)).toBe(true);
   });
 });

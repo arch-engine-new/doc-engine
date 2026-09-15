@@ -629,12 +629,12 @@ export class JobPipeline {
       return;
     }
     try {
-      const fitFinding = await this.attachStandardFitFinding({
+      const rows = await this.attachStandardFitFinding({
         jobId: job.job_id,
         query,
         packId,
       });
-      findings.push(fitFinding);
+      findings.push(...rows);
     } catch {
       /* no retrieve hit — skip; never invent clause_id */
     }
@@ -813,7 +813,8 @@ export class JobPipeline {
     return this.library.searchStandard(input);
   }
 
-  attachStandardFitFinding(input: AttachStandardFitInput): Promise<FindingRow> {
+  /** Spreads table-backed rows; Job MAX_UPLOAD_BYTES stays 4MB. */
+  attachStandardFitFinding(input: AttachStandardFitInput): Promise<FindingRow[]> {
     return this.library.attachStandardFitFinding(input);
   }
 
