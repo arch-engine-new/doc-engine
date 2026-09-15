@@ -95,6 +95,16 @@ export { QdrantVectorStore } from "./retrieve/qdrant.js";
 export { Neo4jGraphStore } from "./retrieve/neo4j.js";
 export { IndependentReranker } from "./retrieve/rerank.js";
 export { FakePrequery, ZhipuPrequery } from "./retrieve/prequery.js";
+export {
+  StandardIngestWorker,
+} from "./retrieve/ingest-worker.js";
+export type {
+  StartPdfInput,
+  StartPdfResult,
+  TickPageResult,
+} from "./retrieve/ingest-worker.js";
+export { renderPdfPagePng, setPdfPageRaster } from "./ocr/pdf-raster.js";
+export type { PdfPageRasterFn } from "./ocr/pdf-raster.js";
 export type {
   ChatComplete,
   ClauseSpan,

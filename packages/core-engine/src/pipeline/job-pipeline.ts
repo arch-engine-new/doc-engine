@@ -9,14 +9,17 @@ import { blobObjectUri, uploadObjectKey } from "../blob/minio.js";
 import { extractByTemplate } from "../extract/field-box.js";
 import { resolveEffectiveBoxes, type EffectiveFieldBox } from "../extract/effective-boxes.js";
 import { extractOcrByTemplate, parseOcrFields } from "../extract/ocr-fields.js";
+import { FakeOcr } from "../ocr/fake.js";
+import { PaddleOcr } from "../ocr/paddleocr.js";
 import type { OcrPort } from "../ocr/port.js";
 import { extractPdfUnicodeText, hasUsablePdfTextLayer } from "../ocr/pdf-text.js";
+import type { PdfPageRasterFn } from "../ocr/pdf-raster.js";
 import { SqliteLedger, type LedgerStore } from "../persistence/ledger.js";
 import { resolveEngineMode } from "../persistence/live-env.js";
 import { runMigrationOnDb } from "../persistence/migrate.js";
 import { runPgMigration } from "../persistence/pg-migrate.js";
 import { PostgresLedger } from "../persistence/pg-store.js";
-import { CoreEngineStore, type FieldBoxWrite, type FieldDefWrite } from "../persistence/store.js";
+import { CoreEngineStore, type FieldBoxWrite } from "../persistence/store.js";
 import { evaluate, RuleInterpreter } from "../rules/interpreter.js";
 import {
   RulePublisher,
@@ -48,7 +51,11 @@ import type {
   VolumePreviewRow,
 } from "../types.js";
 import type { JobStepOrchestrator } from "../agent/job-step-orchestrator.js";
-import { DOC_TYPE_PARENT_ID, PACK_ID, fieldsForKind, type FixtureKind } from "./seed.js";
+import {
+  PACK_ID,
+  fieldsForKind,
+  type FixtureKind,
+} from "./seed.js";
 import {
   ReviewDesk,
   type CheckWordingInput,
@@ -66,6 +73,12 @@ import {
   type IngestStandardResult,
   type SearchStandardInput,
 } from "../retrieve/library.js";
+import {
+  StandardIngestWorker,
+  type StartPdfInput,
+  type StartPdfResult,
+  type TickPageResult,
+} from "../retrieve/ingest-worker.js";
 import { liveRetrievePorts } from "../retrieve/live-ports.js";
 import type { RetrieveHit, RetrievePorts } from "../retrieve/ports.js";
 
@@ -98,14 +111,24 @@ export interface CreateSpecPackInput {
 export interface CreateTemplateInput {
   packId: string;
   name: string;
-  docTypeId?: string;
   pageImageUri?: string;
+  docTypeId?: string;
+}
+
+export interface DemoDocTypeIds {
+  parentId: string;
+  childId: string;
+}
+
+export interface CreateDocTypeInput {
+  packId: string;
+  name: string;
+  parentDocTypeId?: string | null;
 }
 
 export interface RunFixtureJobInput {
   kind: FixtureKind;
   template_id?: string;
-  doc_type_id?: string;
 }
 
 export interface OpenJobForPackInput {
@@ -188,17 +211,22 @@ export class JobPipeline {
   readonly review: ReviewDesk;
   readonly volume: VolumeDesk;
   readonly library: StandardLibrary;
+  private readonly ingestWorker: StandardIngestWorker;
   /** Optional agent step orchestrator (wired by HTTP session). */
   stepOrchestrator: Pick<JobStepOrchestrator, "onStepEntered"> | null = null;
 
   constructor(
     private readonly store: LedgerStore,
     ports?: Partial<RetrievePorts>,
+    ocr?: OcrPort,
   ) {
     this.publisher = new RulePublisher(store);
     this.review = new ReviewDesk(store);
     this.volume = new VolumeDesk(store);
     this.library = new StandardLibrary(store, ports);
+    this.ingestWorker = new StandardIngestWorker(store, this.library, {
+      ocr: ocr ?? new FakeOcr(),
+    });
   }
 
   private static boot(dbPath: string): LedgerStore {
@@ -237,7 +265,7 @@ export class JobPipeline {
     await runPgMigration(mode.databaseUrl);
     const store = new PostgresLedger(mode.databaseUrl);
     await store.seedPublishedRules();
-    return new JobPipeline(store, liveRetrievePorts());
+    return new JobPipeline(store, liveRetrievePorts(), PaddleOcr.fromEnv() ?? new FakeOcr());
   }
 
   async close(): Promise<void> {
@@ -295,13 +323,98 @@ export class JobPipeline {
 
   /** Template bound to a pack; page_image_uri optional this slice. */
   async createTemplate(input: CreateTemplateInput): Promise<TemplateRow> {
-    const doc_type_id = await this.resolveDocTypeIdForTemplate(input.packId, input.docTypeId);
     return this.store.insertTemplate({
       pack_id: input.packId,
-      doc_type_id,
       name: input.name,
       page_image_uri: input.pageImageUri ?? null,
+      doc_type_id: input.docTypeId,
     });
+  }
+
+  async ensureDemoDocTypes(packId: string): Promise<DemoDocTypeIds> {
+    const listed = await this.listDocTypes(packId);
+    let parent = listed.find((dt) => dt.name === "夹具父类型" && !dt.parent_doc_type_id);
+    if (!parent) {
+      parent = await this.store.insertDocType({
+        pack_id: packId,
+        name: "夹具父类型",
+        parent_doc_type_id: null,
+      });
+      await this.store.saveFieldDefs(parent.doc_type_id, [
+        { field_key: "编号", value_type: "string", required: 0 },
+        { field_key: "日期A", value_type: "date", required: 0 },
+      ]);
+    }
+    let child = listed.find((dt) => dt.parent_doc_type_id === parent!.doc_type_id);
+    if (!child) {
+      child = await this.store.insertDocType({
+        pack_id: packId,
+        name: "夹具子类型",
+        parent_doc_type_id: parent.doc_type_id,
+      });
+      await this.store.saveFieldDefs(child.doc_type_id, [
+        { field_key: "特殊批号", value_type: "string", required: 0 },
+      ]);
+    }
+    return { parentId: parent.doc_type_id, childId: child.doc_type_id };
+  }
+
+  async createDocType(input: CreateDocTypeInput): Promise<DocTypeRow> {
+    return this.store.insertDocType({
+      pack_id: input.packId,
+      name: input.name,
+      parent_doc_type_id: input.parentDocTypeId ?? null,
+    });
+  }
+
+  async listDocTypes(packId: string): Promise<DocTypeRow[]> {
+    return this.store.listDocTypesByPack(packId);
+  }
+
+  async getDocType(docTypeId: string): Promise<DocTypeRow | null> {
+    return this.store.getDocType(docTypeId);
+  }
+
+  async updateDocType(docTypeId: string, name: string): Promise<DocTypeRow> {
+    return this.store.updateDocTypeName(docTypeId, name);
+  }
+
+  async deleteDocType(docTypeId: string): Promise<DocTypeRow> {
+    return this.store.softDeleteDocType(docTypeId);
+  }
+
+  async listFieldDefs(docTypeId: string): Promise<FieldDefRow[]> {
+    return this.store.listFieldDefs(docTypeId);
+  }
+
+  async saveFieldDefs(
+    docTypeId: string,
+    defs: Array<{ field_key: string; value_type: string; required?: number }>,
+  ): Promise<FieldDefRow[]> {
+    return this.store.saveFieldDefs(docTypeId, defs);
+  }
+
+  async listEffectiveBoxes(templateId: string): Promise<EffectiveFieldBox[]> {
+    const template = await this.store.getTemplate(templateId);
+    if (!template) throw new Error(`template not found: ${templateId}`);
+    const defs = template.doc_type_id
+      ? await this.store.listEffectiveFieldDefs(template.doc_type_id)
+      : [];
+    const boxes = await this.store.listFieldBoxes(templateId);
+    const merged = resolveEffectiveBoxes(defs, boxes);
+    if (merged.length === 0 && boxes.length > 0) {
+      return boxes.map((box) => ({
+        field_key: box.field_key,
+        value_type: box.value_type,
+        page: box.page,
+        x: box.x,
+        y: box.y,
+        w: box.w,
+        h: box.h,
+        inherited: false,
+      }));
+    }
+    return merged;
   }
 
   /** Persist FieldBoxes; same field_key on a template upserts coords. */
@@ -344,30 +457,12 @@ export class JobPipeline {
   async runFixtureJob(input: RunFixtureJobInput): Promise<FixtureJobResult> {
     const project = this.project ?? (await this.createProject());
     const fixtureFields = fieldsForKind(input.kind);
-    let packId = PACK_ID;
-    if (input.template_id) {
-      const template = await this.store.getTemplate(input.template_id);
-      if (template) {
-        packId = template.pack_id;
-      }
-    } else if (input.doc_type_id) {
-      const docType = await this.store.getDocType(input.doc_type_id);
-      if (docType) {
-        packId = docType.pack_id;
-      }
-    }
-    const { template_id, doc_type_id } = await this.resolveJobDocBinding({
-      packId,
-      template_id: input.template_id ?? null,
-      doc_type_id: input.doc_type_id ?? null,
-    });
 
     let job = await this.store.insertJob({
       project_id: project.project_id,
-      pack_id: packId,
+      pack_id: PACK_ID,
       status: "inspecting",
-      template_id,
-      doc_type_id,
+      template_id: input.template_id ?? null,
     });
 
     const document = await this.store.insertDocument({
@@ -445,24 +540,23 @@ export class JobPipeline {
     deps: OpenUploadJobDeps,
   ): Promise<OpenUploadJobResult> {
     validateUploadInput(input);
-    if (!input.doc_type_id && !input.template_id) {
-      throw new UploadValidationError("doc_type_id or template_id required");
-    }
 
     const project = await this.resolveProjectForUpload(input.projectId);
     const packId = input.packId ?? PACK_ID;
-    const { template_id, doc_type_id } = await this.resolveJobDocBinding({
-      packId,
-      template_id: input.template_id ?? null,
-      doc_type_id: input.doc_type_id ?? null,
-    });
+
+    let templateId = input.template_id ?? null;
+    const docTypeId = input.doc_type_id ?? null;
+    if (docTypeId && !templateId) {
+      const templates = await this.store.listTemplatesByDocType(docTypeId);
+      templateId = templates[0]?.template_id ?? null;
+    }
 
     let job = await this.store.insertJob({
       project_id: project.project_id,
       pack_id: packId,
       status: "uploaded",
-      template_id,
-      doc_type_id,
+      template_id: templateId,
+      doc_type_id: docTypeId,
     });
 
     let document: DocumentRow;
@@ -491,7 +585,7 @@ export class JobPipeline {
       return this.failUploadJob(job, "ocr_error", err);
     }
 
-    const fields = await this.projectOcrExtractionFields(job.template_id, ocrText);
+    const fields = await this.projectOcrExtractionFields(templateId, ocrText);
 
     const extraction = await this.store.insertExtraction({
       job_id: job.job_id,
@@ -603,6 +697,11 @@ export class JobPipeline {
     throw error;
   }
 
+  private async effectiveBoxesForTemplate(templateId: string | null): Promise<EffectiveFieldBox[]> {
+    if (!templateId) return [];
+    return this.listEffectiveBoxes(templateId);
+  }
+
   private async projectOcrExtractionFields(
     templateId: string | null,
     ocrText: string,
@@ -610,9 +709,11 @@ export class JobPipeline {
     if (!templateId) {
       return parseOcrFields(ocrText);
     }
-    const effective = await this.loadEffectiveBoxes(templateId);
+    const effective = await this.effectiveBoxesForTemplate(templateId);
     if (effective.length === 0) {
-      return parseOcrFields(ocrText);
+      const boxes = await this.store.listFieldBoxes(templateId);
+      if (boxes.length === 0) return parseOcrFields(ocrText);
+      return extractOcrByTemplate(ocrText, boxes);
     }
     return extractOcrByTemplate(ocrText, effective);
   }
@@ -641,7 +742,7 @@ export class JobPipeline {
   }
 
   /**
-   * Bound template with effective boxes → project fixture onto field_key list.
+   * Bound template with boxes → project fixture onto field_key list.
    * No boxes (or no template) keeps SLICE-1 full fixture fields.
    */
   private async projectExtractionFields(
@@ -649,91 +750,13 @@ export class JobPipeline {
     fixtureFields: Record<string, string>,
   ): Promise<Record<string, unknown>> {
     if (!templateId) return fixtureFields;
-    const effective = await this.loadEffectiveBoxes(templateId);
-    if (effective.length === 0) return fixtureFields;
+    const effective = await this.effectiveBoxesForTemplate(templateId);
+    if (effective.length === 0) {
+      const boxes = await this.store.listFieldBoxes(templateId);
+      if (boxes.length === 0) return fixtureFields;
+      return extractByTemplate(fixtureFields, boxes);
+    }
     return extractByTemplate(fixtureFields, effective);
-  }
-
-  /** Merge ancestor FieldDefs with template FieldBoxes for extraction / HTTP preview. */
-  async getEffectiveBoxes(templateId: string): Promise<EffectiveFieldBox[]> {
-    const template = await this.store.getTemplate(templateId);
-    if (!template) {
-      throw new Error(`template not found: ${templateId}`);
-    }
-    const ancestors = await this.store.getDocTypeAncestors(template.doc_type_id);
-    const defByKey = new Map<string, FieldDefRow>();
-    for (const docType of ancestors) {
-      for (const def of await this.store.listFieldDefs(docType.doc_type_id)) {
-        defByKey.set(def.field_key, def);
-      }
-    }
-    const templateBoxes = await this.store.listFieldBoxes(templateId);
-    return resolveEffectiveBoxes([...defByKey.values()], templateBoxes);
-  }
-
-  private async loadEffectiveBoxes(templateId: string): Promise<EffectiveFieldBox[]> {
-    try {
-      return await this.getEffectiveBoxes(templateId);
-    } catch {
-      return [];
-    }
-  }
-
-  private async resolveDocTypeIdForTemplate(packId: string, docTypeId?: string): Promise<string> {
-    if (docTypeId) {
-      await this.assertDocTypeInPack(docTypeId, packId);
-      return docTypeId;
-    }
-    const listed = await this.store.listDocTypesByPack(packId);
-    if (listed.length > 0) {
-      return listed[0]!.doc_type_id;
-    }
-    const created = await this.store.insertDocType({ pack_id: packId, name: "默认类型" });
-    return created.doc_type_id;
-  }
-
-  private async assertDocTypeInPack(docTypeId: string, packId: string): Promise<DocTypeRow> {
-    const docType = await this.store.getDocType(docTypeId);
-    if (!docType) {
-      throw new Error(`doc type not found: ${docTypeId}`);
-    }
-    if (docType.pack_id !== packId) {
-      throw new Error(`doc type ${docTypeId} does not belong to pack ${packId}`);
-    }
-    return docType;
-  }
-
-  private async resolveJobDocBinding(input: {
-    packId: string;
-    template_id: string | null;
-    doc_type_id: string | null;
-  }): Promise<{ template_id: string | null; doc_type_id: string | null }> {
-    let template_id = input.template_id;
-    let doc_type_id = input.doc_type_id;
-
-    if (template_id) {
-      const template = await this.store.getTemplate(template_id);
-      if (!template) {
-        throw new Error(`template not found: ${template_id}`);
-      }
-      if (template.pack_id !== input.packId) {
-        throw new Error(`template ${template_id} does not belong to pack ${input.packId}`);
-      }
-      if (doc_type_id && doc_type_id !== template.doc_type_id) {
-        throw new Error(
-          `doc type ${doc_type_id} does not match template doc type ${template.doc_type_id}`,
-        );
-      }
-      doc_type_id = doc_type_id ?? template.doc_type_id;
-    }
-
-    if (doc_type_id) {
-      await this.assertDocTypeInPack(doc_type_id, input.packId);
-    } else if (input.packId === PACK_ID) {
-      doc_type_id = DOC_TYPE_PARENT_ID;
-    }
-
-    return { template_id, doc_type_id };
   }
 
   async checkWording(input: CheckWordingInput): Promise<ProposalRow> {
@@ -809,6 +832,29 @@ export class JobPipeline {
     return this.library.ingest(input);
   }
 
+  /**
+   * PDF ingest 202 path: register pending pages only. Must not reuse Job
+   * MAX_UPLOAD_BYTES — standard scans are larger than 4MB check photos.
+   */
+  startStandardPdfIngest(
+    input: StartPdfInput,
+    deps?: { ocr?: OcrPort; raster?: PdfPageRasterFn },
+  ): Promise<StartPdfResult> {
+    return this.ingestWorker.startPdf({
+      ...input,
+      ocr: deps?.ocr ?? input.ocr,
+      raster: deps?.raster ?? input.raster,
+    });
+  }
+
+  /**
+   * Pull-consume ≤1 pending page. Held on the pipeline so HTTP tick can see
+   * the in-memory PDF bytes map from startStandardPdfIngest.
+   */
+  tickStandardIngest(ingestRunId: string): Promise<TickPageResult> {
+    return this.ingestWorker.tick(ingestRunId);
+  }
+
   searchStandard(input: SearchStandardInput): Promise<RetrieveHit[]> {
     return this.library.searchStandard(input);
   }
@@ -867,42 +913,6 @@ export class JobPipeline {
     return this.store.softDeleteSpecPack(packId);
   }
 
-  async listDocTypesByPack(packId: string): Promise<DocTypeRow[]> {
-    return this.store.listDocTypesByPack(packId);
-  }
-
-  async createDocType(input: {
-    packId: string;
-    name: string;
-    parentDocTypeId?: string | null;
-  }): Promise<DocTypeRow> {
-    return this.store.insertDocType({
-      pack_id: input.packId,
-      name: input.name,
-      parent_doc_type_id: input.parentDocTypeId ?? null,
-    });
-  }
-
-  async updateDocType(docTypeId: string, name: string): Promise<DocTypeRow> {
-    return this.store.updateDocType(docTypeId, name);
-  }
-
-  async deleteDocType(docTypeId: string): Promise<DocTypeRow> {
-    return this.store.softDeleteDocType(docTypeId);
-  }
-
-  async listFieldDefs(docTypeId: string): Promise<FieldDefRow[]> {
-    const docType = await this.store.getDocType(docTypeId);
-    if (!docType) {
-      throw new Error(`doc type not found: ${docTypeId}`);
-    }
-    return this.store.listFieldDefs(docTypeId);
-  }
-
-  async saveFieldDefs(docTypeId: string, defs: FieldDefWrite[]): Promise<FieldDefRow[]> {
-    return this.store.saveFieldDefs(docTypeId, defs);
-  }
-
   async listJobs(): Promise<JobRow[]> {
     return this.store.listJobs();
   }
@@ -913,6 +923,10 @@ export class JobPipeline {
 
   async listTemplates(packId: string): Promise<TemplateRow[]> {
     return this.store.listTemplates(packId);
+  }
+
+  async listTemplatesByDocType(docTypeId: string): Promise<TemplateRow[]> {
+    return this.store.listTemplatesByDocType(docTypeId);
   }
 
   async getExtraction(jobId: string): Promise<ExtractionRow | null> {

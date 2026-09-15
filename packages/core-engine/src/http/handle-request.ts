@@ -13,7 +13,8 @@ import type {
   FieldFillRuleWrite,
 } from "../persistence/store.js";
 import { NoOpenHitlError } from "../agent/job-step-orchestrator.js";
-import { LedgerConflictError, UploadValidationError } from "../pipeline/job-pipeline.js";
+import { LedgerConflictError, UploadValidationError, type JobPipeline } from "../pipeline/job-pipeline.js";
+import type { EdgeKind } from "../retrieve/ports.js";
 import { createFetchHandler } from "agent-runtime";
 import { DEMO_DICTS } from "./dicts.js";
 import type { DemoHttpSession } from "./session.js";
@@ -48,6 +49,7 @@ export interface DemoHttpMultipartFields {
   traceId?: string;
   metadata?: string;
   metadata_json?: string;
+  title?: string;
 }
 
 /**
@@ -158,6 +160,41 @@ function requireStr(body: unknown, ...keys: string[]): string {
   const value = str(body, ...keys);
   if (!value) throw new Error(`missing ${keys[0]}`);
   return value;
+}
+
+const STANDARD_EDGE_KINDS: readonly EdgeKind[] = [
+  "CITES",
+  "SUPERSEDES",
+  "APPLIES_TO",
+  "REQUIRES",
+  "SUPPORTS",
+  "PARENT_OF",
+  "BELONGS_TO",
+];
+
+/** HTTP used to reject layout kinds; SUPPORTS/PARENT_OF/BELONGS_TO are first-class ingest edges. */
+function parseStandardEdgeKind(kind: string): EdgeKind {
+  if ((STANDARD_EDGE_KINDS as readonly string[]).includes(kind)) return kind as EdgeKind;
+  throw new Error(`unsupported edge kind: ${kind}`);
+}
+
+/**
+ * ingest-pdf is not Job upload: no 4MB gate. 202 returns before any page OCR.
+ */
+async function startPdfIngest(pipeline: JobPipeline, req: DemoHttpRequest): Promise<{ ingest_run_id: string }> {
+  const mp = req.multipart;
+  if (!mp?.file) throw new Error("multipart file field required");
+  const packId = mp.fields.pack_id ?? mp.fields.packId;
+  const title = mp.fields.title;
+  if (!packId) throw new Error("pack_id is required");
+  if (!title) throw new Error("title is required");
+  const started = await pipeline.startStandardPdfIngest({
+    packId,
+    title,
+    fileName: mp.file.fileName,
+    bytes: mp.file.bytes,
+  });
+  return { ingest_run_id: started.ingest_run_id };
 }
 
 function parseTree(treeJson: string | null | undefined): { submitted: false } & Record<string, unknown> {
@@ -622,6 +659,13 @@ export async function handleDemoRequest(
       });
       return json(200, result);
     }
+    if (method === "POST" && pathname === "/api/standards/ingest-pdf") {
+      return json(202, await startPdfIngest(p, req));
+    }
+    const ingestTick = match(pathname, "/api/standards/ingest-runs/:id/tick");
+    if (method === "POST" && ingestTick) {
+      return json(200, await p.tickStandardIngest(ingestTick.id));
+    }
     if (method === "POST" && pathname === "/api/standards/search") {
       const hits = await p.searchStandard({
         packId: requireStr(req.body, "packId", "pack_id"),
@@ -631,11 +675,11 @@ export async function handleDemoRequest(
       return json(200, { hits });
     }
     if (method === "POST" && pathname === "/api/standards/edges") {
-      const kind = requireStr(req.body, "kind");
+      const kind = parseStandardEdgeKind(requireStr(req.body, "kind"));
       await p.addStandardEdge({
         from: requireStr(req.body, "from"),
         to: requireStr(req.body, "to"),
-        kind: kind as "CITES" | "SUPERSEDES" | "APPLIES_TO" | "REQUIRES",
+        kind,
       });
       return json(200, { ok: true });
     }

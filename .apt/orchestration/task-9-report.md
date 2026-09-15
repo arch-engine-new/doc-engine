@@ -1,41 +1,55 @@
-# Task 9 Report — 包级回归
+# Task 9 Report — 光栅化 + ingest-worker + HTTP（R7/R9/R24/R28）
 
 ## Status
 DONE
 
 ## Commits
-`8c5413ff5b20ef21ec3b18383303ff3061c305d1` fix(ocr): type extractPdfUnicodeText against unpdf mergePages string
+（填入本 feat commit SHA）
 
-BASE_SHA: `e811f6a8f033577a1f0d3282c034743b43f947d5`（开始时即 `HEAD`，Task 8 无新 commit）。
+BASE_SHA: `5f5d8c07d1c333a371dd4f364c2d3a2f8c09a3c3`
 
-未恢复 `BaiduOcr`。未改 latin1 括号抽字。未提交 `.ai/`（工作区该树原先已脏）。未调用 `audit_arch_changes`。
+未读 `.ai/`。未调用 `audit_arch_changes`。未提交 `.ai/`。未改 vue。未公路 seed。未发明 Paddle DELETE。Job `MAX_UPLOAD_BYTES` 仍为 4MB。ingest-pdf 不套 4MB。未 push。
 
 ## Changes
-- MCP 只读：`query_project_status` → `projectType=component`，无 blockers。`query_contract` `PaddleOcr` / `OcrPort` 命中。`search_arch` 命中 `flattenOcrMarkdown` / `PaddleOcr` / `JobPipeline` / `getSharedSession`。`query_arch` `frontend/core-engine/util#extractPdfUnicodeText` 命中。未 `report_missing`。
-- `packages/core-engine/src/ocr/pdf-text.ts`：`extractText(..., { mergePages: true })` 的 unpdf overload 将 `text` 标为 `string`，原 `result.text.join("\n")` 落在 `never` 上，tsc 失败。改为直接返回 `result.text`。运行时仍走 Unicode 文本层，不回 latin1 括号正则。
+- MCP 只读：`query_project_status` → `projectType=component`，无 blockers。`query_contract` name=`DemoHttpAdapter`；`query_contract` name=`JobPipeline`。
+- `packages/core-engine/src/ocr/pdf-raster.ts`：
+  - `renderPdfPagePng(bytes, pageNo)` 1-based；优先 `unpdf.renderPageAsImage`。
+  - `setPdfPageRaster` 注入假渲染；CI 不装 `@napi-rs/canvas`。失败抛错，不回退整本 PDF 给 OCR。
+- `packages/core-engine/src/retrieve/ingest-worker.ts`：
+  - `startPdf`：`insertStandardDoc` + version + `insertIngestRun(page_count)`，只登记 pending 页；bytes 留 worker 内存 Map。
+  - `tick`：每次 ≤1 页 pending。有文字层用 `extractPdfUnicodePages`；否则单页 PNG → `recognizeLayout`（mime=`image/png`）。随后 `splitLayoutUnits` 写条款/表/向量，`page_start=page_end=page_no`。OCR/光栅失败 → `ocr_error`；向量/图失败 → `index_error`。
+  - JSON text ingest 仍走 `StandardLibrary.ingest()`。
+- `packages/core-engine/src/pipeline/job-pipeline.ts`：包装 `startStandardPdfIngest` / `tickStandardIngest`；ocr 缺省 `FakeOcr`；live `PaddleOcr.fromEnv()`。未改 Job 4MB 闸门。
+- `packages/core-engine/src/http/handle-request.ts`：
+  - `POST /api/standards/ingest-pdf` → **202** `{ ingest_run_id }`（不套 4MB）。
+  - `POST /api/standards/ingest-runs/:id/tick` 处理 ≤1 页。
+  - `/api/standards/edges` kind 允许 SUPPORTS/PARENT_OF/BELONGS_TO。
+- 单测 `ingest-pdf.test.ts`：≥2 页空文字层 PDF；注入 raster + SpyOcr；第 2 页向量 upsert 抛错 → page2=`index_error`，page1 向量仍在（M8/R9）；OCR 入参 size < 原 PDF 且 mime 为 image（M11）。
 
 ## Tests / Verify
-
-| Command | First run | After fix |
-|---------|-----------|-----------|
-| `npm test -w core-engine` | exit 0；22 files passed / 1 skipped；116 passed / 4 skipped（vitest 3.2.7，15.89s） | exit 0；同口径 116 passed / 4 skipped（16.08s） |
-| `npm run typecheck -w core-engine` | **exit 2** | exit 0 |
-
-首次失败摘要：
-
 ```
-src/ocr/pdf-text.ts(51,72): error TS2339: Property 'join' does not exist on type 'never'.
+npx vitest run packages/core-engine/test/ingest-pdf.test.ts packages/core-engine/test/upload-ocr.test.ts
+→ exit 0; Test Files 2 passed (2); Tests 11 passed (11) (vitest 3.2.7)
+  ingest-pdf.test.ts 4 passed
+  upload-ocr.test.ts 7 passed（>4MB 仍拒）
 ```
 
-`check_code_quality` PASS（0 issue）。Rn: R4、R8。
+Rn: R7、R9、R24、R28。
 
 ## APT Micro-closeout
-- ContractsRegistered: none（无新类型；既有 `extractPdfUnicodeText` 签名未变）
+- ContractsRegistered:
+  - `StandardIngestWorker` → `packages/core-engine/src/retrieve/ingest-worker.ts`
+  - `renderPdfPagePng` → `packages/core-engine/src/ocr/pdf-raster.ts`
 - AssetsRefreshed:
-  - `packages/core-engine/src/ocr/pdf-text.ts` → `frontend/core-engine/util/extractPdfUnicodeText`（action=updated）
-  - 同上 → `frontend/core-engine/util/pdf-text`（action=updated）
-- AssetsRemoved: none
+  - `packages/core-engine/src/retrieve/ingest-worker.ts` → `frontend/core-engine/util/StandardIngestWorker`（`kind=util`，`module=core-engine`，action=created）
+  - `packages/core-engine/src/ocr/pdf-raster.ts` → `frontend/core-engine/util/renderPdfPagePng`（`kind=util`，`module=core-engine`，action=created）
+  - `packages/core-engine/src/http/handle-request.ts` → `frontend/core-engine/util/DemoHttpAdapter`（`kind=util`，`module=core-engine`，action=created）
+  - `packages/core-engine/src/pipeline/job-pipeline.ts` → `frontend/core-engine/util/job-pipeline`（`kind=util`，`module=core-engine`，action=created；带 `name=JobPipeline` 的首次 refresh 因 arch 文件锁失败，无 name 重试成功）
 - `audit_arch_changes`: not called
 
 ## Concerns
-无。`.ai/` 索引已由 MCP 更新但未进本 commit。现有 `.apt/orchestration/task-9-report.md` 曾是更早「excel gap-fill」任务残留，本文件已按本 Task 覆盖。
+- Live 光栅：`renderPdfPagePng` 未注入时走 `unpdf.renderPageAsImage` + 动态 `import("@napi-rs/canvas")`。本仓库未把 canvas 写入 `package.json`（测试不强制）。启用 live：在 `packages/core-engine` 安装可选依赖 `@napi-rs/canvas`（unpdf optional peer），不要把原 PDF bytes 交给 Paddle。
+- PDF bytes 本片只在 worker 内存 Map；进程重启后 tick 会因缺 bytes 记 `ocr_error`。MinIO 落盘留给后续。
+- HTTP memory 会话 ingest-pdf 默认 `FakeOcr`；`openLiveFromEnv` 才接 `PaddleOcr.fromEnv()`。扫描件无 token 时 live 仍可能落到 FakeOcr（与 Job memory 缺省一致）；真扫 PDF 应配置 Paddle。
+- `job-pipeline.ts` 在 BASE 上另有未提交的 doc-type 辅助方法；本 commit 纳入该工作副本以便 HTTP reset / 本片包装方法同文件。
+- `.ai/` 索引已由 MCP 更新但未进本 commit。
