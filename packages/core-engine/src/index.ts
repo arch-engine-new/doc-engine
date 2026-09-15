@@ -82,6 +82,12 @@ export type {
 } from "./retrieve/library.js";
 export { splitClauses } from "./retrieve/split.js";
 export type { SplitClause } from "./retrieve/split.js";
+export {
+  clauseNoFromTableCaption,
+  extractClauseRefs,
+  splitLayoutUnits,
+} from "./retrieve/layout-split.js";
+export type { SplitLayoutUnit } from "./retrieve/layout-split.js";
 export { HashEmbeddings, FixtureEmbeddings } from "./retrieve/embeddings.js";
 export { MemoryVectorStore } from "./retrieve/memory-vector.js";
 export { MemoryGraphStore } from "./retrieve/memory-graph.js";

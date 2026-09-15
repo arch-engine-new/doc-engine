@@ -105,9 +105,14 @@ describe("SLICE-6 standard RAG", () => {
     expect(hits).toHaveLength(1);
     expect(hits[0]?.retrieve_path).toBe("exact");
     expect(hits[0]?.clause_id).toBe(`${ingested.version.version_id}:1.1`);
+    expect(hits[0]?.unit_id).toBe(hits[0]?.clause_id);
+    expect(hits[0]?.chunk_kind).toBe("clause");
+    expect(hits[0]?.file_name).toBe("leave");
+    expect(hits[0]?.page_start).toBe(1);
+    expect(hits[0]?.page_end).toBe(1);
     expect(hits[0]?.standard_version_id).toBe(ingested.version.version_id);
     expect(hits[0]?.span).toBeTruthy();
-    expect((await pipeline.getClause(hits[0]!.clause_id))?.clause_id).toBe(hits[0]!.clause_id);
+    expect((await pipeline.getClause(hits[0]!.clause_id!))?.clause_id).toBe(hits[0]!.clause_id);
 
     const finding = await pipeline.attachStandardFitFinding({
       jobId: job.job_id,
@@ -134,6 +139,11 @@ describe("SLICE-6 standard RAG", () => {
         job.trace_id,
         {
           clause_id: "invented-999",
+          unit_id: "invented-999",
+          chunk_kind: "clause",
+          file_name: "leave",
+          page_start: 1,
+          page_end: 1,
           standard_version_id: ingested.version.version_id,
           span: { start: 0, end: 1 },
           retrieve_path: "exact",
@@ -264,5 +274,114 @@ describe("SLICE-6 standard RAG", () => {
     expect((await pipeline.getRuleVersion(draft.version.version_id))?.status).toBe("draft");
     expect(await pipeline.listReceipts(job.job_id)).toHaveLength(0);
     expect((await pipeline.getJob(job.job_id))?.status).toBe("checking");
+  });
+});
+
+const GFM_TABLE_TEXT = `1.1 事假须提前申请。
+须在休假前一至三个工作日提交书面申请，并经主管确认。
+1.2 病假须提供证明。
+申请病假应附医疗机构证明，急诊可于返岗后补交。
+2.1 审批时限为三个工作日。
+主管须在三个工作日内完成审批并书面回复。
+
+| 条款 | 说明 |
+| --- | --- |
+| 1.1 | 事假 |
+| 2.1 | 审批 |
+`;
+
+const GHOST_CITE_TEXT = `1.1 事假须提前申请。
+引用第99.9条办理。
+`;
+
+const PARENT_TEXT = `8.5 构造要求
+本节给出构造规定。
+8.5.1 钢筋锚固
+锚固长度不得小于规定值。
+`;
+
+const UNLINKED_TABLE_TEXT = `1.1 事假须提前申请。
+须提前书面申请。
+
+| 列A | 列B |
+| --- | --- |
+| foo | bar |
+`;
+
+describe("layout ingest SUPPORTS / CITES", () => {
+  let pipeline: JobPipeline;
+
+  beforeEach(() => {
+    pipeline = JobPipeline.openStandardLibrary({
+      vector: new MemoryVectorStore(),
+      graph: new MemoryGraphStore(),
+      prequery: new FakePrequery(),
+      rerank: new IndependentReranker(),
+      embed: new HashEmbeddings(),
+    });
+  });
+
+  afterEach(async () => {
+    await pipeline.close();
+  });
+
+  async function ingestText(text: string, fileUri = "fixture://leave.md") {
+    const project = await pipeline.createProject();
+    const pack = await pipeline.createSpecPack({
+      projectId: project.project_id,
+      name: "请假制度包",
+      version: "1",
+    });
+    const ingested = await pipeline.ingestStandard({
+      packId: pack.pack_id,
+      title: "员工请假说明",
+      fileUri,
+      text,
+    });
+    const idOf = (no: string) => `${ingested.version.version_id}:${no}`;
+    return { pack, ingested, idOf };
+  }
+
+  it("GFM table cells 1.1 and 2.1 yield one table unit and two SUPPORTS", async () => {
+    const { ingested, idOf } = await ingestText(GFM_TABLE_TEXT);
+    const tables = ingested.layoutUnits.filter((unit) => unit.chunk_kind === "table");
+    expect(tables).toHaveLength(1);
+    expect(tables[0]?.body_markdown).toContain("|");
+    expect(tables[0]?.clause_id).toBeNull();
+    expect(ingested.tablesUnlinked).toBe(0);
+
+    const graph = pipeline.library.getPorts().graph;
+    const supports = await graph.queryPath(tables[0]!.unit_id, "SUPPORTS");
+    expect(supports).toHaveLength(2);
+    expect(supports.every((edge) => edge.kind === "SUPPORTS")).toBe(true);
+    expect(supports.map((edge) => edge.to).sort()).toEqual([idOf("1.1"), idOf("2.1")].sort());
+  });
+
+  it("正文第99.9条 with no such clause creates 0 CITES", async () => {
+    const { ingested, idOf } = await ingestText(GHOST_CITE_TEXT);
+    expect(ingested.clauses).toHaveLength(1);
+    const graph = pipeline.library.getPorts().graph;
+    const cites = await graph.queryPath(idOf("1.1"), "CITES");
+    expect(cites).toHaveLength(0);
+    expect(ingested.clauses.some((c) => c.clause_id.endsWith(":99.9"))).toBe(false);
+  });
+
+  it("parent PARENT_OF child; unlinked table is not proximity SUPPORTS", async () => {
+    const tree = await ingestText(PARENT_TEXT);
+    const graph = pipeline.library.getPorts().graph;
+    const parents = await graph.queryPath(tree.idOf("8.5"), "PARENT_OF");
+    expect(parents).toEqual([
+      { from: tree.idOf("8.5"), to: tree.idOf("8.5.1"), kind: "PARENT_OF" },
+    ]);
+
+    const unlinked = await ingestText(UNLINKED_TABLE_TEXT, "fixture://unlinked.md");
+    expect(unlinked.ingested.tablesUnlinked).toBe(1);
+    const tables = unlinked.ingested.layoutUnits.filter((unit) => unit.chunk_kind === "table");
+    expect(tables).toHaveLength(1);
+    const supports = await pipeline.library.getPorts().graph.queryPath(
+      tables[0]!.unit_id,
+      "SUPPORTS",
+    );
+    expect(supports).toHaveLength(0);
   });
 });
