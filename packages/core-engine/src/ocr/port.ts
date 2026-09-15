@@ -11,6 +11,7 @@ export interface OcrRecognizeInput {
 /**
  * Full-page OCR text only. Field projection is extractByTemplate (Task 6), not this port.
  * vendor distinguishes Fake vs Paddle so health/audit never treat injected text as live OCR.
+ * recognizeLayout may leave VL pipes (`\|`) in `text`; recognize callers expect flattened copy.
  */
 export interface OcrRecognizeResult {
   text: string;
@@ -24,4 +25,9 @@ export interface OcrRecognizeResult {
  */
 export interface OcrPort {
   recognize(input: OcrRecognizeInput): Promise<OcrRecognizeResult>;
+  /**
+   * Standard ingest: return VL markdown unflattened so table pipes survive splitLayoutUnits.
+   * Job checks keep calling recognize; flattening here would drop cell_ref (D2).
+   */
+  recognizeLayout(input: OcrRecognizeInput): Promise<OcrRecognizeResult>;
 }
