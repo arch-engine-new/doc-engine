@@ -174,11 +174,39 @@ export interface RuleFixtureView {
   last_result: string | null;
 }
 
+/** Layout unit kind on a retrieve hit; table/annex must not be shown as a clause. */
+export type ChunkKindView = "clause" | "table" | "annex";
+
+/**
+ * Provenance-bearing search hit. Table/annex keep clause_id null so the
+ * citation table can render — instead of stuffing unit_id into the clause column.
+ */
 export interface RetrieveHitView {
-  clause_id: string;
+  clause_id: string | null;
+  unit_id: string;
+  chunk_kind: ChunkKindView;
+  file_name: string;
+  page_start: number;
+  page_end: number;
+  supported_clause_ids?: string[];
   standard_version_id: string;
   span: { start: number; end: number } | null;
   retrieve_path: string;
+}
+
+/** One pull-tick of PDF ingest: ≤1 page, or done when no pending pages remain. */
+export interface IngestTickView {
+  ingest_run_id: string;
+  page_no: number | null;
+  status: string;
+  error: string | null;
+  done: boolean;
+}
+
+/** Page tag accumulated from tick responses (pending/ok/ocr_error/index_error). */
+export interface IngestTickPageView {
+  page_no: number;
+  status: string;
 }
 
 export interface VolumeLeafNode {

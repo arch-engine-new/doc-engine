@@ -5,6 +5,7 @@ import type {
   DocumentGapView,
   ExcelCellMappingView,
   ExcelCellMappingWrite,
+  IngestTickView,
   JobView,
   ReceiptView,
   SignatureTaskView,
@@ -181,4 +182,28 @@ export async function uploadJob(
   const data: unknown = text ? JSON.parse(text) : null;
   if (!res.ok) throw new HttpError(res.status, data);
   return data as { job: JobView };
+}
+
+/**
+ * Multipart PDF ingest. 202 registers pending pages; do not send JSON
+ * Content-Type so the browser can set the multipart boundary.
+ */
+export async function ingestStandardPdf(
+  file: File,
+  fields: { packId: string; title: string },
+): Promise<{ ingest_run_id: string }> {
+  const form = new FormData();
+  form.append("file", file);
+  form.append("packId", fields.packId);
+  form.append("title", fields.title);
+  const res = await fetch("/api/standards/ingest-pdf", { method: "POST", body: form });
+  const text = await res.text();
+  const data: unknown = text ? JSON.parse(text) : null;
+  if (!res.ok) throw new HttpError(res.status, data);
+  return data as { ingest_run_id: string };
+}
+
+/** Pull-consume ≤1 pending ingest page (ok / ocr_error / index_error / done). */
+export async function tickStandardIngest(ingestRunId: string): Promise<IngestTickView> {
+  return http<IngestTickView>(`/api/standards/ingest-runs/${ingestRunId}/tick`, { method: "POST" });
 }
