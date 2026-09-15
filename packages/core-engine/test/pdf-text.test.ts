@@ -8,6 +8,7 @@ import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import { parseOcrFields } from "../src/extract/ocr-fields.js";
 import {
+  extractPdfUnicodePages,
   extractPdfUnicodeText,
   flattenOcrMarkdown,
   hasUsablePdfTextLayer,
@@ -31,21 +32,35 @@ function resolveExamplePdf(): string {
   return ranked[0]!.full;
 }
 
-/** One blank page, no ToUnicode / Tj — a scan-like fixture. */
-function emptyPagePdf(): Uint8Array {
+/** Blank pages, no ToUnicode / Tj — scan-like fixtures; page count must stay unmerged. */
+function emptyPagesPdf(pageCount: number): Uint8Array {
   const header = "%PDF-1.4\n";
   const obj1 = "1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n";
-  const obj2 = "2 0 obj\n<< /Type /Pages /Kids [3 0 R] /Count 1 >>\nendobj\n";
-  const obj3 = "3 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 200 200] >>\nendobj\n";
-  const o1 = Buffer.byteLength(header);
-  const o2 = o1 + Buffer.byteLength(obj1);
-  const o3 = o2 + Buffer.byteLength(obj2);
-  const after = o3 + Buffer.byteLength(obj3);
+  const kids = Array.from({ length: pageCount }, (_, i) => `${3 + i} 0 R`).join(" ");
+  const obj2 = `2 0 obj\n<< /Type /Pages /Kids [${kids}] /Count ${pageCount} >>\nendobj\n`;
+  const pageObjs = Array.from({ length: pageCount }, (_, i) => {
+    const id = 3 + i;
+    return `${id} 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 200 200] >>\nendobj\n`;
+  });
+  const parts = [header, obj1, obj2, ...pageObjs];
+  const offsets: number[] = [];
+  let cursor = 0;
+  for (const part of parts) {
+    if (part !== header) {
+      offsets.push(cursor);
+    }
+    cursor += Buffer.byteLength(part);
+  }
+  const objectCount = 2 + pageCount;
   const pad = (n: number) => `${String(n).padStart(10, "0")} 00000 n \n`;
   const xref =
-    "xref\n0 4\n0000000000 65535 f \n" + pad(o1) + pad(o2) + pad(o3);
-  const trailer = `trailer\n<< /Size 4 /Root 1 0 R >>\nstartxref\n${after}\n%%EOF\n`;
-  return new Uint8Array(Buffer.from(header + obj1 + obj2 + obj3 + xref + trailer));
+    `xref\n0 ${objectCount + 1}\n0000000000 65535 f \n` + offsets.map((n) => pad(n)).join("");
+  const trailer = `trailer\n<< /Size ${objectCount + 1} /Root 1 0 R >>\nstartxref\n${cursor}\n%%EOF\n`;
+  return new Uint8Array(Buffer.from(parts.join("") + xref + trailer));
+}
+
+function emptyPagePdf(): Uint8Array {
+  return emptyPagesPdf(1);
 }
 
 describe("flattenOcrMarkdown", () => {
@@ -69,6 +84,21 @@ describe("extractPdfUnicodeText", () => {
   it("returns empty string when the PDF has no text layer", async () => {
     await expect(extractPdfUnicodeText(emptyPagePdf())).resolves.toBe("");
   });
+});
+
+describe("extractPdfUnicodePages", () => {
+  it("returns one string per page instead of a merged blob", async () => {
+    const bytes = new Uint8Array(readFileSync(resolveExamplePdf()));
+    const pages = await extractPdfUnicodePages(bytes);
+    expect(Array.isArray(pages)).toBe(true);
+    expect(pages.length).toBeGreaterThanOrEqual(1);
+    const han = Array.from(pages.join("\n").matchAll(/\p{Script=Han}/gu)).length;
+    expect(han).toBeGreaterThanOrEqual(8);
+
+    const blankPages = await extractPdfUnicodePages(emptyPagesPdf(2));
+    expect(blankPages).toHaveLength(2);
+    expect(blankPages.every((page) => page.trim() === "")).toBe(true);
+  }, 30_000);
 });
 
 describe("hasUsablePdfTextLayer", () => {

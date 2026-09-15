@@ -56,6 +56,24 @@ export async function extractPdfUnicodeText(bytes: Uint8Array): Promise<string> 
 }
 
 /**
+ * Per-page Unicode for standard ingest ticks. mergePages:true would collapse
+ * page boundaries so a later raster+OCR tick could not target a single empty page.
+ */
+export async function extractPdfUnicodePages(bytes: Uint8Array): Promise<string[]> {
+  if (bytes == null || bytes.byteLength === 0) {
+    return [];
+  }
+  try {
+    const data = Uint8Array.from(bytes);
+    const pdf = await getDocumentProxy(data);
+    const result = await extractText(pdf, { mergePages: false });
+    return result.text;
+  } catch {
+    return [];
+  }
+}
+
+/**
  * True only when decoded text is readable copy: Han ≥ 8, or Unicode letters
  * ≥ 40 with at least one Han. Zero-Han parenthesis / latin1 soup must stay
  * false so scanned PDFs go to OcrPort instead of vendor=pdf-text.

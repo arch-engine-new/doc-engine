@@ -180,13 +180,31 @@ export class PaddleOcr implements OcrPort {
     return config == null ? null : new PaddleOcr(config);
   }
 
+  /**
+   * Job checks need flattened copy: parseOcrFields is frozen and cannot see
+   * VL headings/emphasis/table pipes. Standard ingest must not call this.
+   */
   async recognize(input: OcrRecognizeInput): Promise<OcrRecognizeResult> {
+    const { text, jobId } = await this.runJob(input);
+    return { text: flattenOcrMarkdown(text), vendor: VENDOR, raw: { jobId } };
+  }
+
+  /**
+   * Standard ingest keeps VL table pipes so splitLayoutUnits can recover
+   * cell_ref. Flattening here would drop D2 tables that Job recognize still strips.
+   */
+  async recognizeLayout(input: OcrRecognizeInput): Promise<OcrRecognizeResult> {
+    const { text, jobId } = await this.runJob(input);
+    return { text, vendor: VENDOR, raw: { jobId } };
+  }
+
+  /** Shared submit/poll/jsonl so recognize vs layout only differ on flatten. */
+  private async runJob(input: OcrRecognizeInput): Promise<{ text: string; jobId: string }> {
     this.assertWithinLocalLimit(input.bytes);
     const jobId = await this.submitJob(input);
     const done = await this.pollUntilDone(jobId);
-    // VL markdown wraps labels; parseOcrFields regex is frozen, so strip marks here.
-    const text = flattenOcrMarkdown(await this.readResultMarkdown(done));
-    return { text, vendor: VENDOR, raw: { jobId } };
+    const text = await this.readResultMarkdown(done);
+    return { text, jobId };
   }
 
   private assertWithinLocalLimit(bytes: Uint8Array): void {

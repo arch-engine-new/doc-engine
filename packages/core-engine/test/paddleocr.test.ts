@@ -15,7 +15,8 @@ const JOB_URL = "https://paddleocr.test/api/v2/ocr/jobs";
 const JOB_ID = "job-fixture-42";
 const JSON_URL = "https://paddleocr.test/results/job-fixture-42.jsonl";
 const PAGE_TEXT = "编号：SH-002\n日期A：2026-08-20";
-const VL_MARKDOWN = "# 表\n**编号：** SH-002\n日期A：2026-08-20\n日期B：2026-08-01";
+const VL_MARKDOWN =
+  "# 表\n**编号：** SH-002\n日期A：2026-08-20\n日期B：2026-08-01\n| 条款 | 内容 |\n| --- | --- |\n| 1.1 | 填料 |";
 const AISTUDIO_HOST = "aistudio-app.com";
 const MAX_LOCAL_FILE_BYTES = 50 * 1024 * 1024;
 
@@ -291,6 +292,36 @@ describe("PaddleOcr.recognize", () => {
     expect(fields["日期B"]).toBe("2026-08-01");
     expect(result.text).not.toContain("#");
     expect(result.text).not.toContain("*");
+    expect(result.text).not.toContain("|");
+  });
+});
+
+describe("PaddleOcr.recognizeLayout", () => {
+  it("keeps table pipes that recognize flattens from the same VL markdown", async () => {
+    const handler = async (call: RecordedCall): Promise<Response> => {
+      if (call.method === "POST") {
+        return jsonResponse({ code: 0, data: { jobId: JOB_ID } });
+      }
+      if (call.url === `${JOB_URL}/${JOB_ID}`) {
+        return jsonResponse(jobStatusBody("done", { resultUrl: { jsonUrl: JSON_URL } }));
+      }
+      if (call.url === JSON_URL) {
+        return new Response(jsonlWithResult(VL_MARKDOWN), { status: 200 });
+      }
+      throw new Error(`unexpected ${call.method} ${call.url}`);
+    };
+    const layoutRecorder = createRecorder(handler);
+    const recognizeRecorder = createRecorder(handler);
+
+    const layout = await createAdapter(layoutRecorder.fetch).recognizeLayout(INPUT);
+    const flattened = await createAdapter(recognizeRecorder.fetch).recognize(INPUT);
+
+    expect(layout.vendor).toBe("paddleocr-vl");
+    expect(layout.text).toContain("|");
+    expect(layout.text).toContain("1.1");
+    expect(flattened.text).not.toContain("|");
+    expect(layoutRecorder.calls.some((c) => c.method === "DELETE")).toBe(false);
+    expect(layoutRecorder.calls.filter((c) => c.method === "POST").length).toBe(1);
   });
 });
 
