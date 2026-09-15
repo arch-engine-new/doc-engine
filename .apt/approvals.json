@@ -54,5 +54,12 @@
     "at": "2026-09-14T11:23:00.000Z",
     "by": "user",
     "risk": "high"
+  },
+  {
+    "spec": "docs/superpowers/specs/2026-09-15-rag-ingest-metadata-graph-design.md",
+    "approval": "pending",
+    "at": "2026-09-15T01:45:00.000Z",
+    "by": "apt-auto-brainstorm",
+    "risk": "high"
   }
 ]

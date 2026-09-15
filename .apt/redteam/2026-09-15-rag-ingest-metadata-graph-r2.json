@@ -1,0 +1,50 @@
+{
+  "schema": "apt/spec-redteam",
+  "version": 1,
+  "specPath": "docs/superpowers/specs/2026-09-15-rag-ingest-metadata-graph-design.md",
+  "round": 2,
+  "findings": [
+    {
+      "lens": "机制类多样性/最贵机制",
+      "attack": "推荐 B 声称解决表 1:N，确定性链在 caption/cell_ref 失败后强制 proximity 至少连 1 条；叠加现网 OCR 拆掉表格竖线后，live 扫描件只会得到页内最近条款 1:1。M3 用 markdown 单元格 1.1/2.1 绿的是夹具 cell_ref，不是用户 85MB 公路册。拒 C 之后没有另一套能在 OCR 脏文本上成立的 1:N 机制。",
+      "evidence": "D8/M3 只把必过夹具换成 recognizeLayout 输出含 `|` 且 caption/cell_ref≥2，Testing 仍保留请假 JSON 单元格 1.1/2.1；表连条款顺序第 3 步仍「否则页内向上最近条款（proximity），避免孤表」；Error handling「0 条 caption/cell_ref 可 proximity 降级」；方案 C 仍否；paddleocr.ts:183-189 生产 recognize 仍必 flatten；无条款要求 live 扫描件脏文本上成立 1:N。",
+      "severity": "high"
+    },
+    {
+      "lens": "形状≠行为",
+      "attack": "对照表第 8 行写「命中表时先扩图再 rerank 条款」，D4 却只在「检索首条/rerank 后那条 chunk_kind=table」时写 N 条 Finding；RerankCandidate 仍只有 clause_id:string。按对照表展开后 hits[0] 必为条款，表 1:N 进不了符合度；若把 table 塞进 rerank 只能把 unit_id 写入 clause_id，D6/M4 被绕开。",
+      "evidence": "spec 对照表 #8「保持；命中表时先扩图再 rerank 条款」vs D4/设计段 attachStandardFitFinding「若检索首条（或 rerank 后用于符合度的那条）chunk_kind=table」；packages/core-engine/src/retrieve/ports.ts:57-64 RerankCandidate.clause_id: string；rerank.ts:73 用 candidate.clause_id 排序；library.ts:218-236 仍 hits[0]，323-326 每 version 只收 ordered[0]；M3/M4 可分别对 search 返回 table、对 attach(synthetic tableHit) 假绿，不锁 search→rerank→符合度全链。",
+      "severity": "high"
+    },
+    {
+      "lens": "数据模型自相矛盾",
+      "attack": "Data flow 规定向量失败将该页标为 index_error，但 t_ingest_page.status 只允许 pending/ok/ocr_error，失败索引进不了合法状态。",
+      "evidence": "spec 数据模型 t_ingest_page.status (`pending`/`ok`/`ocr_error`) vs Data flow 第 3 步「向量失败则该页 index_error」；Error handling 只有 ocr_error；实现只能记 ocr_error（撒谎）或 ok（M8 失败页语义被吞）。",
+      "severity": "medium"
+    },
+    {
+      "lens": "YAGNI 反向",
+      "attack": "D3/M12 只锁「可建」同 project 跨 pack CITES；searchStandard/searchGraph 仍按 pack 的 versionIds 过滤目标，跨标准图多跳在检索侧仍被丢弃。",
+      "evidence": "spec M12「第二 pack 夹具可建跨 pack CITES」；Data flow 只要求跨 pack 目标自身 effective，未要求 retrieve 按 project 解析；library.ts:170-185 resolveEffectiveVersionIds → listEffectiveStandardVersions WHERE d.pack_id=$1；library.ts:351 `!versionIds.includes(target.version_id)` 则丢弃。",
+      "severity": "medium"
+    }
+  ],
+  "round1Verification": [
+    { "index": 1, "status": "honored", "note": "D1/M3" },
+    { "index": 2, "status": "honored", "note": "D2/M7" },
+    { "index": 3, "status": "honored", "note": "D3 建边" },
+    { "index": 4, "status": "honored", "note": "D4/M4" },
+    { "index": 5, "status": "honored", "note": "D5/M12" },
+    { "index": 6, "status": "honored", "note": "D6/M1" },
+    { "index": 7, "status": "honored", "note": "D7/M5" },
+    { "index": 8, "status": "still_material", "note": "proximity/脏 OCR 1:N" },
+    { "index": 9, "status": "honored", "note": "D9/M8" },
+    { "index": 10, "status": "honored", "note": "D10" },
+    { "index": 11, "status": "honored", "note": "D11/M11" }
+  ],
+  "resolution": {
+    "delta": [],
+    "user": [],
+    "unresolved": []
+  }
+}

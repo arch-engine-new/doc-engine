@@ -1,10 +1,8 @@
 {
-  "phase": "implement",
+  "phase": "spec_pending_approval",
   "loopDone": false,
-  "nextAction": "implement_plan",
-  "activeSpec": "docs/superpowers/specs/2026-09-14-paddleocr-aistudio-replace-design.md",
-  "activePlan": "docs/apt/plans/2026-09-14-paddleocr-aistudio-replace-plan.md",
+  "nextAction": "await_spec_approval",
+  "activeSpec": "docs/superpowers/specs/2026-09-15-rag-ingest-metadata-graph-design.md",
   "specRisk": "high",
-  "specApproval": "approved",
-  "updatedAt": "2026-09-14T11:23:00.000Z"
+  "updatedAt": "2026-09-15T01:45:00.000Z"
 }

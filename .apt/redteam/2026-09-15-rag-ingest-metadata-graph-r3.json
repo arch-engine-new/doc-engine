@@ -1,0 +1,36 @@
+{
+  "schema": "apt/spec-redteam",
+  "version": 1,
+  "specPath": "docs/superpowers/specs/2026-09-15-rag-ingest-metadata-graph-design.md",
+  "round": 3,
+  "findings": [],
+  "round2Verification": [
+    {
+      "index": 1,
+      "status": "honored",
+      "note": "D12/R26 禁止自动 proximity；M3 只锁 recognizeLayout 夹具。能力收缩留给用户批 R15。"
+    },
+    {
+      "index": 2,
+      "status": "honored",
+      "note": "D13/M13 table 不进 rerank；attach 全链 N 条 Finding。"
+    },
+    {
+      "index": 3,
+      "status": "honored",
+      "note": "D14 index_error 入枚举。"
+    },
+    {
+      "index": 4,
+      "status": "honored",
+      "note": "D15 按 project 检索跨 pack 图目标。"
+    }
+  ],
+  "resolution": {
+    "delta": [
+      "D12-D15"
+    ],
+    "user": [],
+    "unresolved": []
+  }
+}
