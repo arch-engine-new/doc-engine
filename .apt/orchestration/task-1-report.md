@@ -1,33 +1,34 @@
-# Task 1 Report
+## Task 1 Report
 
-## Status
-DONE
+**Status:** DONE_WITH_CONCERNS
 
-## Changes
-- MCP：`query_contract` ExcelFillService / FieldFillRuleWrite / LedgerStore / BlobStore / DocumentPipeline；`search_arch` `seedConcreteInspectionBatchExcelDemo ConcreteExcelSeedStore`。未读 `.ai/`。
-- `excel/fill-service.ts`：`ExcelFillTemplate` 扩为 `string | Buffer | Uint8Array`；`load` 走独立 `ArrayBuffer`（不把 `Buffer<ArrayBufferLike>` 交给 exceljs）。返回仍 `Buffer.from(out)`。
-- `http/handle-request.ts`：`min_num` / `max_num` 空或缺省 → `null`，否则 `String(...)`，对齐 `FieldFillRuleWrite`。
-- `pipeline/seed.ts`：导出 `MaybeAsync<T>`；`DocTypeSeedStore` / `ConcreteExcelSeedStore` 方法返回 `T | Promise<T>`；async 路径继续 `await Promise.resolve(...)`。sqlite `seedPublishedRules` 仍走同步 `SyncSeedStore` 视图，未改出表语义。
-- `uploadConcreteTemplateBytes`：去掉 `as { bucket: string }`，鸭类型读取 `bucket`，否则 `"docengine"`。
-- `session.ts` / `pg-store.ts` / `store.ts` / `document-pipeline.ts` / 测试：**未改**（类型对齐后即可编译）。
+### Tests
+- Command: `node C:\Users\weilt\.apt\scripts\check-logic-sync.cjs --root D:\software\doc-engine --base 4d42e0d9f5b9241ab935b3872289b27ce4e5b363 --json`
+- Result: exit 0；`failures: []`。`pending_review` / `project_home` / `template_annotate` 无 C2。
+- TDD RED/GREEN: N/A
 
-## Tests
-```
-npx tsc -p packages/core-engine --noEmit
-→ exit 0
+### APT Micro-closeout
+- ContractsRegistered: 无（本 Task 无新对外 TS 类型）
+- AssetsRefreshed: 无。本 Task 无架构资产变更（html/logic 不在 arch 索引；未改已索引路径；禁止 `audit_arch_changes`）
+- AssetsRemoved: 无
 
-npm test -w core-engine -- excel-fill-service seed-concrete-excel
-→ Test Files 2 passed; Tests 7 passed (vitest 3.2.7)
-```
+### FilesChanged
+- `designs/v0/pending_review/index.html`（补齐措辞/待签 Tab、signatures API、签字弹窗）
+- `designs/v0/pending_review/page.logic.md`（`handleReconcilePageLogic` 写入，保留 listSignatureTasks / confirmSignatureTask）
+- `designs/v0/pending_review/page.manifest.json`（原未跟踪，随页入仓；reconcile 未重生）
+- `designs/v0/project_home/index.html`（补齐缺表面板、DocType 树、生成检验批）
+- `designs/v0/project_home/page.logic.md`（reconcile 写入，保留 listDocumentGaps / generateInspectionBatch / fillDocumentGap / listDocTypes）
+- `designs/v0/project_home/page.manifest.json`（原未跟踪，随页入仓；reconcile 未重生）
+- `designs/v0/template_annotate/index.html`（补齐继承基字段、Excel 映射面板）
+- `designs/v0/template_annotate/page.logic.md`（reconcile 写入，保留 loadExcelMappings / saveExcelMappings / uploadExcelTemplate / loadEffectiveBoxes）
+- `designs/v0/template_annotate/page.manifest.json`（原未跟踪，随页入仓；reconcile 未重生）
+- `designs/v0/_pages.md`（仅三页 notes）
+- `.apt/orchestration/task-1-report.md`
 
-## Commits
-`fix(core-engine): make package tsc pass without changing fill semantics`
+### Commits
+- `13f44c9` fix(designs): align three C2 prototypes with approved page logic
 
-## APT Micro-closeout
-- ContractsRegistered: `MaybeAsync` → `packages/core-engine/src/pipeline/seed.ts`
-- AssetsRefreshed: `packages/core-engine/src/excel/fill-service.ts`, `packages/core-engine/src/http/handle-request.ts`, `packages/core-engine/src/pipeline/seed.ts`
-- AssetsRemoved: none
-- `audit_arch_changes`: not called
-
-## Concerns
-无。Fill 语义与 C4 无回执不得写入未改。
+### Blockers / Concerns
+- MCP `reconcile_page_logic` 默认走 `glm-5.3-flash` 时 `message.content` 为空（思考占满 token，`finish_reason=length`）。dryRun 一度会砍掉待签/缺表/Excel 操作，已丢弃该写入。先把三页 `index.html` 补齐到已批准 logic+vue，再调用同一 `handleReconcilePageLogic`（`thinking: disabled` + `allowApprovedOverwrite`）写入 logic。未手改 `page.logic.md`。
+- `project_home` 新 logic 操作表未再列出 `openStepChat`（原型仍引入 `step-chat.js`）。硬约束的缺表 / 生成检验批 / DocType 树均保留。
+- `page.manifest.json` 未随 reconcile 重生（handler 只写 `page.logic.md`）；未手填，仅把原未跟踪文件一并入仓。

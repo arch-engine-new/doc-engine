@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>模板标注</title>
+  <link rel="stylesheet" href="../styles/tokens.css" />
+  <link rel="stylesheet" href="../styles/global.css" />
+  <style>
+    .annotate-layout { display: grid; grid-template-columns: 240px 1fr; gap: 16px; align-items: start; }
+    .annotate-side { border-right: 1px solid var(--apt-border); padding-right: 12px; }
+    .row-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 12px 0; }
+    .filter-label { display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--apt-text-muted); }
+    .filter-label input, .filter-label select { font-family: inherit; padding: 6px 8px; border: 1px solid var(--apt-border); border-radius: var(--apt-radius-sm); }
+    .box.inherited {
+      border-color: var(--apt-text-muted);
+      background: var(--apt-surface);
+      color: var(--apt-text-muted);
+    }
+    .box.ext-date-a { left: 8%; top: 32%; width: 28%; height: 10%; }
+    .box.ext-date-b { left: 42%; top: 32%; width: 28%; height: 10%; }
+    .box.ext-code { left: 8%; top: 12%; width: 22%; height: 10%; }
+    @media (max-width: 720px) {
+      .annotate-layout { grid-template-columns: 1fr; }
+      .annotate-side { border-right: 0; padding-right: 0; }
+    }
+  </style>
+</head>
+<body data-step="annotate" data-trace="trc_local">
+<nav class="app-nav">
+  <span class="brand">工程资料核心引擎</span>
+  <a href="../project_home/index.html">项目</a>
+  <a class="active" href="../template_annotate/index.html">模板</a>
+  <a href="../rule_editor/index.html">规则</a>
+  <a href="../standard_lib/index.html">标准库</a>
+  <a href="../job_upload/index.html">任务</a>
+  <a href="../pending_review/index.html">待审</a>
+  <a href="../check_findings/index.html">检查</a>
+  <a href="../volume_preview/index.html">组卷</a>
+  <a href="../audit_trace/index.html">审计</a>
+</nav>
+<div class="wrap">
+  <h1>模板标注</h1>
+  <p class="sub">左侧为类型继承的基字段（只读）。<code>layout_kind=raster</code> 画布只标扩展框；<code>layout_kind=excel</code> 走 <code>GET/PUT /api/templates/:id/excel-mappings</code> 与 <code>POST /api/templates/:id/excel-template</code>。</p>
+  <p class="sub">模板 默认模板 · 文档类型路径：默认类型 / 检验批</p>
+  <p class="row-actions">
+    <label class="filter-label">field_key <input type="text" value="编号" /></label>
+    <label class="filter-label">value_type <input type="text" value="string" /></label>
+    <button class="btn" type="button">保存扩展框</button>
+    <span class="tag ok">已保存 3 个扩展框</span>
+  </p>
+
+  <section class="annotate-layout card">
+    <aside class="annotate-side">
+      <h2>继承基字段 · loadEffectiveBoxes</h2>
+      <p class="sub">来自 DocType FieldDef，标注页不可编辑。</p>
+      <table>
+        <thead><tr><th>field_key</th><th>value_type</th></tr></thead>
+        <tbody>
+          <tr><td>编号</td><td>string</td></tr>
+          <tr><td>日期A</td><td>date</td></tr>
+          <tr><td>日期B</td><td>date</td></tr>
+        </tbody>
+      </table>
+    </aside>
+
+    <div>
+      <p><strong>raster 画布</strong> · drawBox / saveBoxes（继承框灰色只读）</p>
+      <div class="canvas">
+        <div class="box inherited ext-code">编号（继承）</div>
+        <div class="box ext-date-a">日期A</div>
+        <div class="box ext-date-b">日期B</div>
+      </div>
+      <table>
+        <thead>
+          <tr><th>field_key</th><th>value_type</th><th>page</th><th>x</th><th>y</th><th>w</th><th>h</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>日期A</td><td>date</td><td>1</td><td>8</td><td>32</td><td>28</td><td>10</td></tr>
+          <tr><td>日期B</td><td>date</td><td>1</td><td>42</td><td>32</td><td>28</td><td>10</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="card">
+    <p><strong>Excel 映射面板</strong> · layout_kind=excel · loadExcelMappings / saveExcelMappings / uploadExcelTemplate</p>
+    <p>工作表：Sheet1 · 模板已上传</p>
+    <p class="row-actions">
+      <label class="filter-label">上传 .xlsx <input type="file" accept=".xlsx" /></label>
+      <label class="filter-label">sheet 名（可选） <input type="text" value="Sheet1" /></label>
+    </p>
+    <p class="row-actions">
+      <label class="filter-label">cell <input type="text" placeholder="如 B4" value="B4" /></label>
+      <label class="filter-label">field_key
+        <select>
+          <option>编号 (string)</option>
+          <option>日期A (date)</option>
+          <option>日期B (date)</option>
+        </select>
+      </label>
+      <button class="btn ghost" type="button">添加映射</button>
+      <button class="btn" type="button">保存映射</button>
+      <span class="tag ok">已保存 3 条映射</span>
+    </p>
+    <table>
+      <thead>
+        <tr><th>cell</th><th>field_key</th><th>value_type</th><th>signature_role</th><th>sheet</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>B2</td><td>编号</td><td>string</td><td>—</td><td>Sheet1</td></tr>
+        <tr><td>B4</td><td>日期A</td><td>date</td><td>—</td><td>Sheet1</td></tr>
+        <tr><td>D4</td><td>日期B</td><td>date</td><td>监理</td><td>Sheet1</td></tr>
+      </tbody>
+    </table>
+  </section>
+</div>
+<script src="../mock/step-chat.js"></script>
+</body>
+</html>

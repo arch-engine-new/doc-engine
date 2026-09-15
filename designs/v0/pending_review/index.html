@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>待审工作台</title>
+  <link rel="stylesheet" href="../styles/tokens.css" />
+  <link rel="stylesheet" href="../styles/global.css" />
+  <style>
+    .tab-bar { display: flex; gap: 8px; margin-bottom: 16px; }
+    .tab-btn {
+      background: transparent;
+      border: 1px solid var(--apt-border);
+      border-radius: var(--apt-radius-sm);
+      color: var(--apt-text-muted);
+      padding: 8px 14px;
+      font-size: 13px;
+    }
+    .tab-btn.active {
+      background: var(--apt-primary);
+      border-color: var(--apt-primary);
+      color: var(--apt-bg-elevated);
+      font-weight: 600;
+    }
+    .row-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 12px 0; }
+    .wording-box { width: 100%; border: 1px solid var(--apt-border); border-radius: var(--apt-radius-sm); padding: 8px; font-family: inherit; }
+    .filter-label { display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--apt-text-muted); }
+    .filter-label input { font-family: inherit; padding: 6px 8px; border: 1px solid var(--apt-border); border-radius: var(--apt-radius-sm); }
+    .sig-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
+    .sig-meta { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 0 0 12px; }
+    .sig-meta dt { color: var(--apt-text-muted); font-size: 12px; margin-bottom: 4px; }
+    .sig-meta dd { margin: 0; font-size: 13px; }
+    .mono { font-family: var(--apt-font-mono), monospace; font-size: 12px; }
+  </style>
+</head>
+<body data-step="pending" data-trace="trc_bad_002">
+<nav class="app-nav">
+  <span class="brand">工程资料核心引擎</span>
+  <a href="../project_home/index.html">项目</a>
+  <a href="../template_annotate/index.html">模板</a>
+  <a href="../rule_editor/index.html">规则</a>
+  <a href="../standard_lib/index.html">标准库</a>
+  <a href="../job_upload/index.html">任务</a>
+  <a class="active" href="../pending_review/index.html">待审</a>
+  <a href="../check_findings/index.html">检查</a>
+  <a href="../volume_preview/index.html">组卷</a>
+  <a href="../audit_trace/index.html">审计</a>
+</nav>
+<div class="wrap">
+  <h1>待审工作台</h1>
+  <p class="sub">agent-runtime check_wording 只生成 Proposal（pending）。人确认后中台写 Receipt。无 submit Tool。资料待签走 <code>GET /api/pending/signatures</code> 与 <code>POST /api/signature-tasks/:id/confirm</code>。</p>
+  <div class="tab-bar">
+    <button class="tab-btn active" type="button">措辞待审</button>
+    <button class="tab-btn" type="button">资料待签</button>
+  </div>
+  <p class="sub">Receipt rec_pending_001 · confirmed</p>
+
+  <section class="card">
+    <p><strong>措辞待审 Tab</strong> · listProposals</p>
+    <table>
+      <thead>
+        <tr><th>提案</th><th>Job</th><th>状态</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>prp_fix_001</td>
+          <td><a href="../check_findings/index.html">job_bad_002</a></td>
+          <td><span class="tag warn">pending</span></td>
+        </tr>
+      </tbody>
+    </table>
+  </section>
+  <section class="card">
+    <p>建议措辞（可改）· editWording：</p>
+    <p><textarea class="wording-box" rows="3">日期A晚于日期B，请核对扫描件填写顺序。</textarea></p>
+    <p class="row-actions">
+      <button class="btn ghost" type="button">保存措辞</button>
+      <button class="btn" type="button">确认并开 Receipt</button>
+      <button class="btn ghost" type="button">退回</button>
+    </p>
+  </section>
+
+  <section class="card">
+    <div class="sig-head">
+      <h2>资料待签 · listSignatureTasks</h2>
+      <span class="tag warn">待签</span>
+    </div>
+    <dl class="sig-meta">
+      <div>
+        <dt>签认人</dt>
+        <dd>张监理</dd>
+      </div>
+      <div>
+        <dt>资料</dt>
+        <dd>
+          <span class="mono">art_batch_001</span>
+          <a href="../audit_trace/index.html">审计</a>
+        </dd>
+      </div>
+    </dl>
+    <p>role=监理 · assignee_label=张监理 · artifact_id=art_batch_001 · trace=trc_sig_001</p>
+    <p class="row-actions">
+      <button class="btn" type="button">确认签字</button>
+    </p>
+  </section>
+  <section class="card">
+    <p><strong>确认签字 — 监理</strong> · confirmSignatureTask</p>
+    <p class="sub">资料 art_batch_001</p>
+    <label class="filter-label">
+      签字人姓名
+      <input type="text" value="张监理" placeholder="如：张监理" />
+    </label>
+    <p class="row-actions">
+      <button class="btn" type="button">提交签字</button>
+      <button class="btn ghost" type="button">取消</button>
+    </p>
+  </section>
+</div>
+<script src="../mock/step-chat.js"></script>
+</body>
+</html>

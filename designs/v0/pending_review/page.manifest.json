@@ -1,0 +1,12 @@
+{
+  "id": "pending_review",
+  "pageType": "list",
+  "feature": "core-engine",
+  "title": "待审工作台",
+  "route": "/pending",
+  "description": "check_wording 产出 Proposal；确认后中台写 Receipt。验收 A6/A8。",
+  "status": "approved",
+  "source": "generated",
+  "generatedAt": "2026-08-26T07:13:04.556Z",
+  "generator": "pm-agent-v10"
+}

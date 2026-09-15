@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>项目与规范包</title>
+  <link rel="stylesheet" href="../styles/tokens.css" />
+  <link rel="stylesheet" href="../styles/global.css" />
+  <style>
+    .row-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 12px 0; }
+    .filter-label { display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--apt-text-muted); }
+    .filter-label input, .filter-label select { font-family: inherit; padding: 6px 8px; border: 1px solid var(--apt-border); border-radius: var(--apt-radius-sm); }
+    .gaps-title { font-size: 1rem; margin: 0 0 8px; }
+    .gaps-list { list-style: none; margin: 0; padding: 0; }
+    .gap-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 8px 0;
+      border-bottom: 1px solid var(--apt-border);
+    }
+    .nested-cell { background: var(--apt-surface); padding: 12px 16px; }
+  </style>
+</head>
+<body data-step="configure" data-trace="trc_local">
+<nav class="app-nav">
+  <span class="brand">工程资料核心引擎</span>
+  <a class="active" href="../project_home/index.html">项目</a>
+  <a href="../template_annotate/index.html">模板</a>
+  <a href="../rule_editor/index.html">规则</a>
+  <a href="../standard_lib/index.html">标准库</a>
+  <a href="../job_upload/index.html">任务</a>
+  <a href="../pending_review/index.html">待审</a>
+  <a href="../check_findings/index.html">检查</a>
+  <a href="../volume_preview/index.html">组卷</a>
+  <a href="../audit_trace/index.html">审计</a>
+</nav>
+<div class="wrap">
+  <h1>项目与规范包</h1>
+  <p class="sub">空规范包，无预置公路/水利/房建字样。规范包由用户自行配置。缺表走 <code>GET /api/projects/:id/document-gaps</code>；生成检验批走 generate → upload。</p>
+  <p class="row-actions">
+    <label class="filter-label">项目名 <input type="text" value="演示项目-夹具" /></label>
+    <button class="btn" type="button">新建项目</button>
+    <label class="filter-label">归属项目
+      <select><option>演示项目-夹具</option></select>
+    </label>
+    <label class="filter-label">规范包名 <input type="text" value="空包-收货单级" /></label>
+    <button class="btn ghost" type="button">新建空规范包</button>
+  </p>
+
+  <section class="card">
+    <h2 class="gaps-title">演示项目-夹具 — 缺表清单 · listDocumentGaps</h2>
+    <ul class="gaps-list">
+      <li class="gap-row">
+        <span>检验批记录表（required，尚无 artifact）</span>
+        <button class="btn ghost" type="button">补表</button>
+      </li>
+    </ul>
+  </section>
+
+  <div class="card">
+    <table>
+      <thead><tr><th>项目</th><th>规范包</th><th>版本</th><th>模板</th><th></th></tr></thead>
+      <tbody>
+        <tr>
+          <td>演示项目-夹具</td>
+          <td>空包-收货单级</td>
+          <td>v0</td>
+          <td>默认模板</td>
+          <td>
+            <a href="../template_annotate/index.html">标注模板</a>
+            · <a href="../rule_editor/index.html">规则</a>
+            · <button class="btn ghost" type="button">收起类型</button>
+            · <button class="btn ghost" type="button">重命名</button>
+            · <button class="btn ghost" type="button">删除</button>
+          </td>
+        </tr>
+        <tr>
+          <td colspan="5" class="nested-cell">
+            <p><strong>文档类型树</strong> · listDocTypes（含 parent_name、template_count）</p>
+            <table>
+              <thead>
+                <tr><th>文档类型</th><th>父类型</th><th>模板数</th><th></th></tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>检验批</td>
+                  <td>—</td>
+                  <td>1</td>
+                  <td>
+                    <button class="btn ghost" type="button">编辑基字段</button>
+                    · <button class="btn ghost" type="button">新建模板</button>
+                    · <a href="../template_annotate/index.html">标注</a>
+                    · <button class="btn ghost" type="button">生成检验批</button>
+                    · <span class="tag ok">已上传</span>
+                    · <a href="../audit_trace/index.html">审计</a>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+            <p><button class="btn ghost" type="button">新建文档类型</button></p>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <section class="card">
+    <p><strong>编辑基字段 — 检验批</strong> · saveFieldDefs（无坐标，由模板扩展框补充）</p>
+    <table>
+      <thead><tr><th>field_key</th><th>value_type</th><th>required</th></tr></thead>
+      <tbody>
+        <tr><td>编号</td><td>string</td><td>1</td></tr>
+        <tr><td>日期A</td><td>date</td><td>1</td></tr>
+        <tr><td>日期B</td><td>date</td><td>1</td></tr>
+      </tbody>
+    </table>
+    <p class="row-actions">
+      <button class="btn ghost" type="button">添加字段</button>
+      <button class="btn" type="button">保存基字段</button>
+    </p>
+  </section>
+</div>
+<script src="../mock/step-chat.js"></script>
+</body>
+</html>

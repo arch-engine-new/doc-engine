@@ -1,0 +1,12 @@
+{
+  "id": "template_annotate",
+  "pageType": "custom",
+  "feature": "core-engine",
+  "title": "模板标注",
+  "route": "/templates/:id/annotate",
+  "description": "空白表框选 ≥3 字段（编号/日期A/日期B）。验收 A2。",
+  "status": "approved",
+  "source": "generated",
+  "generatedAt": "2026-08-26T07:03:33.810Z",
+  "generator": "pm-agent-v10"
+}
