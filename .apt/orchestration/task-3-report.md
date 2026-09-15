@@ -1,36 +1,37 @@
-# Task 3 Report — flattenOcrMarkdown 接硬抽取
+## Task 3 Report
 
-## Status
-DONE
+**Status:** DONE
 
-## Commits
-`820d7918360f33b260b2add9e2b9eefdff4685b8` feat(ocr): flatten Paddle VL markdown for parseOcrFields
+### Tests
+- Command: `npx vitest run packages/core-engine/test/standard-rag.test.ts packages/core-engine/test/upload-ocr.test.ts packages/core-engine/test/ingest-pdf.test.ts packages/core-engine/test/paddleocr.test.ts packages/core-engine/test/graph-store.test.ts packages/core-engine/test/vector-payload.test.ts packages/core-engine/test/live-rag-ingest.test.ts`
+- Cwd: `D:\software\doc-engine`
+- Result: exit 0。`Test Files  6 passed | 1 skipped (7)`；`Tests  44 passed | 1 skipped (45)`。Duration 9.37s。
+- Per file:
+  - `graph-store.test.ts` 4 passed (20ms)
+  - `vector-payload.test.ts` 5 passed (25ms)
+  - `paddleocr.test.ts` 9 passed (113ms)
+  - `upload-ocr.test.ts` 7 passed (1221ms)
+  - `standard-rag.test.ts` 15 passed (823ms)
+  - `ingest-pdf.test.ts` 4 passed (969ms)
+  - `live-rag-ingest.test.ts` 1 skipped（无 `DATABASE_URL` / `QDRANT_URL` / `NEO4J_URI`，`describe.skipIf(!hasLiveEnv)`，brief 允许）
+- stderr: `upload-ocr.test.ts` 有 PDF 字体告警 `Warning: TT: undefined function: 32`（既有，非失败）。
+- TDD RED/GREEN: N/A（无业务代码；design-sync 后 RAG 未回退）
 
-BASE_SHA: `ace99a4acd092767289325aec9aca1527f0d6804`
+未跑 `/verify`（brief：全量 verify 由主 Agent 在全部 Task Gate 后执行）。
 
-未改 `parseOcrFields`。未 add `apps/web/.env`。未提交 `.ai/`（工作区该树原先已脏）。未调用 `audit_arch_changes`。
+### APT Micro-closeout
+- ContractsRegistered: 无（本 Task 无新对外 TS 类型）
+- AssetsRefreshed: 无。本 Task 无架构资产变更；禁止 `audit_arch_changes`
+- AssetsRemoved: 无
 
-## Changes
-- MCP 只读：`query_project_status` → `projectType=component`，无 blockers。`query_arch` path=`frontend/core-engine/utils#parseocrfields` → `packages/core-engine/src/extract/ocr-fields.ts`；`parseOcrFields(text): Record<string, string>`，硬抽 `编号`/`日期A`/`日期B`，不发明缺失键、不在倒置日期时对调。未读 `.ai/` 猜正则；**未改**该函数。
-- `packages/core-engine/src/ocr/pdf-text.ts`（新）：导出 `flattenOcrMarkdown`。去行首 `#` 标题、`*`/`_` 强调、表格 `|`，空白折叠。公开注释说明：VL markdown 包住标签，而 `parseOcrFields` 正则冻结，故在此剥标记。
-- `packages/core-engine/src/ocr/paddleocr.ts`：`recognize` 成功路径在返回前调用 `flattenOcrMarkdown`（失败路径不 flatten）。
-- `packages/core-engine/test/paddleocr.test.ts`：夹具 `# 表\n**编号：** SH-002\n日期A：2026-08-20\n日期B：2026-08-01` flatten 后 `parseOcrFields` 得到三字段；成功路径 jsonl 同夹具亦抽出三字段。
+### FilesChanged
+- `.apt/orchestration/task-3-report.md`
 
-## Tests / Verify
-```
-npm test -w core-engine -- paddleocr
-→ exit 0; Test Files 1 passed (1); Tests 8 passed (8) (vitest 3.2.7, 35ms)
-```
+未改 `packages/**` / `apps/**` / `designs/**` / `.ai/**`。
 
-覆盖：原 Task 2 六例仍绿；flatten 夹具 `编号=SH-002`、`日期A=2026-08-20`、`日期B=2026-08-01`；Paddle 成功路径对 VL markdown 调用 flatten 后同样三字段。无真实 aistudio 请求。Rn: R10。
+### Commits
+- （见本文件提交后 SHA；subject `test(core-engine): record RAG regression after design-sync`）
 
-## APT Micro-closeout
-- ContractsRegistered: `flattenOcrMarkdown` → `packages/core-engine/src/ocr/pdf-text.ts`（MCP `register_contract`，INDEX 已刷新）
-- AssetsRefreshed:
-  - `packages/core-engine/src/ocr/pdf-text.ts` → `frontend/core-engine/util/flattenOcrMarkdown`（`kind=util`，`module=core-engine`，action=created）
-  - `packages/core-engine/src/ocr/paddleocr.ts` → `frontend/core-engine/util/PaddleOcr`（action=updated）
-- AssetsRemoved: none
-- `audit_arch_changes`: not called
-
-## Concerns
-无。Task 4 将在同一 `pdf-text.ts` 加 Unicode PDF 解码；本 Task 未引入解码依赖。`.ai/` 索引已由 MCP 更新但未进本 commit。
+### Blockers / Concerns
+- 无。live smoke 因缺 live env 跳过，符合 brief。
+- Plan Task 3 第二项「重新 `/verify`」不在本 implementer 范围，留给主 Agent。
