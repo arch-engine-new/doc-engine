@@ -1,20 +1,15 @@
-projectType: component
-plan: docs/apt/plans/2026-09-14-paddleocr-aistudio-replace-plan.md
-status: in_progress
-updatedAt: 2026-09-14T11:23:00.000Z
-BASE_SHA_initial: pending
+projectType: component（跳过 B2 test-cases.md；公开方法注释抽检仍适用）
+plan: docs/apt/plans/2026-09-15-verify-fix-design-audit-logic-sync-plan.md
+status: done
+updatedAt: 2026-09-15T16:05:00.000Z
+BASE_SHA: 9f584e7987786bd48fa0cdc39addc923739c1410
+BASE_SHA_initial: 4d42e0d9f5b9241ab935b3872289b27ce4e5b363
 ---
 
-# Orchestration Progress — paddleocr-aistudio-replace
+# Orchestration Progress — verify-fix-design-audit-logic-sync
 
 | Task | Title | Status | Commit | Report |
 |------|-------|--------|--------|--------|
-| 1 | 环境变量与删除百度配置面 | IN_PROGRESS | | `.apt/orchestration/task-1-report.md` |
-| 2 | PaddleOcr 适配器 | PENDING | | |
-| 3 | flattenOcrMarkdown | PENDING | | |
-| 4 | Unicode PDF 文字层 | PENDING | | |
-| 5 | 接入 JobPipeline | PENDING | | |
-| 6 | DemoHttpSession 装配与 health | PENDING | | |
-| 7 | 导出、手册、本地 env | PENDING | | |
-| 8 | 语料 spec 口径锁定 | PENDING | | |
-| 9 | 包级回归 | PENDING | | |
+| 1 | 三页 C2 回流（F2） | DONE | eca0561 | `.apt/orchestration/task-1-report.md` |
+| 2 | design-sync 刷新设计知识（F1） | DONE | 843ab7e | `.apt/orchestration/task-2-report.md` |
+| 3 | 回归（RAG 不得回退） | DONE | f0f37a7 | `.apt/orchestration/task-3-report.md` |

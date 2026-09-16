@@ -1,9 +1,12 @@
 ---
 title: 工程化 RAG：可信源（文件/页）+ 版式单元（条款/表）+ 图关联
 date: 2026-09-15
-status: draft
+status: approved
 risk: high
-phase: spec_pending_approval
+phase: approved
+approvedAt: 2026-09-15T02:15:00.000Z
+approvedBy: user
+approvalNote: continue（推荐默认：R15 保持 nice；先 refine 再改 vue；embedding 下一片）
 topic: rag-ingest-metadata-graph
 mode: apt-auto-brainstorm
 feature: core-engine

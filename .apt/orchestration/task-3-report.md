@@ -30,7 +30,7 @@
 未改 `packages/**` / `apps/**` / `designs/**` / `.ai/**`。
 
 ### Commits
-- （见本文件提交后 SHA；subject `test(core-engine): record RAG regression after design-sync`）
+- `f0f37a7` test(core-engine): record RAG regression after design-sync
 
 ### Blockers / Concerns
 - 无。live smoke 因缺 live env 跳过，符合 brief。

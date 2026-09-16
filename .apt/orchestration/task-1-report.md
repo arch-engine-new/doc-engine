@@ -26,7 +26,7 @@
 - `.apt/orchestration/task-1-report.md`
 
 ### Commits
-- `13f44c9` fix(designs): align three C2 prototypes with approved page logic
+- `eca0561` fix(designs): align three C2 prototypes with approved page logic
 
 ### Blockers / Concerns
 - MCP `reconcile_page_logic` 默认走 `glm-5.3-flash` 时 `message.content` 为空（思考占满 token，`finish_reason=length`）。dryRun 一度会砍掉待签/缺表/Excel 操作，已丢弃该写入。先把三页 `index.html` 补齐到已批准 logic+vue，再调用同一 `handleReconcilePageLogic`（`thinking: disabled` + `allowApprovedOverwrite`）写入 logic。未手改 `page.logic.md`。

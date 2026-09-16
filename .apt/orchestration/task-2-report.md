@@ -26,7 +26,7 @@
 未手写 `.ai/design/`。未改业务代码 / `designs/v0` / `.ai/arch`。
 
 ### Commits
-- `6cab4cb` chore(design): sync v0 recipes after C2 logic align
+- `843ab7e` chore(design): sync v0 recipes after C2 logic align
 
 ### Blockers / Concerns
 - `audit_design_changes.ok` 仍为 false：10 页 `blockingPageGaps` / `undeclared_implementations` 均为 `no-implementation-ref`（warn）。plan 明确不要求本轮清除。
