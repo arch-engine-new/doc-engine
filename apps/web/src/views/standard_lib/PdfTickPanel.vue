@@ -12,6 +12,7 @@ defineProps<{
 const emit = defineEmits<{
   fileChange: [file: File];
   tick: [];
+  tickAll: [];
 }>();
 
 const selectedName = ref("");
@@ -42,6 +43,9 @@ function tagClass(status: string): string {
         <input type="file" accept="application/pdf" :disabled="busy" @change="onFileChange" />
       </label>
       <span v-if="selectedName" class="tag">已选 {{ selectedName }}</span>
+      <button class="btn" type="button" :disabled="busy || !ingestRunId || tickDone" @click="emit('tickAll')">
+        处理全部页
+      </button>
       <button class="btn ghost" type="button" :disabled="busy || !ingestRunId || tickDone" @click="emit('tick')">
         处理一页
       </button>

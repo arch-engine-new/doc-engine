@@ -16,6 +16,7 @@ import type { IngestTickPageView, RetrieveHitView, SpecPackView } from "../../se
 import HitDetailPanel from "./HitDetailPanel.vue";
 import PdfTickPanel from "./PdfTickPanel.vue";
 import RetrieveHitsTable from "./RetrieveHitsTable.vue";
+import { runTickAll } from "./tick-all";
 
 const LEAVE_TEXT = `1.1 事假须提前申请。
 须在休假前一至三个工作日提交书面申请，并经主管确认。
@@ -145,18 +146,37 @@ async function onPdfSelected(file: File): Promise<void> {
   }
 }
 
+async function applyOneTick(): Promise<{ done: boolean; status: string }> {
+  const tick = await tickStandardIngest(ingestRunId.value);
+  if (tick.page_no != null) {
+    const rest = tickPages.value.filter((page) => page.page_no !== tick.page_no);
+    tickPages.value = [...rest, { page_no: tick.page_no, status: tick.status }];
+  }
+  if (tick.done) tickDone.value = true;
+  if (tick.error) error.value = ingestError(tick.error);
+  return tick;
+}
+
 async function tickPage(): Promise<void> {
   if (!ingestRunId.value || tickDone.value) return;
   busy.value = true;
   error.value = "";
   try {
-    const tick = await tickStandardIngest(ingestRunId.value);
-    if (tick.page_no != null) {
-      const rest = tickPages.value.filter((page) => page.page_no !== tick.page_no);
-      tickPages.value = [...rest, { page_no: tick.page_no, status: tick.status }];
-    }
-    if (tick.done) tickDone.value = true;
-    if (tick.error) error.value = ingestError(tick.error);
+    await applyOneTick();
+  } catch (err) {
+    error.value = ingestError(err);
+  } finally {
+    busy.value = false;
+  }
+}
+
+/** Busy wraps the whole serial loop; each tickFn is the existing one-page ingest. */
+async function tickAllPages(): Promise<void> {
+  if (!ingestRunId.value || tickDone.value) return;
+  busy.value = true;
+  error.value = "";
+  try {
+    await runTickAll(applyOneTick);
   } catch (err) {
     error.value = ingestError(err);
   } finally {
@@ -248,6 +268,7 @@ onMounted(reloadPack);
         :tick-done="tickDone"
         @file-change="onPdfSelected"
         @tick="tickPage"
+        @tick-all="tickAllPages"
       />
     </section>
     <section class="card">
