@@ -205,6 +205,22 @@ export const CONFIRM_NEXT: Record<string, string> = {
   pending: "previewed",
 };
 
+/**
+ * Live ingest must fail closed when PADDLEOCR_ACCESS_TOKEN is missing.
+ * Falling back to FakeOcr would stamp vendor "fake" on operator scans and look
+ * like a successful OCR path. Tests may still inject FakeOcr; memory mode may
+ * omit OCR (constructor default). Only the live openLiveFromEnv branch uses this.
+ */
+export function requireLiveOcr(env: NodeJS.ProcessEnv = process.env): OcrPort {
+  const ocr = PaddleOcr.fromEnv(env);
+  if (ocr != null) {
+    return ocr;
+  }
+  throw new Error(
+    "live JobPipeline requires a Paddle OCR access token; FakeOcr fallback is forbidden",
+  );
+}
+
 export class JobPipeline {
   private project: ProjectRow | null = null;
   readonly interpreter = new RuleInterpreter();
@@ -267,7 +283,7 @@ export class JobPipeline {
     await runPgMigration(mode.databaseUrl);
     const store = new PostgresLedger(mode.databaseUrl);
     await store.seedPublishedRules();
-    const pipeline = new JobPipeline(store, liveRetrievePorts(), PaddleOcr.fromEnv() ?? new FakeOcr());
+    const pipeline = new JobPipeline(store, liveRetrievePorts(), requireLiveOcr());
     // Live Qdrant may have been rebuilt to v3 dims; Hash-filling that empty collection is forbidden.
     await pipeline.library.reindexVectorsFromLedger();
     return pipeline;
