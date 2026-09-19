@@ -3,7 +3,7 @@
  * Production retrieve must not silently use MemoryVectorStore when live env is set.
  */
 
-import { HashEmbeddings } from "./embeddings.js";
+import { DashScopeEmbeddings } from "./embeddings.js";
 import { Neo4jGraphStore } from "./neo4j.js";
 import { FakePrequery } from "./prequery.js";
 import type { RetrievePorts } from "./ports.js";
@@ -11,16 +11,17 @@ import { QdrantVectorStore } from "./qdrant.js";
 import { IndependentReranker } from "./rerank.js";
 
 /**
- * Same defaults as `defaultRetrievePorts` except vector + graph:
- * `QdrantVectorStore` reads `QDRANT_URL`, `Neo4jGraphStore` reads `NEO4J_URI`.
- * Throws if those env vars are missing instead of falling back to memory stores.
+ * Live retrieve must share one v3 embedder with rerank.
+ * Missing DASHSCOPE_API_KEY fails here (not in resolveEngineMode) so memory CI
+ * still works; never fall back to HashEmbeddings.
  */
 export function liveRetrievePorts(): RetrievePorts {
+  const embed = new DashScopeEmbeddings();
   return {
     vector: new QdrantVectorStore(),
     graph: new Neo4jGraphStore(),
     prequery: new FakePrequery(),
-    rerank: new IndependentReranker(),
-    embed: new HashEmbeddings(),
+    rerank: new IndependentReranker({ embed }),
+    embed,
   };
 }

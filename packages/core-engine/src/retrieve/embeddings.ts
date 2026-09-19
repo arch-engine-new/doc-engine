@@ -7,6 +7,13 @@
 import type { Embeddings } from "./ports.js";
 
 export const HASH_EMBED_DIM = 48;
+/** v3 default size; Qdrant clauses must match this, never Hash 48. */
+export const DASHSCOPE_EMBED_DIM = 1024;
+/** Compatible-mode model id; chat completions must not be used as embed. */
+export const DASHSCOPE_EMBED_MODEL = "text-embedding-v3";
+/** OpenAI-compatible embeddings root; POST /embeddings on this origin. */
+export const DASHSCOPE_DEFAULT_BASE_URL =
+  "https://dashscope.aliyuncs.com/compatible-mode/v1";
 
 function tokenize(text: string): string[] {
   const normalized = text.normalize("NFKC").toLowerCase().replace(/\s+/g, "");
@@ -65,4 +72,75 @@ export class FixtureEmbeddings implements Embeddings {
     if (pinned) return [...pinned];
     return this.hash.embed(text);
   }
+}
+
+export interface DashScopeEmbeddingsOptions {
+  /** Injected so CI never hits dashscope.aliyuncs.com. */
+  fetch?: typeof fetch;
+  /** Injected so tests can strip DASHSCOPE_API_KEY without mutating process.env. */
+  env?: Record<string, string | undefined>;
+  /** Override only in tests; production stays on the compatible-mode host. */
+  baseUrl?: string;
+}
+
+/**
+ * Live clause vectors must come from DashScope v3, not Hash 48-dim.
+ * Fail at construct when DASHSCOPE_API_KEY is absent so live cannot silently
+ * assemble HashEmbeddings.
+ */
+export class DashScopeEmbeddings implements Embeddings {
+  private readonly fetchImpl: typeof fetch;
+  private readonly secret: string;
+  private readonly baseUrl: string;
+
+  constructor(options?: DashScopeEmbeddingsOptions) {
+    const env = options?.env ?? process.env;
+    const secret = env.DASHSCOPE_API_KEY?.trim() ?? "";
+    if (secret.length === 0) {
+      throw new Error("DASHSCOPE_API_KEY is required");
+    }
+    this.secret = secret;
+    this.fetchImpl = options?.fetch ?? fetch;
+    this.baseUrl = (options?.baseUrl ?? DASHSCOPE_DEFAULT_BASE_URL).replace(/\/$/, "");
+  }
+
+  /**
+   * HTTP embedding is async; callers await. Dimension is pinned at 1024 so
+   * Qdrant clauses cannot mix Hash 48-dim points.
+   */
+  async embed(text: string): Promise<number[]> {
+    const response = await this.fetchImpl(`${this.baseUrl}/embeddings`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${this.secret}`,
+      },
+      body: JSON.stringify({
+        model: DASHSCOPE_EMBED_MODEL,
+        input: text,
+        dimensions: DASHSCOPE_EMBED_DIM,
+        encoding_format: "float",
+      }),
+    });
+    return parseDashScopeEmbedding(response);
+  }
+}
+
+async function parseDashScopeEmbedding(response: Response): Promise<number[]> {
+  if (!response.ok) {
+    throw new Error(`DashScope embeddings HTTP ${response.status}`);
+  }
+  const body = (await response.json()) as {
+    data?: Array<{ embedding?: number[] }>;
+  };
+  const embedding = body.data?.[0]?.embedding;
+  if (!embedding || embedding.length === 0) {
+    throw new Error("DashScope embeddings returned empty embedding");
+  }
+  if (embedding.length !== DASHSCOPE_EMBED_DIM) {
+    throw new Error(
+      `DashScope embeddings dimension mismatch: expected ${DASHSCOPE_EMBED_DIM}, got ${embedding.length}`,
+    );
+  }
+  return embedding;
 }

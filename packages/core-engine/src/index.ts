@@ -88,7 +88,7 @@ export {
   splitLayoutUnits,
 } from "./retrieve/layout-split.js";
 export type { SplitLayoutUnit } from "./retrieve/layout-split.js";
-export { HashEmbeddings, FixtureEmbeddings } from "./retrieve/embeddings.js";
+export { HashEmbeddings, FixtureEmbeddings, DashScopeEmbeddings } from "./retrieve/embeddings.js";
 export { MemoryVectorStore } from "./retrieve/memory-vector.js";
 export { MemoryGraphStore } from "./retrieve/memory-graph.js";
 export { QdrantVectorStore } from "./retrieve/qdrant.js";
