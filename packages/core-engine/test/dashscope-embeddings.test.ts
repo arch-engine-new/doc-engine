@@ -9,6 +9,8 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   DashScopeEmbeddings,
   HashEmbeddings,
+  HttpReranker,
+  IndependentReranker,
   liveRetrievePorts,
 } from "../src/index.js";
 
@@ -21,6 +23,9 @@ const envSnapshot = {
   QDRANT_URL: process.env.QDRANT_URL,
   NEO4J_URI: process.env.NEO4J_URI,
   AGENT_RUNTIME_LLM_CONFIG: process.env.AGENT_RUNTIME_LLM_CONFIG,
+  RERANK_URL: process.env.RERANK_URL,
+  RERANK_MODEL: process.env.RERANK_MODEL,
+  RERANK_API_KEY: process.env.RERANK_API_KEY,
 };
 
 const tempDirs: string[] = [];
@@ -30,6 +35,9 @@ afterEach(() => {
   restoreEnv("QDRANT_URL", envSnapshot.QDRANT_URL);
   restoreEnv("NEO4J_URI", envSnapshot.NEO4J_URI);
   restoreEnv("AGENT_RUNTIME_LLM_CONFIG", envSnapshot.AGENT_RUNTIME_LLM_CONFIG);
+  restoreEnv("RERANK_URL", envSnapshot.RERANK_URL);
+  restoreEnv("RERANK_MODEL", envSnapshot.RERANK_MODEL);
+  restoreEnv("RERANK_API_KEY", envSnapshot.RERANK_API_KEY);
   while (tempDirs.length > 0) {
     const dir = tempDirs.pop();
     if (dir) rmSync(dir, { recursive: true, force: true });
@@ -174,21 +182,34 @@ describe("liveRetrievePorts", () => {
     }
   });
 
-  it("shares one DashScopeEmbeddings instance with IndependentReranker", async () => {
+  it("does not call embed when live rerank uses HttpReranker", async () => {
     process.env.DASHSCOPE_API_KEY = TEST_KEY;
     process.env.QDRANT_URL = process.env.QDRANT_URL ?? "http://127.0.0.1:6333";
     process.env.NEO4J_URI = process.env.NEO4J_URI ?? "bolt://127.0.0.1:7687";
     process.env.AGENT_RUNTIME_LLM_CONFIG = writeTempZhipuLlmJson();
+    delete process.env.RERANK_URL;
+    delete process.env.RERANK_MODEL;
+    delete process.env.RERANK_API_KEY;
 
-    const fetchMock = vi.fn(async () =>
-      jsonResponse(200, { data: [{ embedding: vectorOf(1024) }] }),
-    );
+    const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input);
+      expect(url).not.toContain("chat/completions");
+      if (url.includes("/reranks")) {
+        expect(url.endsWith("/embeddings")).toBe(false);
+        return jsonResponse(200, {
+          results: [{ index: 0, relevance_score: 0.9 }],
+        });
+      }
+      return jsonResponse(200, {});
+    });
     const originalFetch = globalThis.fetch;
     globalThis.fetch = fetchMock as typeof fetch;
     try {
       const ports = liveRetrievePorts();
       expect(ports.embed).toBeInstanceOf(DashScopeEmbeddings);
       expect(ports.embed).not.toBeInstanceOf(HashEmbeddings);
+      expect(ports.rerank).toBeInstanceOf(HttpReranker);
+      expect(ports.rerank).not.toBeInstanceOf(IndependentReranker);
 
       const originalEmbed = ports.embed.embed.bind(ports.embed);
       const spy = vi.fn(originalEmbed);
@@ -197,7 +218,12 @@ describe("liveRetrievePorts", () => {
       await ports.rerank.rerank("query", [
         { clause_id: "c1", text: "candidate without stored vector" },
       ]);
-      expect(spy.mock.calls.length).toBeGreaterThan(0);
+      expect(spy).toHaveBeenCalledTimes(0);
+      const rerankCalls = fetchMock.mock.calls.filter((call) =>
+        String(call[0]).includes("/reranks"),
+      );
+      expect(rerankCalls).toHaveLength(1);
+      expect(String(rerankCalls[0]![0]).endsWith("/embeddings")).toBe(false);
     } finally {
       globalThis.fetch = originalFetch;
     }

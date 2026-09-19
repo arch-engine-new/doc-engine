@@ -10,6 +10,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   FakePrequery,
   HashEmbeddings,
+  HttpReranker,
   IndependentReranker,
   liveRetrievePorts,
   ZhipuPrequery,
@@ -23,6 +24,9 @@ const envSnapshot = {
   NEO4J_URI: process.env.NEO4J_URI,
   AGENT_RUNTIME_LLM_CONFIG: process.env.AGENT_RUNTIME_LLM_CONFIG,
   APT_PROJECT_ROOT: process.env.APT_PROJECT_ROOT,
+  RERANK_URL: process.env.RERANK_URL,
+  RERANK_MODEL: process.env.RERANK_MODEL,
+  RERANK_API_KEY: process.env.RERANK_API_KEY,
 };
 
 const tempDirs: string[] = [];
@@ -33,6 +37,9 @@ afterEach(() => {
   restoreEnv("NEO4J_URI", envSnapshot.NEO4J_URI);
   restoreEnv("AGENT_RUNTIME_LLM_CONFIG", envSnapshot.AGENT_RUNTIME_LLM_CONFIG);
   restoreEnv("APT_PROJECT_ROOT", envSnapshot.APT_PROJECT_ROOT);
+  restoreEnv("RERANK_URL", envSnapshot.RERANK_URL);
+  restoreEnv("RERANK_MODEL", envSnapshot.RERANK_MODEL);
+  restoreEnv("RERANK_API_KEY", envSnapshot.RERANK_API_KEY);
   while (tempDirs.length > 0) {
     const dir = tempDirs.pop();
     if (dir) rmSync(dir, { recursive: true, force: true });
@@ -42,10 +49,6 @@ afterEach(() => {
 function restoreEnv(name: string, value: string | undefined): void {
   if (value === undefined) delete process.env[name];
   else process.env[name] = value;
-}
-
-function vectorOf(length: number): number[] {
-  return Array.from({ length }, (_, i) => (i === 0 ? 1 : 0));
 }
 
 function jsonResponse(status: number, body: unknown): Response {
@@ -118,20 +121,31 @@ describe("liveRetrievePorts ZhipuPrequery", () => {
     expect(result.rewritten).toBe("表 8.5.1-1");
   });
 
-  it("keeps IndependentReranker on embed only and never chat-completes", async () => {
+  it("assembles HttpReranker, not IndependentReranker, and never embeds or chat-completes", async () => {
     applyLiveStoreEnv();
     process.env.AGENT_RUNTIME_LLM_CONFIG = writeTempZhipuLlmJson();
+    delete process.env.RERANK_URL;
+    delete process.env.RERANK_MODEL;
+    delete process.env.RERANK_API_KEY;
 
     const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
       const url = String(input);
       expect(url).not.toMatch(/chat\/completions/);
-      return jsonResponse(200, { data: [{ embedding: vectorOf(1024) }] });
+      if (url.includes("/reranks")) {
+        expect(url.endsWith("/embeddings")).toBe(false);
+        return jsonResponse(200, {
+          results: [{ index: 0, relevance_score: 0.9 }],
+        });
+      }
+      return jsonResponse(200, {});
     });
     const originalFetch = globalThis.fetch;
     globalThis.fetch = fetchMock as typeof fetch;
     try {
       const ports = liveRetrievePorts();
-      expect(ports.rerank).toBeInstanceOf(IndependentReranker);
+      expect(ports.prequery).toBeInstanceOf(ZhipuPrequery);
+      expect(ports.rerank).toBeInstanceOf(HttpReranker);
+      expect(ports.rerank).not.toBeInstanceOf(IndependentReranker);
       expect(ports.embed).not.toBeInstanceOf(HashEmbeddings);
 
       const originalEmbed = ports.embed.embed.bind(ports.embed);
@@ -141,7 +155,12 @@ describe("liveRetrievePorts ZhipuPrequery", () => {
       await ports.rerank.rerank("query", [
         { clause_id: "c1", text: "candidate without stored vector" },
       ]);
-      expect(spy.mock.calls.length).toBeGreaterThan(0);
+      expect(spy).toHaveBeenCalledTimes(0);
+      const rerankCalls = fetchMock.mock.calls.filter((call) =>
+        String(call[0]).includes("/reranks"),
+      );
+      expect(rerankCalls).toHaveLength(1);
+      expect(String(rerankCalls[0]![0]).endsWith("/embeddings")).toBe(false);
       for (const call of fetchMock.mock.calls) {
         expect(String(call[0])).not.toMatch(/chat\/completions/);
       }
