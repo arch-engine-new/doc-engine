@@ -94,6 +94,7 @@ export { MemoryGraphStore } from "./retrieve/memory-graph.js";
 export { QdrantVectorStore } from "./retrieve/qdrant.js";
 export { Neo4jGraphStore } from "./retrieve/neo4j.js";
 export { IndependentReranker } from "./retrieve/rerank.js";
+export { HttpReranker } from "./retrieve/http-rerank.js";
 export { FakePrequery, ZhipuPrequery } from "./retrieve/prequery.js";
 export {
   StandardIngestWorker,
