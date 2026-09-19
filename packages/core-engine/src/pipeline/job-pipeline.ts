@@ -265,7 +265,10 @@ export class JobPipeline {
     await runPgMigration(mode.databaseUrl);
     const store = new PostgresLedger(mode.databaseUrl);
     await store.seedPublishedRules();
-    return new JobPipeline(store, liveRetrievePorts(), PaddleOcr.fromEnv() ?? new FakeOcr());
+    const pipeline = new JobPipeline(store, liveRetrievePorts(), PaddleOcr.fromEnv() ?? new FakeOcr());
+    // Live Qdrant may have been rebuilt to v3 dims; Hash-filling that empty collection is forbidden.
+    await pipeline.library.reindexVectorsFromLedger();
+    return pipeline;
   }
 
   async close(): Promise<void> {

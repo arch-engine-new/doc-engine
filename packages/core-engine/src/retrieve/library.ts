@@ -189,6 +189,78 @@ export class StandardLibrary {
   }
 
   /**
+   * Collection rebuild (v3 1024-d) empties Qdrant; Hash 48-d backfill would
+   * look like live RAG still works. Fail the boot instead of mixing dims.
+   */
+  async reindexVectorsFromLedger(): Promise<void> {
+    for (const project of await this.store.listProjects()) {
+      for (const pack of await this.store.listSpecPacks(project.project_id)) {
+        await this.reindexPackLayoutUnits(pack.pack_id);
+      }
+    }
+  }
+
+  private async reindexPackLayoutUnits(packId: string): Promise<void> {
+    for (const doc of await this.store.listStandardDocs(packId)) {
+      for (const version of await this.store.listStandardVersions(doc.doc_id)) {
+        for (const unit of await this.store.listLayoutUnits(version.version_id)) {
+          await this.upsertReindexedUnit(packId, doc, unit);
+        }
+      }
+    }
+  }
+
+  private async upsertReindexedUnit(
+    packId: string,
+    doc: StandardDocRow,
+    unit: LayoutUnitRow,
+  ): Promise<void> {
+    const kind = asChunkKind(unit.chunk_kind);
+    const text = await this.reindexEmbedText(unit, kind);
+    await this.ports.vector.upsert({
+      id: unit.unit_id,
+      vector: await this.ports.embed.embed(text),
+      payload: this.reindexPayload(packId, doc, unit, kind),
+    });
+  }
+
+  private async reindexEmbedText(unit: LayoutUnitRow, kind: ChunkKind): Promise<string> {
+    if (kind === "clause") {
+      const clause = unit.clause_id ? await this.store.getClause(unit.clause_id) : null;
+      if (clause) return `${clause.heading ?? ""}\n${clause.body}`;
+    }
+    return `${unit.heading ?? ""}\n${unit.body_markdown}`;
+  }
+
+  private reindexPayload(
+    packId: string,
+    doc: StandardDocRow,
+    unit: LayoutUnitRow,
+    kind: ChunkKind,
+  ): Record<string, unknown> {
+    const pageStart = unit.page_start > 0 ? unit.page_start : DEFAULT_PAGE;
+    const pageEnd = unit.page_end >= pageStart ? unit.page_end : pageStart;
+    const fileName = unit.file_name.length > 0 ? unit.file_name : fileNameFromUri(doc.file_uri);
+    const payload: Record<string, unknown> = {
+      unit_id: unit.unit_id,
+      chunk_kind: kind,
+      versionId: unit.version_id,
+      file_name: fileName,
+      page_start: pageStart,
+      page_end: pageEnd,
+      heading: unit.heading,
+      doc_title: doc.title,
+      pack_id: packId,
+      source_uri: doc.file_uri,
+    };
+    // Table/annex clause_id would fail the payload gate and invent a clause hit.
+    if (kind === "clause" && unit.clause_id) {
+      payload.clause_id = unit.clause_id;
+    }
+    return payload;
+  }
+
+  /**
    * JSON/text ingest for fixtures. Provenance is URI basename + page 1 because
    * there is no PDF; GFM tables still become layout units so SUPPORTS can fire.
    */
@@ -455,7 +527,7 @@ export class StandardLibrary {
   }
 
   private async searchSemantic(versionIds: string[], rewritten: string): Promise<RetrieveHit[]> {
-    const queryVector = this.ports.embed.embed(rewritten);
+    const queryVector = await this.ports.embed.embed(rewritten);
     const scoredTables: Array<{ score: number; hit: RetrieveHit }> = [];
     const clauseHits: RetrieveHit[] = [];
     for (const versionId of versionIds) {
@@ -700,7 +772,7 @@ export class StandardLibrary {
     });
     await this.ports.vector.upsert({
       id: clause.clause_id,
-      vector: this.ports.embed.embed(text),
+      vector: await this.ports.embed.embed(text),
       payload: {
         unit_id: clause.clause_id,
         chunk_kind: "clause",
@@ -765,7 +837,7 @@ export class StandardLibrary {
     });
     await this.ports.vector.upsert({
       id: unitId,
-      vector: this.ports.embed.embed(`${part.heading}\n${part.body}`),
+      vector: await this.ports.embed.embed(`${part.heading}\n${part.body}`),
       payload: {
         unit_id: unitId,
         chunk_kind: "table",
