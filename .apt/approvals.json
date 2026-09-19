@@ -83,5 +83,12 @@
     "at": "2026-09-19T11:10:00.000Z",
     "by": "apt-auto-brainstorm",
     "risk": "low"
+  },
+  {
+    "spec": "docs/superpowers/specs/2026-09-19-live-minio-health-blocked-design.md",
+    "approval": "auto_approved",
+    "at": "2026-09-19T14:30:00.000Z",
+    "by": "apt-auto-brainstorm",
+    "risk": "low"
   }
 ]
