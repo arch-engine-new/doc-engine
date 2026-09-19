@@ -112,6 +112,8 @@ describe("SLICE-6 standard RAG", () => {
     expect(hits[0]?.page_end).toBe(1);
     expect(hits[0]?.standard_version_id).toBe(ingested.version.version_id);
     expect(hits[0]?.span).toBeTruthy();
+    expect(hits[0]?.heading).toContain("1.1 事假须提前申请");
+    expect(hits[0]?.body).toContain("须在休假前");
     expect((await pipeline.getClause(hits[0]!.clause_id!))?.clause_id).toBe(hits[0]!.clause_id);
 
     const findings = await pipeline.attachStandardFitFinding({
@@ -394,7 +396,10 @@ describe("layout ingest SUPPORTS / CITES", () => {
     expect(tableHit).toBeTruthy();
     expect(hits[0]?.chunk_kind).toBe("table");
     expect(tableHit?.clause_id).toBeNull();
-    expect(tableHit?.unit_id).toBe(ingested.layoutUnits.find((u) => u.chunk_kind === "table")?.unit_id);
+    const tableUnit = ingested.layoutUnits.find((u) => u.chunk_kind === "table");
+    expect(tableHit?.unit_id).toBe(tableUnit?.unit_id);
+    expect(tableHit?.heading).toBe(tableUnit?.heading);
+    expect(tableHit?.body).toContain(tableUnit?.body_markdown ?? "");
     expect(tableHit?.file_name).toBe("leave.md");
     expect(tableHit?.page_start).toBe(1);
     expect(tableHit?.page_end).toBe(1);

@@ -591,6 +591,7 @@ export class StandardLibrary {
   /**
    * Hits must carry file/page/unit or citation UI cannot show provenance.
    * Clause-only builder; table/annex hits go through toUnitHit so clause_id stays null.
+   * heading/body are copied from the clause ledger — never synthesized.
    */
   private toHit(clause: ClauseRow, retrieve_path: RetrievePath): RetrieveHit {
     const pageStart = clause.page_start && clause.page_start > 0 ? clause.page_start : DEFAULT_PAGE;
@@ -606,10 +607,15 @@ export class StandardLibrary {
       standard_version_id: clause.version_id,
       span: parseSpan(clause.span_json),
       retrieve_path,
+      heading: clause.heading,
+      body: clause.body,
     };
   }
 
-  /** Table/annex hits keep clause_id null so attachHit cannot treat a unit as a clause. */
+  /**
+   * Table/annex hits keep clause_id null so attachHit cannot treat a unit as a clause.
+   * heading/body come from LayoutUnitRow; empty body_markdown is returned as-is.
+   */
   private toUnitHit(
     unit: LayoutUnitRow,
     retrieve_path: RetrievePath,
@@ -629,6 +635,8 @@ export class StandardLibrary {
       standard_version_id: unit.version_id,
       span: null,
       retrieve_path,
+      heading: unit.heading,
+      body: unit.body_markdown,
     };
   }
 

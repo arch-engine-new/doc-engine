@@ -107,6 +107,7 @@ export interface ClauseSpan {
 /**
  * Provenance-bearing retrieve hit. Citation UI needs file+page+unit; table hits
  * must keep clause_id null so attachHit cannot treat a layout unit as a clause.
+ * heading/body are ledger text for detail/chat; the hits table must not render body.
  */
 export interface RetrieveHit {
   /** Clause hits use t_clause id; table/annex hits MUST be null (D6). */
@@ -123,6 +124,16 @@ export interface RetrieveHit {
   span: ClauseSpan | null;
   retrieve_path: RetrievePath;
   path?: GraphEdge[];
+  /**
+   * Ledger heading (clause heading or layout caption). Optional so older
+   * fixtures compile; empty/null means no title, never invent one.
+   */
+  heading?: string | null;
+  /**
+   * Ledger body for detail/chat (clause.body or layout body_markdown).
+   * Hits-table rows must not render this; empty string is kept, not filled in.
+   */
+  body?: string | null;
 }
 
 /** Alias used by contracts / callers. */
