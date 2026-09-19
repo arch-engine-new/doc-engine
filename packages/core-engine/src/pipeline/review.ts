@@ -13,6 +13,8 @@ export interface CheckWordingInput {
   jobId: string;
   wording: string;
   agentRunId?: string;
+  /** When false, only insert Proposal; job.status unchanged (orchestrator auto-draft at checking). */
+  advanceJobStatus?: boolean;
 }
 
 export interface ConfirmProposalResult {
@@ -38,7 +40,9 @@ export class ReviewDesk {
       status: "pending",
       agent_run_id: input.agentRunId ?? null,
     });
-    await this.store.updateJobStatus(input.jobId, "pending");
+    if (input.advanceJobStatus !== false) {
+      await this.store.updateJobStatus(input.jobId, "pending");
+    }
     return proposal;
   }
 

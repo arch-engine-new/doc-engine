@@ -1,6 +1,456 @@
 {
   "nodes": [
     {
+      "id": "component:RouterLink",
+      "kind": "method",
+      "name": "RouterLink"
+    },
+    {
+      "id": "component:RouterView",
+      "kind": "method",
+      "name": "RouterView"
+    },
+    {
+      "id": "component:global",
+      "kind": "method",
+      "name": "global"
+    },
+    {
+      "id": "component:DraftBox",
+      "kind": "method",
+      "name": "DraftBox"
+    },
+    {
+      "id": "component:EffectiveFieldBoxView",
+      "kind": "method",
+      "name": "EffectiveFieldBoxView"
+    },
+    {
+      "id": "component:RouterLink",
+      "kind": "method",
+      "name": "RouterLink"
+    },
+    {
+      "id": "component:RouterView",
+      "kind": "method",
+      "name": "RouterView"
+    },
+    {
+      "id": "component:global",
+      "kind": "method",
+      "name": "global"
+    },
+    {
+      "id": "component:DraftBox",
+      "kind": "method",
+      "name": "DraftBox"
+    },
+    {
+      "id": "component:EffectiveFieldBoxView",
+      "kind": "method",
+      "name": "EffectiveFieldBoxView"
+    },
+    {
+      "id": "component:RouterLink",
+      "kind": "method",
+      "name": "RouterLink"
+    },
+    {
+      "id": "component:RouterView",
+      "kind": "method",
+      "name": "RouterView"
+    },
+    {
+      "id": "component:global",
+      "kind": "method",
+      "name": "global"
+    },
+    {
+      "id": "component:DraftBox",
+      "kind": "method",
+      "name": "DraftBox"
+    },
+    {
+      "id": "component:EffectiveFieldBoxView",
+      "kind": "method",
+      "name": "EffectiveFieldBoxView"
+    },
+    {
+      "id": "component:RouterLink",
+      "kind": "method",
+      "name": "RouterLink"
+    },
+    {
+      "id": "component:RouterView",
+      "kind": "method",
+      "name": "RouterView"
+    },
+    {
+      "id": "component:global",
+      "kind": "method",
+      "name": "global"
+    },
+    {
+      "id": "component:DraftBox",
+      "kind": "method",
+      "name": "DraftBox"
+    },
+    {
+      "id": "component:EffectiveFieldBoxView",
+      "kind": "method",
+      "name": "EffectiveFieldBoxView"
+    },
+    {
+      "id": "component:RouterLink",
+      "kind": "method",
+      "name": "RouterLink"
+    },
+    {
+      "id": "component:RouterView",
+      "kind": "method",
+      "name": "RouterView"
+    },
+    {
+      "id": "component:global",
+      "kind": "method",
+      "name": "global"
+    },
+    {
+      "id": "component:DraftBox",
+      "kind": "method",
+      "name": "DraftBox"
+    },
+    {
+      "id": "component:EffectiveFieldBoxView",
+      "kind": "method",
+      "name": "EffectiveFieldBoxView"
+    },
+    {
+      "id": "component:RouterLink",
+      "kind": "method",
+      "name": "RouterLink"
+    },
+    {
+      "id": "component:RouterView",
+      "kind": "method",
+      "name": "RouterView"
+    },
+    {
+      "id": "component:global",
+      "kind": "method",
+      "name": "global"
+    },
+    {
+      "id": "component:DraftBox",
+      "kind": "method",
+      "name": "DraftBox"
+    },
+    {
+      "id": "component:EffectiveFieldBoxView",
+      "kind": "method",
+      "name": "EffectiveFieldBoxView"
+    },
+    {
+      "id": "component:RouterLink",
+      "kind": "method",
+      "name": "RouterLink"
+    },
+    {
+      "id": "component:RouterView",
+      "kind": "method",
+      "name": "RouterView"
+    },
+    {
+      "id": "component:global",
+      "kind": "method",
+      "name": "global"
+    },
+    {
+      "id": "component:DraftBox",
+      "kind": "method",
+      "name": "DraftBox"
+    },
+    {
+      "id": "component:EffectiveFieldBoxView",
+      "kind": "method",
+      "name": "EffectiveFieldBoxView"
+    },
+    {
+      "id": "component:RouterLink",
+      "kind": "method",
+      "name": "RouterLink"
+    },
+    {
+      "id": "component:RouterView",
+      "kind": "method",
+      "name": "RouterView"
+    },
+    {
+      "id": "component:global",
+      "kind": "method",
+      "name": "global"
+    },
+    {
+      "id": "component:DraftBox",
+      "kind": "method",
+      "name": "DraftBox"
+    },
+    {
+      "id": "component:EffectiveFieldBoxView",
+      "kind": "method",
+      "name": "EffectiveFieldBoxView"
+    },
+    {
+      "id": "component:RouterLink",
+      "kind": "method",
+      "name": "RouterLink"
+    },
+    {
+      "id": "component:RouterView",
+      "kind": "method",
+      "name": "RouterView"
+    },
+    {
+      "id": "component:global",
+      "kind": "method",
+      "name": "global"
+    },
+    {
+      "id": "component:DraftBox",
+      "kind": "method",
+      "name": "DraftBox"
+    },
+    {
+      "id": "component:EffectiveFieldBoxView",
+      "kind": "method",
+      "name": "EffectiveFieldBoxView"
+    },
+    {
+      "id": "component:RouterLink",
+      "kind": "method",
+      "name": "RouterLink"
+    },
+    {
+      "id": "component:RouterView",
+      "kind": "method",
+      "name": "RouterView"
+    },
+    {
+      "id": "component:global",
+      "kind": "method",
+      "name": "global"
+    },
+    {
+      "id": "component:DraftBox",
+      "kind": "method",
+      "name": "DraftBox"
+    },
+    {
+      "id": "component:EffectiveFieldBoxView",
+      "kind": "method",
+      "name": "EffectiveFieldBoxView"
+    },
+    {
+      "id": "component:RouterLink",
+      "kind": "method",
+      "name": "RouterLink"
+    },
+    {
+      "id": "component:RouterView",
+      "kind": "method",
+      "name": "RouterView"
+    },
+    {
+      "id": "component:global",
+      "kind": "method",
+      "name": "global"
+    },
+    {
+      "id": "component:DraftBox",
+      "kind": "method",
+      "name": "DraftBox"
+    },
+    {
+      "id": "component:EffectiveFieldBoxView",
+      "kind": "method",
+      "name": "EffectiveFieldBoxView"
+    },
+    {
+      "id": "component:RouterLink",
+      "kind": "method",
+      "name": "RouterLink"
+    },
+    {
+      "id": "component:RouterView",
+      "kind": "method",
+      "name": "RouterView"
+    },
+    {
+      "id": "component:global",
+      "kind": "method",
+      "name": "global"
+    },
+    {
+      "id": "component:DraftBox",
+      "kind": "method",
+      "name": "DraftBox"
+    },
+    {
+      "id": "component:EffectiveFieldBoxView",
+      "kind": "method",
+      "name": "EffectiveFieldBoxView"
+    },
+    {
+      "id": "component:RouterLink",
+      "kind": "method",
+      "name": "RouterLink"
+    },
+    {
+      "id": "component:RouterView",
+      "kind": "method",
+      "name": "RouterView"
+    },
+    {
+      "id": "component:global",
+      "kind": "method",
+      "name": "global"
+    },
+    {
+      "id": "component:DraftBox",
+      "kind": "method",
+      "name": "DraftBox"
+    },
+    {
+      "id": "component:EffectiveFieldBoxView",
+      "kind": "method",
+      "name": "EffectiveFieldBoxView"
+    },
+    {
+      "id": "component:RouterLink",
+      "kind": "method",
+      "name": "RouterLink"
+    },
+    {
+      "id": "component:RouterView",
+      "kind": "method",
+      "name": "RouterView"
+    },
+    {
+      "id": "component:global",
+      "kind": "method",
+      "name": "global"
+    },
+    {
+      "id": "component:DraftBox",
+      "kind": "method",
+      "name": "DraftBox"
+    },
+    {
+      "id": "component:EffectiveFieldBoxView",
+      "kind": "method",
+      "name": "EffectiveFieldBoxView"
+    },
+    {
+      "id": "component:RouterLink",
+      "kind": "method",
+      "name": "RouterLink"
+    },
+    {
+      "id": "component:RouterView",
+      "kind": "method",
+      "name": "RouterView"
+    },
+    {
+      "id": "component:global",
+      "kind": "method",
+      "name": "global"
+    },
+    {
+      "id": "component:DraftBox",
+      "kind": "method",
+      "name": "DraftBox"
+    },
+    {
+      "id": "component:EffectiveFieldBoxView",
+      "kind": "method",
+      "name": "EffectiveFieldBoxView"
+    },
+    {
+      "id": "component:RouterLink",
+      "kind": "method",
+      "name": "RouterLink"
+    },
+    {
+      "id": "component:RouterView",
+      "kind": "method",
+      "name": "RouterView"
+    },
+    {
+      "id": "component:global",
+      "kind": "method",
+      "name": "global"
+    },
+    {
+      "id": "component:DraftBox",
+      "kind": "method",
+      "name": "DraftBox"
+    },
+    {
+      "id": "component:EffectiveFieldBoxView",
+      "kind": "method",
+      "name": "EffectiveFieldBoxView"
+    },
+    {
+      "id": "component:RouterLink",
+      "kind": "method",
+      "name": "RouterLink"
+    },
+    {
+      "id": "component:RouterView",
+      "kind": "method",
+      "name": "RouterView"
+    },
+    {
+      "id": "component:global",
+      "kind": "method",
+      "name": "global"
+    },
+    {
+      "id": "component:DraftBox",
+      "kind": "method",
+      "name": "DraftBox"
+    },
+    {
+      "id": "component:EffectiveFieldBoxView",
+      "kind": "method",
+      "name": "EffectiveFieldBoxView"
+    },
+    {
+      "id": "component:RouterLink",
+      "kind": "method",
+      "name": "RouterLink"
+    },
+    {
+      "id": "component:RouterView",
+      "kind": "method",
+      "name": "RouterView"
+    },
+    {
+      "id": "component:global",
+      "kind": "method",
+      "name": "global"
+    },
+    {
+      "id": "component:DraftBox",
+      "kind": "method",
+      "name": "DraftBox"
+    },
+    {
+      "id": "component:EffectiveFieldBoxView",
+      "kind": "method",
+      "name": "EffectiveFieldBoxView"
+    },
+    {
       "id": "component:App",
       "kind": "method",
       "name": "App",
@@ -86,6 +536,27 @@
       "moduleSlug": "web"
     },
     {
+      "id": "component:SignatureConfirmDialog",
+      "kind": "method",
+      "name": "SignatureConfirmDialog",
+      "filePath": "apps/web/src/views/pending_review/SignatureConfirmDialog.vue",
+      "moduleSlug": "web"
+    },
+    {
+      "id": "component:SignatureReviewPanel",
+      "kind": "method",
+      "name": "SignatureReviewPanel",
+      "filePath": "apps/web/src/views/pending_review/SignatureReviewPanel.vue",
+      "moduleSlug": "web"
+    },
+    {
+      "id": "component:WordingReviewPanel",
+      "kind": "method",
+      "name": "WordingReviewPanel",
+      "filePath": "apps/web/src/views/pending_review/WordingReviewPanel.vue",
+      "moduleSlug": "web"
+    },
+    {
       "id": "component:DocumentGapsPanel",
       "kind": "method",
       "name": "DocumentGapsPanel",
@@ -114,24 +585,24 @@
       "moduleSlug": "web"
     },
     {
-      "id": "component:SignatureConfirmDialog",
+      "id": "component:HitDetailPanel",
       "kind": "method",
-      "name": "SignatureConfirmDialog",
-      "filePath": "apps/web/src/views/pending_review/SignatureConfirmDialog.vue",
+      "name": "HitDetailPanel",
+      "filePath": "apps/web/src/views/standard_lib/HitDetailPanel.vue",
       "moduleSlug": "web"
     },
     {
-      "id": "component:SignatureReviewPanel",
+      "id": "component:PdfTickPanel",
       "kind": "method",
-      "name": "SignatureReviewPanel",
-      "filePath": "apps/web/src/views/pending_review/SignatureReviewPanel.vue",
+      "name": "PdfTickPanel",
+      "filePath": "apps/web/src/views/standard_lib/PdfTickPanel.vue",
       "moduleSlug": "web"
     },
     {
-      "id": "component:WordingReviewPanel",
+      "id": "component:RetrieveHitsTable",
       "kind": "method",
-      "name": "WordingReviewPanel",
-      "filePath": "apps/web/src/views/pending_review/WordingReviewPanel.vue",
+      "name": "RetrieveHitsTable",
+      "filePath": "apps/web/src/views/standard_lib/RetrieveHitsTable.vue",
       "moduleSlug": "web"
     },
     {
@@ -294,6 +765,78 @@
       "confidence": "high"
     },
     {
+      "from": "component:index",
+      "to": "component:SignatureConfirmDialog",
+      "kind": "imports",
+      "confidence": "high"
+    },
+    {
+      "from": "component:index",
+      "to": "component:SignatureReviewPanel",
+      "kind": "imports",
+      "confidence": "high"
+    },
+    {
+      "from": "component:index",
+      "to": "component:WordingReviewPanel",
+      "kind": "imports",
+      "confidence": "high"
+    },
+    {
+      "from": "component:index",
+      "to": "component:SignatureConfirmDialog",
+      "kind": "template",
+      "confidence": "high"
+    },
+    {
+      "from": "component:index",
+      "to": "component:SignatureReviewPanel",
+      "kind": "template",
+      "confidence": "high"
+    },
+    {
+      "from": "component:index",
+      "to": "component:WordingReviewPanel",
+      "kind": "template",
+      "confidence": "high"
+    },
+    {
+      "from": "component:SignatureConfirmDialog",
+      "to": "component:types",
+      "kind": "imports",
+      "confidence": "high"
+    },
+    {
+      "from": "component:SignatureReviewPanel",
+      "to": "component:types",
+      "kind": "imports",
+      "confidence": "high"
+    },
+    {
+      "from": "component:SignatureReviewPanel",
+      "to": "component:RouterLink",
+      "kind": "template",
+      "confidence": "high"
+    },
+    {
+      "from": "component:WordingReviewPanel",
+      "to": "component:http",
+      "kind": "imports",
+      "confidence": "high"
+    },
+    {
+      "from": "component:WordingReviewPanel",
+      "to": "component:types",
+      "kind": "imports",
+      "confidence": "high"
+    },
+    {
+      "from": "component:WordingReviewPanel",
+      "to": "component:RouterLink",
+      "kind": "template",
+      "confidence": "high"
+    },
+    {
       "from": "component:DocumentGapsPanel",
       "to": "component:types",
       "kind": "imports",
@@ -384,75 +927,63 @@
       "confidence": "high"
     },
     {
-      "from": "component:index",
-      "to": "component:SignatureConfirmDialog",
-      "kind": "imports",
-      "confidence": "high"
-    },
-    {
-      "from": "component:index",
-      "to": "component:SignatureReviewPanel",
-      "kind": "imports",
-      "confidence": "high"
-    },
-    {
-      "from": "component:index",
-      "to": "component:WordingReviewPanel",
-      "kind": "imports",
-      "confidence": "high"
-    },
-    {
-      "from": "component:index",
-      "to": "component:SignatureConfirmDialog",
-      "kind": "template",
-      "confidence": "high"
-    },
-    {
-      "from": "component:index",
-      "to": "component:SignatureReviewPanel",
-      "kind": "template",
-      "confidence": "high"
-    },
-    {
-      "from": "component:index",
-      "to": "component:WordingReviewPanel",
-      "kind": "template",
-      "confidence": "high"
-    },
-    {
-      "from": "component:SignatureConfirmDialog",
+      "from": "component:HitDetailPanel",
       "to": "component:types",
       "kind": "imports",
       "confidence": "high"
     },
     {
-      "from": "component:SignatureReviewPanel",
+      "from": "component:index",
+      "to": "component:HitDetailPanel",
+      "kind": "imports",
+      "confidence": "high"
+    },
+    {
+      "from": "component:index",
+      "to": "component:PdfTickPanel",
+      "kind": "imports",
+      "confidence": "high"
+    },
+    {
+      "from": "component:index",
+      "to": "component:RetrieveHitsTable",
+      "kind": "imports",
+      "confidence": "high"
+    },
+    {
+      "from": "component:index",
+      "to": "component:HitDetailPanel",
+      "kind": "template",
+      "confidence": "high"
+    },
+    {
+      "from": "component:index",
+      "to": "component:PdfTickPanel",
+      "kind": "template",
+      "confidence": "high"
+    },
+    {
+      "from": "component:index",
+      "to": "component:RetrieveHitsTable",
+      "kind": "template",
+      "confidence": "high"
+    },
+    {
+      "from": "component:PdfTickPanel",
       "to": "component:types",
       "kind": "imports",
       "confidence": "high"
     },
     {
-      "from": "component:SignatureReviewPanel",
-      "to": "component:RouterLink",
-      "kind": "template",
-      "confidence": "high"
-    },
-    {
-      "from": "component:WordingReviewPanel",
+      "from": "component:RetrieveHitsTable",
       "to": "component:http",
       "kind": "imports",
       "confidence": "high"
     },
     {
-      "from": "component:WordingReviewPanel",
+      "from": "component:RetrieveHitsTable",
       "to": "component:types",
       "kind": "imports",
-      "confidence": "high"
-    },
-    {
-      "from": "component:WordingReviewPanel",
-      "to": "component:RouterLink",
-      "kind": "template",
       "confidence": "high"
     },
     {

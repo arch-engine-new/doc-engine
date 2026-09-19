@@ -144,6 +144,25 @@ Agent **必须**在目标工程写入：`pages.json`、`required-apis.json`、`r
 | 社区 | 业务接口 | GET /property/community/list |
 | 楼栋（级联） | 业务接口 | GET /property/house/tree?communityId=xxx |
 
+## 菜单/导航接入表
+| 页面 | 菜单挂载点 | 机制类型 |
+|------|-----------|---------|
+| 用户管理 | 系统管理/用户管理 | db-driven（后端菜单接口下发） |
+
+## 数据契约对齐
+| API 意向名 | volumeClass（page.logic「数据契约」节） | shape 申报 | 分页参数 |
+|-----------|--------------------------------------|-----------|---------|
+| listUsers | bounded | paged | pageNum/pageSize |
+| exportUsers | bounded | full（fullReason：审计导出需一次取全量归档） | — |
+
+## 前端数据防御申报（画像 ui 段；defaulted 可整节省略）
+| 申报项 | 值（示例） | 说明 |
+|--------|-----------|------|
+| framework | react | react｜vue｜other；other/缺省档位上限 L1 |
+| apiClientModule | src/services/apiClient | decode 层约定路径 |
+| boundaryComponent | src/components/DataBoundary | 区块边界组件路径 |
+| evidenceLevel | L2 | 申报取证档位；done 复算缺证据即 FAIL |
+
 ## 缺失项
 - 缺少后端接口：exportUsers → 需按 feature 补 ExportController（写入 plan 后端 Task，排在接线前）
 - 缺表：无
@@ -151,8 +170,8 @@ Agent **必须**在目标工程写入：`pages.json`、`required-apis.json`、`r
 ```
 
 8. **同步写入 Connect Ledger**（目标工程 `.apt/connect/`，**机制强制**，与上表对齐）：
-   - `pages.json`：全页；每页须含 `apis`，并记 `mode`（原型页 `prototype-ref` / 逻辑页 `logic-only`）；顶层记 `framework`（`vue` | `react`）
-   - `required-apis.json`：每条 API `status` = `missing` | `ready` | `wired`
+   - `pages.json`：全页；每页须含 `apis`，并记 `mode`（原型页 `prototype-ref` / 逻辑页 `logic-only`）；顶层记 `framework`（`vue` | `react`）；页级记 `nav`（机制 + 挂载点，取 page.logic「导航」节的菜单机制类型 × 菜单挂载点 × 画像探测结论，如 `nav: { "menuType": "db-driven", "mountPoint": "系统管理/用户管理" }`）
+   - `required-apis.json`：每条 API `status` = `missing` | `ready` | `wired`；列表/查询类 API **申报数据形态**：`shape`（`paged` | `full`）+ `volumeClass`（**从 page.logic「数据契约」节取量级，PM 声明的 volumeClass 开发不得改**）；`shape=full` 须带非空 `fullReason`；`shape=paged` 须带 `pageParam` / `sizeParam`（取画像数据约定）。申报非法 gate 即拦：`DATA_SHAPE_INVALID` / `FULL_FETCH_UNBOUNDED`（ledger 阶段）、`FULL_FETCH_UNJUSTIFIED`（wire 阶段）、`PAGED_PARAMS_MISSING`（plan 阶段）
    - `required-dropdowns.json`：下拉 → 接口/字典（可空数组，文件必须存在）
    - `mocks.json`：待清理 mock 清单
    - `progress.json`：`phase` 至少推进到 ledger 阶段
@@ -169,8 +188,18 @@ Agent **必须**在目标工程写入：`pages.json`、`required-apis.json`、`r
    - 缺字段（已有表加字段）→ 同上
    - **缺微服务**（与「缺普通业务接口」不同）→ 提示架构师 `/apt-arch-review`；确认拆分策略后，仍把可落地的接口/BFF 缺口写入 plan；无法本会话落地的写入 `deferred.json`（`reason=needs_arch_review`），**不得**因普通缺接口而结束本命令
 
+#### 工程机制画像（`.apt/profile.json`）
+
+随迁移清单一并探测**目标工程**的菜单机制与数据约定，产出工程机制画像——「本项目什么叫合理」的政策声明，gate 用它 × 申报 × 证据做一致性判定（schema 见 `templates/connect-runner/profile.json.example`）：
+
+1. **探测菜单机制**（`menu.type`）：db-driven=后端菜单接口下发（记 `navApi`，如 `/getRouters`）／route-driven=中心路由文件（记 `source` 路径；wire/done 静态断言该文件含每页 route，缺页 → `NAV_NOT_REGISTERED`）／code-driven=中心菜单注册文件（记 `source` 路径）。page.logic「导航」节机制类型为 `unknown` 的页以探测结果定。
+2. **探测数据约定**（`data`）：列表响应 envelope（如 `{ rows, total }`）与分页参数名 `pageParam` / `sizeParam`（如 `pageNum` / `pageSize`）。
+3. **探测前端防御声明（`ui` 段，并入画像人审）**：`framework`（`react|vue|other`）+ `apiClientModule`（decode 层约定路径）+ `boundaryComponent`（区块边界组件路径）+ `evidenceLevel`（`L1|L2|L3` 申报取证档位）；页级可用 `pages.json` 页对象 `evidenceLevel` 覆盖画像档位。**申报时向人讲明降级后果**：申报档位在 done 复算时缺证据 = FAIL（`FRONTEND_*` 失败码，见 Phase 6）；未申报（defaulted：缺省/空串/非法）→ 按 L1 放行（存量画像零破坏）；`framework=other`/缺省 → 档位上限 L1（gate WARN `FRONTEND_LEVEL_CAPPED`，按 L1 判）。ui 段申报结论记入迁移清单「前端数据防御申报」节。
+4. 探测结论写入目标工程 `.apt/profile.json`，先落 `status: draft`。
+5. **停顿点请人确认**：画像属政策声明，必须人审——`draft` 期间 gate 对画像相关判定只 WARN 不 FAIL；确认后置 `status: confirmed`（确认动作并入下方停顿点）。
+
 展示迁移清单汇总（N 页 + M 个缺少后端接口 + K 个缺表）。  
-若仅需用户扫一眼清单：可短暂停顿确认；**S2/S3 在此停顿点明示「将创建 Vue 3 + Vite / React + Vite 工程」（未指定 `--framework` 时默认 Vue）供用户当场改**；**确认后必须继续 Phase 3–4，禁止当作对接已完成。**
+若仅需用户扫一眼清单：可短暂停顿确认；**S2/S3 在此停顿点明示「将创建 Vue 3 + Vite / React + Vite 工程」（未指定 `--framework` 时默认 Vue）供用户当场改**；**同一停顿点一并展示工程机制画像（菜单机制 + 数据约定 + `ui` 段前端防御申报）请人确认**，确认后置 `.apt/profile.json` `status: confirmed`；存量工程迭代时画像已 `confirmed` → **跳过本停顿，不重复打扰**；**确认后必须继续 Phase 3–4，禁止当作对接已完成。**
 
 #### Phase 2 出口闸门（强制）
 
@@ -195,12 +224,14 @@ plan 的 Task **必须**按此顺序：
 2. **Task A — 按域 feature 补后端**（仅针对「❌ 缺少后端接口 / 缺表 / 缺字段」）  
    - 每一业务域一个（或一组）Task，模式对齐 `/feature`：补 Controller/Service/Entity/Mapper 等  
    - 多域（如 20 域）**按域拆开串行**，保证索引表完整，避免一上下文塞爆后半截放弃  
+   - **消费工程机制画像**：db-driven 工程的菜单数据变更（SQL / 菜单配置）必须进 Task A 后端域；`shape=paged` 的缺失 API 进后端 Task 时**带 `pageParam` / `sizeParam` 约定**（取自画像 `data` 节；缺失 → gate plan 阶段 `PAGED_PARAMS_MISSING`）  
    - **reset-demo 约定**：为有写操作的域提供 `POST /api/<domain>/reset-demo`（幂等，重置到 page.logic 演示态）；与 `$apt-accept` Phase 0.5 **重置能力探针**互指——该探针即探测此约定（或可重复种子，两者皆无 → 探针 WARN）  
 3. **Task B′ — 按页实现**（依赖对应 Task A 完成；S1 即现行「Task B — 前端对接」）  
    - 每页 = view 组件树（page.logic.md 为 SSOT；**S2 另对照原型视觉**：布局结构、语义组件、tokens 用色）+ services（先接 mock，该页 API ready 后切真）+ 下拉走接口/字典  
    - S1 行为不变：删 mock + 连 API + 实现功能 + 下拉走接口；每页以 page.logic.md 为 SSOT  
 
-禁止：只有前端 Task、或把「缺少后端接口」的页直接跳过。
+禁止：只有前端 Task、或把「缺少后端接口」的页直接跳过。  
+禁止：页内私挂菜单——工程无菜单机制 → plan 必含**中心注册 Task**（建 route-driven 中心路由 / code-driven 注册机制），菜单接入一律走画像声明的机制。
 
 **执行顺序（S2/S3）——按页垂直切片**：
 
@@ -245,9 +276,20 @@ exit ≠ 0 → **禁止**进入 Phase 4b。
 
 #### Phase 4b — 再对接前端
 
+##### 骨架先行（前端数据防御，先于任何页面组件）
+
+受管页在写任何页面组件**之前**，先从 SSOT `templates/_frontend-data-defense.md` 实例化防御骨架——接口形状/文件路径/DOM 标记/断言全部照抄模板，AI 只填 `TODO(scaffold-fill)` 空位（填空而非造轮子）：
+
+- **实例化五产物**：decodeClient + requestJson（apiClient 模块内）→ per-API decoder stub（`<api-name>.decode.ts`）→ DataBoundary → useResource → per-API 契约测试（`tests/frontend-contracts/`）；契约测试文件头两行 `// DONOTEDIT(scaffold)` + `// fingerprint: sha256:<hex>`，指纹逐条入 `.apt/connect/frontend-fingerprints.json`（ledger）
+- **遵守 `templates/_code-standards.md`「数据防御」四则**：入口必 decode / 区块必 boundary / 渲染必三态 / 骨架必先于页面；DOM 标记照模板写死：页面根元素带 `[data-page-root]`，错误降级带 `data-state="error"`（四态 `loading|error|empty|data` 与 useResource 一一对应）
+- **三禁（gate L1 即拦，`FRONTEND_SKELETON_MISSING`）**：禁裸消费原始响应；禁 `as Type` 断言替代校验（假 decode）；禁只包整页单 boundary（粒度按数据区块）
+- **`DONOTEDIT(scaffold)` 文件禁手改**：私改断言/删测试 → done 闸指纹复算 `FRONTEND_TEST_TAMPERED`（改证据骗闸门 = 无证据）
+- S2/S3 按页垂直切片时，骨架先行落在**每页 UI 实现之前**（先实例化该页骨架，再实现该页）
+
 - 跑 Task B / B′：删 mock → 连 API → 操作/状态/校验 → 下拉走接口  
 - 回写 `mocks.json`（cleared/done）与 `required-apis`→`wired`；更新 `progress.json`  
 - 调 `query_connect_status`，将快照写入 `.apt/connect/connect-status.json`  
+- 接线后运行 **wire 探针**：`node templates/connect-runner/wire-probe.cjs --base-url=<目标后端> --ledger=.apt/connect`（**M2，Task 8 交付**）→ 产出 `.apt/connect/wire-evidence.json`（逐页导航数据源 + 列表请求的原始捕获）；环境不可用 → 证据标 `blocked(env)` 并如实上报，**禁止虚假「已对接」叙事**  
 - 若某页仍依赖未补齐的 API → BLOCKED，回到 4a，不得跳过该页假装完成
 
 #### Phase 4b 出口闸门（强制）
@@ -276,7 +318,16 @@ exit ≠ 0 → **禁止**宣称对接完成 / 进入「命令结束」叙事。�
 
 FAIL → `/finish-feature` → 重新 `/verify`。
 
-验收前自检：迁移清单中曾标「缺少后端接口」的项应已可 `search_arch` / `query_contract` 命中，且对应 Mock 清理表已处理；否则不得宣称完成。
+**前端防御取证（按申报档位；画像 `ui` 段或页级 `evidenceLevel` 已申报时必跑）**：
+
+```bash
+node templates/connect-runner/wire-probe.cjs --resilience --ledger=.apt/connect \
+  [--base-url=<目标后端> --user=<u> --password=<p>] --level=both --target=<目标工程>
+```
+
+证据落 `.apt/connect/frontend-evidence.json`（只含原始事实，无结论字段）。**L3 申报必 `--level=both`**：阶梯累积 L3⊃L2，缺 L2 证据 gate 会报 `missing:levels.L2`。无测试运行器/无浏览器 → 探针 `skipped`（`no-test-runner` / `no-playwright`）= 合法降档路径，非失败；**显式申报高档而证据缺失才 FAIL**（defaulted 未申报 → 按 L1 放行）。
+
+验收前自检：迁移清单中曾标「缺少后端接口」的项应已可 `search_arch` / `query_contract` 命中，且对应 Mock 清理表已处理；若已产出 `.apt/connect/wire-evidence.json` 与 `.apt/connect/frontend-evidence.json`，一并核对证据与申报/画像一致——探针 `blocked(env)` 须如实注明，不得当作探针已通过；否则不得宣称完成。
 
 ### Phase 6 — 闭环 + done 闸门
 
@@ -296,6 +347,20 @@ exit ≠ 0 → **禁止** Overall 完成叙事。
 
 **N5 对接分级（done 时如实标注）**：done 过闸后必须在 `progress.json` 顶层如实标 `connectLevel`（`prototype|mock|real-backend|production`，缺省视为 `prototype`；gate 会在 done 输出透出该档位）。未到 `production` 时，完成输出须注明剩余升级路径**一句**（例：`connectLevel=mock：后端仍为 mock，需换接真实后端后重跑 done 闸门`）。
 
+**分级诚实链（M2，Task 9 交付 gate 断言）**：done 前核对 `.apt/connect/wire-evidence.json`——mocks 全清 + `required-apis` 全 wired 却把 `connectLevel` 报成 `mock|prototype` → gate FAIL `LEVEL_EVIDENCE_CONFLICT`；档位必须与证据相符，不得低报装保守、不得无证据高报。
+
+**FRONTEND_* 失败码与修复路径（done 阶段按申报档位复算；失败码/marker 以 `connect-gate.cjs` 实码为准，全表见 `templates/connect-runner/README.md`）**：
+
+| 失败码 | 修复路径 |
+|--------|----------|
+| `FRONTEND_SKELETON_MISSING`（marker `fake-decode`/`boundary`） | 回 Phase 4b **骨架先行重跑**：补 decode 引用链 / boundary 引用，禁 `as Type` 假 decode |
+| `FRONTEND_EVIDENCE_MISSING` | **补证据**：重跑 `wire-probe --resilience` 取证 / 补齐契约测试与运行器 / 补 `frontend-fingerprints.json` 指纹 ledger |
+| `FRONTEND_TEST_TAMPERED` | **重算指纹**：从 SSOT 重新实例化被改/被删的骨架文件并重算指纹入库；禁止手改 `DONOTEDIT(scaffold)` 骗闸门 |
+| `FRONTEND_EVIDENCE_INCONSISTENT` | 证据含结论字段（`passed/ok/success/verdict`）或出现未申报档位证据 → 删手写证据，重跑 `--resilience` 取真实证据 |
+| `LEVEL_EVIDENCE_CONFLICT` | **如实降档**：申报改到证据可支撑的档位，或补齐高档证据，二选一 |
+
+非阻断 WARN：`FRONTEND_LEVEL_CAPPED`（`framework=other`/缺省 → 档位上限 L1，按 L1 判——此时如实按 L1 申报即正确形态，不算降级违规）。
+
 **出口**：→ `/current-status`（看进度，确认交付）。
 
 ## 约束
@@ -307,6 +372,9 @@ exit ≠ 0 → **禁止** Overall 完成叙事。
 - **先后端、后接线**——顺序不可颠倒；`stage=backend` 未过禁止 4b  
 - **不做完不结束**——禁止静默半截收工；完成靠 `connect-gate` 机制  
 - **缺微服务需架构确认**——与普通缺 Controller 区分；普通缺口走 feature 补齐  
+- **菜单必须走画像声明的机制**——db-driven=后端菜单数据、route-driven/code-driven=中心注册；禁页内私挂  
+- **量级以 page.logic 数据契约为真源**——PM 声明的 `volumeClass` 开发不得改；申报（`shape`）与证据围绕它裁决  
+- **数据防御骨架先行**——受管页先从 `_frontend-data-defense.md` 实例化骨架再写页面组件；禁裸消费原始响应/`as Type` 假 decode/只包整页单 boundary；`DONOTEDIT(scaffold)` 文件禁手改  
 - **迁移清单是 plan 的输入**——不是最终实现；机检以 `.apt/connect/` 为准
 - **applied schema 软引用**——有则优先参考 `docs/schema/*`；无则不 FAIL  
 - **原型永不交付**——S2 的原型仅是预览与视觉参考；最终页面一律为工程内 view 组件  

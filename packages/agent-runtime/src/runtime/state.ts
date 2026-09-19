@@ -6,7 +6,8 @@
  * Avoids implicit mutation bugs and enables future checkpointing.
  */
 
-import type { GraphNode } from "../graph/types.js";
+import type { CompiledGraph, GraphNode } from "../graph/types.js";
+import type { LlmProvider } from "../llm/provider.js";
 
 /** A single named channel holding a JSON-serializable value. */
 export interface Channel<T = unknown> {
@@ -53,6 +54,10 @@ export interface ExecutionContext {
   readonly nodeExecutionId?: number;
   /** Current attempt number for this node (1-based). */
   attempt: number;
+  /** Resolve nested graph by id (subgraph nodes). */
+  getCompiledGraph?: (graphId: string) => CompiledGraph | undefined;
+  /** Optional LLM provider override for llm nodes. */
+  llmProvider?: LlmProvider;
 }
 
 /**

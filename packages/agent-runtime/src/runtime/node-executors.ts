@@ -2,16 +2,15 @@
  * Node executors for each GraphNode type.
  *
  * Why: Separates execution logic from scheduling, making each executor
- * independently testable and replaceable. fn/branch are implemented;
- * llm/tool/hitl/subgraph throw NotImplementedError with clear messages
- * so the scheduler integrates end-to-end without external deps.
+ * independently testable and replaceable.
  */
 
-import type { GraphNode } from "../graph/types.js";
+import type { GraphNode, CompiledGraph } from "../graph/types.js";
 import type { ExecutionContext } from "./state.js";
 import type { RetryPolicy } from "../graph/types.js";
 import { ToolRuntime, type ExecuteOptions } from "../tools/runtime.js";
 import { getDefaultRegistry } from "../tools/registry.js";
+import { getDefaultLlmProvider, type LlmProvider } from "../llm/provider.js";
 
 /** Result of executing a single node. */
 export interface NodeResult {
@@ -145,14 +144,45 @@ export class BranchExecutor implements NodeExecutor {
 }
 
 /**
- * LLM node executor - NOT IMPLEMENTED.
- * Would call an LLM provider with prompt from config, stream/return response.
+ * LLM node executor — uses injectable LlmProvider (default: FakeLlmProvider).
  */
 export class LLMExecutor implements NodeExecutor {
   readonly nodeType = "llm" as const;
+  private provider: LlmProvider;
 
-  async execute(_node: GraphNode, _context: ExecutionContext): Promise<NodeResult> {
-    throw new NotImplementedError("llm");
+  constructor(provider?: LlmProvider) {
+    this.provider = provider ?? getDefaultLlmProvider();
+  }
+
+  async execute(node: GraphNode, context: ExecutionContext): Promise<NodeResult> {
+    const config = node.config ?? {};
+    const outputChannel: string = (config.outputChannel as string) ?? node.id;
+
+    let prompt: string;
+    if (typeof config.prompt === "string") {
+      prompt = config.prompt;
+    } else if (typeof config.promptTemplate === "function") {
+      prompt = await config.promptTemplate(serializeChannels(context.channels), context);
+    } else if (typeof config.promptTemplate === "string") {
+      prompt = config.promptTemplate;
+    } else {
+      const inputChannels: string[] = (config.inputChannels as string[]) ?? ["input"];
+      const parts: string[] = [];
+      for (const ch of inputChannels) {
+        const val = getChannel(context.channels, ch);
+        if (val !== undefined) parts.push(String(val));
+      }
+      prompt = parts.join("\n");
+    }
+
+    const provider = context.llmProvider ?? this.provider;
+    const text = await provider.complete({
+      prompt,
+      model: config.model as string | undefined,
+      temperature: config.temperature as number | undefined,
+    });
+
+    return { updates: { [outputChannel]: text } };
   }
 }
 
@@ -265,26 +295,72 @@ export class ToolExecutor implements NodeExecutor {
 }
 
 /**
- * Human-in-the-loop node executor - NOT IMPLEMENTED.
- * Would pause run, persist state, await external resume signal.
+ * HITL is handled in the scheduler before executors run; this stub should not be invoked.
  */
 export class HITLExecutor implements NodeExecutor {
   readonly nodeType = "hitl" as const;
 
   async execute(_node: GraphNode, _context: ExecutionContext): Promise<NodeResult> {
-    throw new NotImplementedError("hitl");
+    throw new Error("HITL nodes are handled by the scheduler, not HITLExecutor");
   }
 }
 
 /**
- * Subgraph node executor - NOT IMPLEMENTED.
- * Would spawn a nested run with subgraph definition.
+ * Subgraph node — runs a nested compiled graph and maps output to a channel.
  */
 export class SubgraphExecutor implements NodeExecutor {
   readonly nodeType = "subgraph" as const;
 
-  async execute(_node: GraphNode, _context: ExecutionContext): Promise<NodeResult> {
-    throw new NotImplementedError("subgraph");
+  async execute(node: GraphNode, context: ExecutionContext): Promise<NodeResult> {
+    const config = node.config ?? {};
+    const graphId = config.graphId as string | undefined;
+    if (!graphId) {
+      throw new Error(`subgraph node "${node.id}" requires config.graphId`);
+    }
+
+    const resolver = context.getCompiledGraph;
+    if (!resolver) {
+      throw new Error(`subgraph node "${node.id}" requires getCompiledGraph on execution context`);
+    }
+
+    const nested = resolver(graphId);
+    if (!nested) {
+      throw new Error(`subgraph graph not found: ${graphId}`);
+    }
+
+    const inputChannels: string[] = (config.inputChannels as string[]) ?? ["input"];
+    const subgraphInput: Record<string, unknown> = {};
+    for (const ch of inputChannels) {
+      subgraphInput[ch] = getChannel(context.channels, ch);
+    }
+
+    const nestedInput =
+      config.input !== undefined
+        ? config.input
+        : inputChannels.length === 1
+          ? getChannel(context.channels, inputChannels[0])
+          : subgraphInput;
+
+    const { runGraph } = await import("./scheduler.js");
+    const nestedResult = await runGraph(nested, nestedInput, context.abortSignal, {
+      getCompiledGraph: resolver,
+      llmProvider: context.llmProvider,
+    });
+
+    if (nestedResult.status === "waiting_hitl") {
+      throw new Error(`subgraph "${graphId}" paused at HITL — nested HITL not supported in subgraph node`);
+    }
+    if (nestedResult.status !== "completed") {
+      throw new Error(
+        `subgraph "${graphId}" failed with status ${nestedResult.status}: ${nestedResult.error?.message ?? "unknown"}`,
+      );
+    }
+
+    const outputChannel: string = (config.outputChannel as string) ?? node.id;
+    const outputKey = (config.outputKey as string) ?? "output";
+    const output = nestedResult.output ?? getChannel(nestedResult.channels, outputKey);
+
+    return { updates: { [outputChannel]: output } };
   }
 }
 

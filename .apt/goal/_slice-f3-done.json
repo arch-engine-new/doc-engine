@@ -1,0 +1,27 @@
+{
+  "note": "F-3 终态回填草稿；playbook-state.json 当时被占用",
+  "cursorAfter": 1,
+  "slice": {
+    "id": "F-3",
+    "status": "done",
+    "verifyResult": "PASS",
+    "finishedAt": "2026-09-19T11:05:00.000Z",
+    "commit": "cf22716"
+  },
+  "topSteps": [
+    {
+      "id": "F-3:PB-1",
+      "action": "feature",
+      "status": "done",
+      "attempts": 1,
+      "notes": "commit cf22716; TDD RED->GREEN; vitest 27 passed"
+    },
+    {
+      "id": "F-3:PB-2",
+      "action": "verify",
+      "status": "done",
+      "attempts": 1,
+      "notes": ".apt/verify/latest.md Overall PASS vs F-3 plan"
+    }
+  ]
+}

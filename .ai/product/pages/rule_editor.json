@@ -1,0 +1,8 @@
+{
+  "pageId": "rule_editor",
+  "title": "规则编辑与发布",
+  "capabilities": [],
+  "signals": [],
+  "sourcePath": "designs/v0/rule_editor/page.logic.md",
+  "contentHash": "ce4e2eb25f1bb369a8fc3629a8888b3cf8855e5ce0a4557cf54fc5a69a23c039"
+}

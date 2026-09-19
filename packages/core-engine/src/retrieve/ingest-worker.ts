@@ -5,6 +5,7 @@
 
 import type { OcrPort } from "../ocr/port.js";
 import { extractPdfUnicodePages, hasUsablePdfTextLayer } from "../ocr/pdf-text.js";
+import { getDocumentProxy } from "unpdf";
 import { renderPdfPagePng, type PdfPageRasterFn } from "../ocr/pdf-raster.js";
 import type { LedgerStore } from "../persistence/ledger.js";
 import type {
@@ -222,6 +223,13 @@ export class StandardIngestWorker {
 }
 
 async function countPdfPages(bytes: Uint8Array): Promise<number> {
+  try {
+    const pdf = await getDocumentProxy(Uint8Array.from(bytes));
+    const n = pdf.numPages;
+    if (typeof n === "number" && n > 0) return n;
+  } catch {
+    /* fall through to text-layer length */
+  }
   const pages = await extractPdfUnicodePages(bytes);
   return Math.max(pages.length, 1);
 }

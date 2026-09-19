@@ -29,7 +29,7 @@ import {
   serializeChannels,
   deserializeChannels,
 } from "../src/runtime/state.js";
-import { FnExecutor, BranchExecutor, NotImplementedError } from "../src/runtime/node-executors.js";
+import { FnExecutor, BranchExecutor } from "../src/runtime/node-executors.js";
 
 describe("state.ts - channel/reducer model", () => {
   it("createInitialChannels creates input channel", () => {
@@ -129,10 +129,15 @@ describe("node-executors.ts", () => {
     expect(result.nextNodeIds).toEqual(["nodeDefault"]);
   });
 
-  it("LLMExecutor throws NotImplementedError", async () => {
+  it("LLMExecutor uses FakeLlmProvider", async () => {
     const { LLMExecutor } = await import("../src/runtime/node-executors.js");
-    const executor = new LLMExecutor();
-    await expect(executor.execute({ id: "x", type: "llm" }, mockContext)).rejects.toThrow(NotImplementedError);
+    const { FakeLlmProvider } = await import("../src/llm/provider.js");
+    const executor = new LLMExecutor(new FakeLlmProvider());
+    const result = await executor.execute(
+      { id: "x", type: "llm", config: { prompt: "hi", outputChannel: "out" } },
+      mockContext,
+    );
+    expect(result.updates.out).toContain("[fake-llm");
   });
 
   it("getExecutor returns built-in executors", async () => {

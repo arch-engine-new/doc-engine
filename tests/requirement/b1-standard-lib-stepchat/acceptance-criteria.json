@@ -1,0 +1,42 @@
+{
+  "source": "docs/apt/plans/2026-09-17-b1-standard-lib-stepchat-fix-plan.md",
+  "extractedAt": "2026-09-17T04:05:00.000Z",
+  "verifiedAt": "2026-09-17T04:08:00.000Z",
+  "criteria": [
+    {
+      "id": "AC-1",
+      "description": "未配置 .apt/agent-runtime.llm.json 时，助手回复不得以 [fake-llm 开头回显 HITL 系统提示，须中文说明未配置模型",
+      "verifyMethod": "vitest unconfigured-llm + http-adapter memory POST /api/chat without llm.json",
+      "relatedFiles": [
+        "packages/agent-runtime/src/llm/provider.ts",
+        "packages/core-engine/src/http/session.ts",
+        "packages/core-engine/src/agent/agent-runtime-factory.ts"
+      ],
+      "passed": true,
+      "attempts": 0
+    },
+    {
+      "id": "AC-2",
+      "description": "标准库对话不得展示无关 Job 的 fixture-reversed.json / findings；问条款时只依据本次检索命中或明确未命中",
+      "verifyMethod": "no /api/jobs in standard_lib/index.vue; vitest standard-lib-stepchat",
+      "relatedFiles": [
+        "apps/web/src/views/standard_lib/index.vue",
+        "packages/core-engine/src/agent/context.ts",
+        "packages/core-engine/src/agent/step-chat-bridge.ts"
+      ],
+      "passed": true,
+      "attempts": 0
+    },
+    {
+      "id": "AC-3",
+      "description": "Vue step=retrieve 与 standard_lib 提示词/检索分支对齐；先红后绿测试覆盖复现",
+      "verifyMethod": "vitest standard-lib-stepchat + agent-connect",
+      "relatedFiles": [
+        "packages/core-engine/src/agent/prompts.ts",
+        "apps/web/src/views/standard_lib/index.vue"
+      ],
+      "passed": true,
+      "attempts": 0
+    }
+  ]
+}

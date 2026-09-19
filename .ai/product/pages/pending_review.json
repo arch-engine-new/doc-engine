@@ -1,0 +1,16 @@
+{
+  "pageId": "pending_review",
+  "title": "待审工作台",
+  "capabilities": [
+    "list"
+  ],
+  "signals": [
+    {
+      "kind": "list",
+      "excerpt": "…Receipt + audit；刷新待签列表 | 提交签字确认？ | 监理（assignee） |",
+      "path": "designs/v0/pending_review/page.logic.md"
+    }
+  ],
+  "sourcePath": "designs/v0/pending_review/page.logic.md",
+  "contentHash": "c7e255901df3e039357582992f5e7f78343608f15db1c78038fdcad34d99f049"
+}

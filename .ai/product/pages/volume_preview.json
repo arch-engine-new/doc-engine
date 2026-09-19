@@ -1,0 +1,8 @@
+{
+  "pageId": "volume_preview",
+  "title": "组卷预览",
+  "capabilities": [],
+  "signals": [],
+  "sourcePath": "designs/v0/volume_preview/page.logic.md",
+  "contentHash": "6eb9609d84c1eeaefa8f704299bbe4ecec4e22de283d9b2a64173e831bdd1c46"
+}

@@ -1,48 +1,46 @@
-# Task 8 Report — 缺表扫描 + CompletenessRule
+# Task 8 Report — recognizeLayout 与按页文字层（R8/R17）
 
-## Summary
+## Status
+DONE
 
-Implemented document completeness gap scanning (AC-8): backend compares `CompletenessRule` rows against `DocumentArtifact` records per project, exposes REST endpoints, seeds a concrete inspection batch rule, and surfaces missing docs on `project_home` with a「补表」action that triggers generate + upload.
+## Commits
+`5f5d8c07d1c333a371dd4f364c2d3a2f8c09a3c3` feat(ocr): add recognizeLayout and per-page PDF Unicode extraction
 
-## Backend
+BASE_SHA: `824e49ec0ab09a7d2601a74db23c2a626206e6bc`
 
-### `packages/core-engine/src/pipeline/document-pipeline.ts`
-- Added `DocumentGap` / `DocumentGapsResult` types.
-- Added `listDocumentGaps(projectId)` — walks project packs, required completeness rules, and existing artifacts; returns missing doc types.
+未读 `.ai/`。未调用 `audit_arch_changes`。未提交 `.ai/`。未改 ingest-worker / handle-request / Job 4MB。未发明 Paddle DELETE。未恢复 Baidu。未 push。
 
-### `packages/core-engine/src/http/handle-request.ts`
-- `GET /api/projects/:projectId/document-gaps` → `{ missing: [{ doc_type_id, label, pack_id }] }`
-- `GET /api/packs/:packId/completeness-rules`
-- `PUT /api/packs/:packId/completeness-rules` (bulk replace)
-- Added `completenessRulesFromBody` parser (snake_case + camelCase aliases).
+## Changes
+- MCP 只读：`query_project_status` → `projectType=component`，无 blockers。`query_contract` name=`PaddleOcr`；`query_contract` name=`flattenOcrMarkdown`。
+- `packages/core-engine/src/ocr/paddleocr.ts`：
+  - 抽私有 `runJob`（submit/poll/jsonl）。
+  - `recognizeLayout` 返回未拍平 VL markdown（可含 `|`）。
+  - `recognize` 仍 `flattenOcrMarkdown`（Job 路径）。
+- `packages/core-engine/src/ocr/pdf-text.ts`：
+  - 新增 `extractPdfUnicodePages`：`mergePages: false`，返回 `string[]`。
+  - `extractPdfUnicodeText` 保持 `mergePages: true`（Job）。
+- 单测：同一 VL markdown 夹具（含 GFM 表）；`recognizeLayout` 含 `|`；`recognize` 不含表竖线。`extractPdfUnicodePages` 两页空 PDF 长度为 2。
 
-### `packages/core-engine/src/pipeline/seed.ts`
-- Extended `ConcreteExcelSeedStore` with `saveCompletenessRules`.
-- Added `concreteCompletenessRules(docTypeId)` — required rule for「混凝土施工检验批质量验收记录」.
-- Idempotent seed in `applyConcreteLedgerSeed` / `seedConcreteInspectionBatchLedger` (including existing-seed path).
+## Tests / Verify
+```
+npx vitest run packages/core-engine/test/paddleocr.test.ts packages/core-engine/test/pdf-text.test.ts
+→ exit 0; Test Files 2 passed (2); Tests 16 passed (16) (vitest 3.2.7)
+  paddleocr.test.ts 9 passed（既有 8 + recognizeLayout）
+  pdf-text.test.ts 7 passed（既有 6 + pages）
+```
 
-### `packages/core-engine/test/document-gaps.test.ts`
-- AC-8: gap present after reset for concrete rule; cleared after `documents/generate`.
-- PUT completeness-rules replaces pack rules.
+Rn: R8、R17。
 
-## Frontend
+## APT Micro-closeout
+- ContractsRegistered:
+  - `PaddleOcr` → `packages/core-engine/src/ocr/paddleocr.ts`（更新）
+  - `extractPdfUnicodePages` → `packages/core-engine/src/ocr/pdf-text.ts`（新建）
+- AssetsRefreshed:
+  - `packages/core-engine/src/ocr/paddleocr.ts` → `frontend/core-engine/util/PaddleOcr`（`kind=util`，`module=core-engine`，action=updated）
+  - `packages/core-engine/src/ocr/pdf-text.ts` → `frontend/core-engine/util/extractPdfUnicodePages`（`kind=util`，`module=core-engine`，action=created）
+- `audit_arch_changes`: not called
 
-### `apps/web/src/services/http.ts` + `types.ts`
-- `DocumentGapView` type and `fetchDocumentGaps(projectId)`.
-
-### `apps/web/src/views/project_home/`
-- `useProjectHome.ts`: loads gaps per project on `load()`, `fillDocumentGap` delegates to `generateInspectionBatch`, refreshes gaps after fill.
-- `DocumentGapsPanel.vue`: per-project missing-doc list with「补表」button.
-- `index.vue`: renders `DocumentGapsPanel` above pack table.
-
-## Verify
-
-| Command | Result |
-|---------|--------|
-| `npm test -w core-engine` | PASS (97 tests) |
-| `npm test -w core-engine -- document-gaps` | PASS (2 tests) |
-| `npx tsc -p apps/web --noEmit` | PASS |
-
-## Commit
-
-`feat: document gaps scan and completeness rules (task 8)`
+## Concerns
+- `.ai/` 索引已由 MCP 更新但未进本 commit。
+- 白名单未改 `upload-ocr.test.ts` 的 `SpyOcr`（仍缺 `recognizeLayout`）；Job 路径不调用 layout，本 Task 不修。
+- Task 9 才接线 ingest-worker / pdf-raster。

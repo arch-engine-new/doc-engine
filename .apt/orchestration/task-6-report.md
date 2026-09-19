@@ -1,45 +1,41 @@
-# Task 6 Report — DemoHttpSession 装配与 health
+# Task 6 Report — 预查询 + 检索不丢表 + 跨 pack 图
 
 ## Status
-DONE_WITH_CONCERNS
+DONE
 
 ## Commits
-`23183841b3f7334659dbf2a5005b1fd922ced384` feat(ocr): wire DemoHttpSession live OCR to PaddleOCR
+`1c5411118b18d28244ce41df5577709269e5ceae` feat(retrieve): keep table hits in search and scope graph to project versions
 
-BASE_SHA: `454744b719f1ac77fa63b3aa557a98d17416ac85`
+BASE_SHA: `f594629f36268bb9465331d784e9ee7d5aae194e`
 
-未改 `index.ts`。未改 9 页、未建表、未读 `rules/`。未提交 `.ai/`（refresh/remove 落在工作区，原先已脏）。未调用 `audit_arch_changes`。无新公开导出，未 `register_contract`。
+未改 `attachStandardFitFinding` 签名（仍返回单条 Finding，Task 7）。未改 vue、job-pipeline。未读 `.ai/`。未调用 `audit_arch_changes`。未提交 `.ai/`。
 
 ## Changes
-- MCP 只读：`query_project_status` → `projectType=component`，无 blockers。`query_contract` name=`DemoHttpSession` 未命中 → `query_arch` path=`frontend/core-engine/utils#demohttpsession` → `packages/core-engine/src/http/session.ts`。`query_contract` name=`PaddleOcr` → `fromEnv()` 无 token 为 null。
-- `packages/core-engine/src/http/session.ts`：live `resolveUploadDeps` 改 `PaddleOcr.fromEnv`；缺 MinIO 或缺 token → `UploadServiceUnavailableError`（文案含 PaddleOCR token，不含百度）。memory 仍 `FakeOcr`。HTTP 装配不再经过 `index.ts` 桶文件。
-- `probePaddleOcr`：无 token=`skip`；GET `{jobUrl}/__health_probe` + `Authorization: bearer <token>`；函数体仅 `method: "GET"`，无 `method: "POST"`；401/403=`fail`；404=`ok`；其它 `response.ok` 则 ok 否则 fail。
-- 删除 `packages/core-engine/src/ocr/baidu.ts`。
-- `packages/core-engine/src/http/handle-request.ts`：`mockPendingMount` / `uploadDocument` / `FieldBoxWrite` 改为直连 `adapter/mock.js` 与 `persistence/store.js`。删除 baidu.ts 后 vitest 若仍走 `index.ts` 桶文件会在 collect 阶段因 `./ocr/baidu.js` 缺失失败；本文件不在白名单，但为让 `http-adapter` 在不改 `index.ts` 的前提下变绿所必需。
+- MCP 只读：`query_project_status` → `projectType=component`，无 blockers。`query_contract` name=`FakePrequery`；`query_contract` name=`RetrieveHit`。
+- `packages/core-engine/src/retrieve/prequery.ts`：`inferIntent` **先**匹配 `附表|见表|表` → `intent=semantic`，避免「表 8.5.1-1」被 `EXACT_RE` 收成 exact（R20/M12）。
+- `packages/core-engine/src/retrieve/library.ts`：
+  - `searchSemantic` 用 `payload.unit_id`（或 hit.id）→ `getLayoutUnit`；table/annex 不进 rerank；clause 才 `IndependentReranker`；返回表在前（向量分高到低）再条款。表 hit `clause_id=null`，`supported_clause_ids` 来自 `queryPath(unit_id, "SUPPORTS")`。
+  - `searchGraph` 用 `resolveProjectEffectiveVersionIds`（当前 pack 的 project_id → `listSpecPacks` → 各 pack `resolveEffectiveVersionIds`）。有 `toClauseNo` 走 `shortestPath`；fallback `queryPath` 必带 kind（从 rewritten 解析 SUPERSEDES/CITES/REQUIRES/APPLIES_TO）。
+- `packages/core-engine/test/standard-rag.test.ts`：M3 见表 table hit + supported≥2；M12 表号 intent≠exact；R29 packA graph 命中 packB；命中含 file_name/页/unit_id。
 
 ## Tests / Verify
 ```
-rg -n "BaiduOcr|baiduFromEnv|probeBaidu|aip.baidubce.com" packages/core-engine/src
-```
-仅 `packages/core-engine/src/index.ts` 三行残留（191–193 百度再导出）。`session.ts` / `baidu.ts` 无匹配（baidu.ts 已删）。
-
-```
-npm test -w core-engine -- http-adapter
-→ exit 0; Test Files 1 passed (1); Tests 27 passed (27) (vitest 3.2.7)
+npx vitest run packages/core-engine/test/standard-rag.test.ts
+→ exit 0; Test Files 1 passed (1); Tests 13 passed (13) (vitest 3.2.7)
 ```
 
-内存 health：`GET /api/health` 断言 `ocr: "skip"`（及 postgres/qdrant/neo4j/minio skip）仍绿。Rn: R1、R4、R7。
+A11–A14 仍绿。Rn: R2、R16、R20、R29。
 
 ## APT Micro-closeout
-- ContractsRegistered: none（无新公开导出）
+- ContractsRegistered:
+  - `FakePrequery` → `packages/core-engine/src/retrieve/prequery.ts`
+  - `RetrieveHit` → `packages/core-engine/src/retrieve/ports.ts`
 - AssetsRefreshed:
-  - `packages/core-engine/src/http/session.ts` → `frontend/core-engine/util/DemoHttpSession`（`kind=util`，`module=core-engine`，action=created）
-  - `packages/core-engine/src/http/handle-request.ts` → `frontend/core-engine/util/handleDemoRequest`（`kind=util`，`module=core-engine`，action=created）
-- AssetsRemoved:
-  - `frontend/core-engine/util/BaiduOcr`（sourcePath=`packages/core-engine/src/ocr/baidu.ts`）
-  - `frontend/core-engine/util/fromEnv`（sourcePath=`packages/core-engine/src/ocr/baidu.ts`）
+  - `packages/core-engine/src/retrieve/prequery.ts` → `frontend/core-engine/util/FakePrequery`（`kind=util`，`module=core-engine`，action=created）
+  - `packages/core-engine/src/retrieve/library.ts` → `frontend/core-engine/util/StandardLibrary`（`kind=util`，`module=core-engine`，action=created）
 - `audit_arch_changes`: not called
 
 ## Concerns
-- 白名单外改了 `handle-request.ts` 一处 import：否则删除 `baidu.ts` 且不改 `index.ts` 时，`http-adapter` 无法 collect。Task 7 仍须把 `index.ts` 百度导出换成 `PaddleOcr` / `readPaddleOcrEnv` / `paddleOcrFromEnv`。
-- `.ai/` 索引已由 MCP 更新但未进本 commit。
+- `prequery.ts` 在 BASE_SHA 上未跟踪（磁盘有、HEAD 无），本 commit 一并纳入白名单。
+- `.ai/` 索引已由 MCP 更新但未进本 commit（工作区该树原先已脏）。
+- `attachStandardFitFinding` 仍取 `hits[0]`；表查询若直接 attach 会因 `clause_id=null` 抛错，留给 Task 7。

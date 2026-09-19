@@ -2,7 +2,7 @@
 
 > **Spec:** `docs/superpowers/specs/2026-08-28-upload-ocr-hard-path-design.md`
 > **Command:** `/plan-from-spec`
-> **Status:** draft
+> **Status:** approved
 > **projectType:** component（仍做 job_upload 文件控件；不新开页。设计寻址已做以免臆造 token。）
 
 **Goal:** 任务页真上传原件进本机 MinIO，再用百度 OCR 与硬规则/硬检索跑完检查；夹具路径与 CI 不依赖外网。

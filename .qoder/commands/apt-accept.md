@@ -1,6 +1,6 @@
 ---
 ---
-<!-- apt-template-version: 10.6.10 -->
+<!-- apt-template-version: 10.9.0 -->
 # $apt-accept — 运行时按产品真源验收
 
 依据 ingest 的 **`page.logic.md`** 做运行时验收：

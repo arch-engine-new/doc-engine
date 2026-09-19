@@ -29,7 +29,7 @@ AssertionError: expected undefined to be 'table'
 - `packages/core-engine/test/standard-rag.test.ts`
 - `.apt/orchestration/task-f1-1-report.md`
 ### Commits
-- `feat(retrieve): hydrate RetrieveHit heading and body from ledger`（仅白名单 4 文件；待本步 git commit）
+- `45a2a73` `feat(retrieve): hydrate RetrieveHit heading and body from ledger`（仅白名单 4 文件；未 push）
 ### Blockers / Concerns
 - 开始前只读 MCP：`query_contract RetrieveHit` 无 heading/body；`ClauseRow` 已有 `heading`/`body`；`LayoutUnitRow` 已有 `heading`/`body_markdown`；`StandardLibrary` 的 `toHit`/`toUnitHit` 当时只抄 provenance。
 - `refresh_asset` 新建 `frontend/packages/util/ports` 与 `frontend/packages/util/library`，未覆盖既有 `frontend/core-engine` 条目。禁止 audit，未手工改索引。

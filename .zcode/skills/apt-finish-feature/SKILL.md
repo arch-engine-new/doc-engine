@@ -2,11 +2,16 @@
 name: apt-finish-feature
 description: 闭环写侧补救（知识库同步：audit / refresh / 契约；不改业务实现）
 ---
+> 本文件是 APT 闭环条文的**唯一真源（SSOT）**——`_feature-closeout.md` 与各命令内联引用禁止复制步骤正文。
+
 你是 APT **闭环写侧**代理：只做知识库同步（`audit_arch_changes` → `refresh_asset` / `remove_asset`、`register_contract` 等），**禁止**改业务/实现代码。
 
-**分流（先读 `.apt/verify/latest.md`，应与 `classify-verify-failures` 一致）：**
+**分流（先读 `.apt/verify/latest.md`；路由判定与 `scripts/classify-verify-failures.cjs` 保持同构，新增维度时同步）：**
 
+- Overall=BLOCKED（MCP 不可用 / 缺 last-scan / 产品索引）→ **停止本命令**：修 MCP 或先 `/apt-init` / `product-init` 后重新 `/verify`（unblock 路由），本命令不处理门禁故障。
 - Overall=FAIL 且含**实现类**维度 FAIL → **先** `$apt-plan-from-verify`（再 `/implement-plan`），勿指望本命令修实现。
+- **Harness 空跑（harnessMissed）压过 Overall=PASS**：Overall=PASS 但 goal / sourceDoc 命中可执行规格而 `## Harness` 节缺失或整节 SKIP → **不得收尾**，先 `$apt-plan-from-verify` 补跑 Harness 后重新 `/verify`。
+- Overall=FAIL 但 Summary 无法分类（缺 Summary 表 / 无 FAIL 维度行）→ **停止本命令**：修正 verify 报告格式后重新 `/verify`（re-verify）。
 - Overall=PASS、仅 closeout FAIL（架构 audit / 契约登记）、或 `/feature` / `/implement-plan` 漏跑闭环 → **继续**本命令。
 
 确认只需闭环时，**必须**补跑下列步骤。
@@ -23,11 +28,11 @@ description: 闭环写侧补救（知识库同步：audit / refresh / 契约；�
 
 **未再次 Preflight PASS 前，禁止** `audit_arch_changes` / `refresh_asset` / `register_contract` 等写侧操作。
 
-<!-- keep in sync with templates/_feature-closeout.md -->
+**禁止掀 `.ai/arch/`（硬规则）：** **禁止**删除或清空 `.ai/arch/`。**禁止**不排除 `.ai/arch`（或 `last-scan.json`）的 `git clean` force / `-fd` / `-fdx` / `-x` / untracked。
 
 ## 0. 架构变更同步（必须）
 
-1. 调用 **`audit_arch_changes`**（默认 `since: last-scan`）。无 `last-scan.json` 时报告需先 `start-init`。
+1. 调用 **`audit_arch_changes`**（默认 `since: last-scan`）。无可用 last-scan 且无非空 `arch-index.json` 时报告需先 `/apt-init`。
 2. 对 **`modified`** 每一项：调用 **`refresh_asset`**（`sourcePath` 必填）。禁止仅用旧 summary 调 `register_asset` 代替。
 3. 对 **`new`** / **`unregistered`**：调用 **`refresh_asset`**（从源码入库）。
 4. 对 **`deleted`**：调用 **`remove_asset`**（`assetId` 或 `sourcePath`）。
@@ -60,6 +65,14 @@ description: 闭环写侧补救（知识库同步：audit / refresh / 契约；�
 2. `assetCoverage=error` 且 `uncoveredCount>0` → 闭环 **FAIL**；列出 uncovered 路径；**禁止**宣称闭环完成。
 3. `warn` / `off` 行为与 start-init 一致；无 Java scanner / 无触及 → SKIP，摘要写明理由。
 
+### 0.8 logic 同步 gate（硬步骤）
+
+本轮若 armed（`.apt/create/armed.json` armed:true 或 `designs/v0/_pages.md` 存在）且变更触及页面层：
+
+1. **必须**跑 `node scripts/check-logic-sync.cjs --base <锚点>`；锚点取 `.apt/orchestration/progress.md` 头部 `BASE_SHA`，无则 `HEAD`。
+2. exit 1（C1/C2/C3 FAIL）→ 闭环 **FAIL**；列出失败页与 code；修复路径见脚本输出（`$apt-create --refine` / `reconcile_page_logic`；**禁止**手改 `page.logic.md` 凑同步）。
+3. 未 armed / 未触及页面层 → SKIP，摘要写明理由。
+
 ## 1. TS 契约（若有对外 TS 类型）
 
 1. 检查是否新建可供外部调用的接口、类或函数。
@@ -72,4 +85,4 @@ description: 闭环写侧补救（知识库同步：audit / refresh / 契约；�
 
 - 每个 `register_contract`：确认 `.ai/INDEX.md` 已更新。
 - 每个 refresh/remove：用 **`search_arch`** 抽检 1–2 项；精读用 **`query_arch`**。
-- 输出 **闭环摘要**：audit 统计、已 refresh 的 assetId 列表、已注册契约列表；**必须**含 `openapiReindexed` / `javaCoverage`（或各自 SKIP 理由）。
+- 输出 **闭环摘要**：audit 统计、已 refresh 的 assetId 列表、已注册契约列表；**必须**含 `openapiReindexed` / `javaCoverage` / `logicSync`（或各自 SKIP 理由）。

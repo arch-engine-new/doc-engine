@@ -1,0 +1,20 @@
+{
+  "pageId": "standard_lib",
+  "source": "designs/v0/standard_lib/page.logic.md",
+  "points": [
+    { "id": "RP-01", "kind": "view_load", "logicAnchor": "§元信息 路由 /packs/:id/standards 主视图", "caseId": "C-01" },
+    { "id": "RP-02", "kind": "upload", "logicAnchor": "§操作明细/uploadDoc 选择 PDF → ingest-pdf 202 + ingest_run_id", "caseId": "C-02" },
+    { "id": "RP-03", "kind": "action", "logicAnchor": "§操作明细/ingestClauses 入库完成 Clause[]", "caseId": "C-03" },
+    { "id": "RP-04", "kind": "action", "logicAnchor": "§操作明细/indexVectors Qdrant 键=unit_id", "caseId": "C-04" },
+    { "id": "RP-05", "kind": "dropdown", "logicAnchor": "§操作明细/indexGraph 边类型 standard_edge_kind", "caseId": "C-05" },
+    { "id": "RP-06", "kind": "action", "logicAnchor": "§操作明细/indexGraph 添加 StandardEdge", "caseId": "C-06" },
+    { "id": "RP-07", "kind": "action", "logicAnchor": "§操作明细/searchSemantic 预查询→向量→rerank", "caseId": "C-07" },
+    { "id": "RP-08", "kind": "action", "logicAnchor": "§操作明细/bindEffectiveVersion 绑定生效版", "caseId": "C-08" },
+    { "id": "RP-09", "kind": "action", "logicAnchor": "§操作明细/openStepChat 检索命中后提问", "caseId": "C-09" },
+    { "id": "RP-10", "kind": "state", "logicAnchor": "§状态 indexed（入库后 version 标签）", "caseId": "C-10" },
+    { "id": "RP-11", "kind": "other", "logicAnchor": "§检索命中列 file_name/页/unit_id/clause_id/路径；命中含 standard_version+span", "caseId": "C-11" },
+    { "id": "RP-12", "kind": "action", "logicAnchor": "§操作明细/tick 处理一页 ≤1 页", "caseId": "C-12" },
+    { "id": "RP-13", "kind": "action", "logicAnchor": "§操作明细/tickAll 循环 tick 至无 pending", "caseId": "C-13" },
+    { "id": "RP-14", "kind": "action", "logicAnchor": "§操作明细/searchGraph 跨条/引用/替代", "caseId": "C-14" }
+  ]
+}

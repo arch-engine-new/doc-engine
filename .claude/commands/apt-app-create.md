@@ -1,4 +1,4 @@
-<!-- apt-template-version: 10.6.10 -->
+<!-- apt-template-version: 10.9.0 -->
 # $apt-app-create — 从零做 App 产品（强制规格载体）
 
 PM 说产品想法，一条命令产出 PRD + 原型工程 + 页面逻辑 + **像素级规格载体**（`page.spec.*`）。

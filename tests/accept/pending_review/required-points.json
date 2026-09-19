@@ -1,0 +1,11 @@
+{
+  "pageId": "pending_review",
+  "source": "designs/v0/pending_review/page.logic.md",
+  "points": [
+    { "id": "RP-01", "kind": "view_load", "logicAnchor": "§元信息/主视图 /pending", "caseId": "C-01" },
+    { "id": "RP-02", "kind": "action", "logicAnchor": "§操作明细/listProposals 措辞待审 Tab", "caseId": "C-02" },
+    { "id": "RP-03", "kind": "action", "logicAnchor": "§操作明细/listSignatureTasks 资料待签 Tab", "caseId": "C-03" },
+    { "id": "RP-04", "kind": "action", "logicAnchor": "§操作明细/openStepChat 进入可对话", "caseId": "C-04" },
+    { "id": "RP-05", "kind": "state", "logicAnchor": "§状态 pending / confirmed 列表或空态", "caseId": "C-05" }
+  ]
+}

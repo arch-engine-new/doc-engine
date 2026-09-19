@@ -1,0 +1,39 @@
+{
+  "url": "http://127.0.0.1:5173/packs/pack_e978697d85124f75/standards",
+  "title": "标准库",
+  "ingestVisible": true,
+  "searchVisible": true,
+  "edgeKindOptions": [
+    "CITES",
+    "SUPERSEDES",
+    "APPLIES_TO",
+    "REQUIRES",
+    "SUPPORTS",
+    "PARENT_OF",
+    "BELONGS_TO"
+  ],
+  "stepChatVisible": true,
+  "hitsAfterSearch": 1,
+  "error": "",
+  "packEffective": "sver_545924f5b96e4b20",
+  "searchStatus": 200,
+  "searchBody": {
+    "hits": [
+      {
+        "clause_id": "sver_545924f5b96e4b20:1.1",
+        "unit_id": "sver_545924f5b96e4b20:1.1",
+        "chunk_kind": "clause",
+        "file_name": "leave-accept-live",
+        "page_start": 1,
+        "page_end": 1,
+        "standard_version_id": "sver_545924f5b96e4b20",
+        "span": {
+          "start": 0,
+          "end": 70
+        },
+        "retrieve_path": "exact"
+      }
+    ]
+  },
+  "screenshot": "D:\\software\\doc-engine\\.apt\\accept\\screenshot-standards-live.png"
+}

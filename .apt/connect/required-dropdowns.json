@@ -1,0 +1,45 @@
+{
+  "dropdowns": [
+    {
+      "field": "job.status",
+      "source": "dict",
+      "dictType": "job_status",
+      "pages": [
+        "job_upload"
+      ]
+    },
+    {
+      "field": "rule.status",
+      "source": "dict",
+      "dictType": "rule_status",
+      "pages": [
+        "rule_editor"
+      ]
+    },
+    {
+      "field": "proposal.status",
+      "source": "dict",
+      "dictType": "proposal_status",
+      "pages": [
+        "pending_review"
+      ]
+    },
+    {
+      "field": "retrieve_path",
+      "source": "dict",
+      "dictType": "retrieve_path",
+      "pages": [
+        "check_findings",
+        "standard_lib"
+      ]
+    },
+    {
+      "field": "edge.kind",
+      "source": "dict",
+      "dictType": "standard_edge_kind",
+      "pages": [
+        "standard_lib"
+      ]
+    }
+  ]
+}

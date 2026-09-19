@@ -1,0 +1,7 @@
+{
+  "provider": "zhipu",
+  "baseUrl": "https://open.bigmodel.cn/api/coding/paas/v4",
+  "model": "glm-5.3",
+  "apiKey": "YOUR_ZHIPU_API_KEY",
+  "timeoutMs": 60000
+}

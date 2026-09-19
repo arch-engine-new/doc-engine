@@ -335,6 +335,10 @@ export class ToolRuntime {
       nodeExecutionId,
     } = options;
 
+    if (name.startsWith("submit_")) {
+      throw new ToolExecutionError(name, "NOT_FOUND", `Tool "${name}" not found`, 0);
+    }
+
     // Look up tool
     const tool = this.registry.get<Input, Output>(name);
     if (!tool) {

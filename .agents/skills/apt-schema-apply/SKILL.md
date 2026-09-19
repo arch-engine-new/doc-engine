@@ -11,7 +11,7 @@ description: 表设计评审通过后落 DO + migration/DDL，经扫描入 Entit
 > **主输入：** `.apt/schema/progress.md` 指向的 `docs/schema/<feature>-schema.md`。  
 > **入图路径：** 落盘源码 → scan / `register_asset` / `refresh_asset` / 提示 `sync-changes`。**禁止**手改 `.ai/arch/entities.json`（`mergeEntityGraphs` 由 JPA/MyBatis/SQL 扫描器合并产出）。  
 > **规范：** `templates/_code-standards.md`（或项目 `.apt/code-standards.md`）**数据库**节。  
-> **参考片段：** `templates/schema-apply/`（jpa / mybatis / alter.sql；非完整引擎，按栈选用）。
+> **参考片段：** `templates/schema-apply/`（jpa / mybatis / prisma / typeorm / gorm / sqlalchemy / alter.sql；非完整引擎，按栈选用）。
 
 ## 输入
 
@@ -32,7 +32,7 @@ $apt-schema-apply [<feature>] [--apply] [--dry-run]
 2. **禁止**未确认评审即 apply（无确认语且无合法 `--apply` → FAIL）。
 3. 先跑 `check-schema-design`；非零退出 → **FAIL 停**，不得写 DO / migration。
 4. design 门禁 PASS 后必须跑 `check-schema-apply`（路径解析与 design 对称）；非零退出 → **FAIL 停**，列冲突，不得落盘。`--dry-run` 时脚本本身 exit 0 仅出报告，Skill 仍须打印报告后**结束**（不写盘、不改 applied）。
-5. 写 DO + migration/DDL 草稿；按栈（jpa / mybatis / sql-fallback）选用风格；路径探测见下。**禁止**静默覆盖已有 DO（已存在同名文件 → 打印 diff / 冲突说明，**停等**用户确认覆盖 / 跳过 / 中止）。
+5. 写 DO + migration/DDL 草稿；按栈（jpa / mybatis / prisma / typeorm / gorm / sqlalchemy / sql-fallback）选用风格；路径探测见下。**禁止**静默覆盖已有 DO（已存在同名文件 → 打印 diff / 冲突说明，**停等**用户确认覆盖 / 跳过 / 中止）。
 6. 与现有 **EntityGraph** 冲突（同表/同实体字段不一致）→ 打印 diff，**停等**用户选：覆盖字段 / 保留旧 / 中止。
 7. **禁止**手改 `entities.json` 或其它 EntityGraph 索引文件；入图只靠落盘 + 扫描 / register / refresh。
 8. 成功后（非 `--dry-run`）：尝试 `register_asset` / `refresh_asset`（或提示用户跑 `sync-changes` / 重扫），使实体可经 `search_arch` / EntityGraph 命中；账本写 `applied: yes` + 时间戳，`reviewed: yes`。
@@ -96,7 +96,7 @@ node <解析到的脚本> --dry-run <项目根>
 
 - **非 `--dry-run`：** 非零退出 → **FAIL**：按 stderr / ApplyPlan `conflicts` 处理（改 MD 处置为 alter、回 design、或停等），**禁止**写 DO / migration / 改账本。
 - **`--dry-run`：** 打印人读报告（stack + 每表 action / 字段差分 / 冲突）；脚本 exit 0。Skill **到此结束**：不写文件、不改 `applied`。可选摘要 JSON 给人读。
-- exit 0（默认路径）→ 记下输出中的 **stack**（`jpa` | `mybatis` | `sql-fallback`）与 ApplyPlan，继续落盘。
+- exit 0（默认路径）→ 记下输出中的 **stack**（`jpa` | `mybatis` | `prisma` | `typeorm` | `gorm` | `sqlalchemy` | `sql-fallback`）与 ApplyPlan，继续落盘。
 
 ### 5. 读设计与 EntityGraph
 
@@ -113,7 +113,11 @@ node <解析到的脚本> --dry-run <项目根>
 |-------|----------|----------|
 | `jpa` | JPA `@Entity`；跟模块内既有 Entity 目录惯例 | `templates/schema-apply/jpa-entity.java.snippet` |
 | `mybatis` | MyBatis DO / dataobject；跟模块内既有 DO 惯例 | `templates/schema-apply/mybatis-do.java.snippet` |
-| `sql-fallback` | **只写** SQL migration/DDL（无 Java DO） | `templates/schema-apply/alter.sql.snippet` |
+| `prisma` | Prisma `model`；`prisma/schema.prisma` 为唯一真源，编辑后 `prisma migrate dev` | `templates/schema-apply/prisma-schema.prisma.snippet` |
+| `typeorm` | TypeORM `@Entity`；跟仓库既有 `**/entities` 样例；data-source / migration 另行 | `templates/schema-apply/typeorm-entity.ts.snippet` |
+| `gorm` | GORM model；跟仓库既有 `**/model` 样例；AutoMigrate 注册另行 | `templates/schema-apply/gorm-model.go.snippet` |
+| `sqlalchemy` | SQLAlchemy model；跟仓库既有 `**/models` 样例；Alembic migration 另行 | `templates/schema-apply/sqlalchemy-model.py.snippet` |
+| `sql-fallback` | **只写** SQL migration/DDL（无 ORM model） | `templates/schema-apply/alter.sql.snippet` |
 
 **DO / Entity 落盘目录（jpa / mybatis；按序，命中既有目录即用）：**
 1. 项目内已存在的 `**/domain/**/dal`（或同模块下邻近 dal 包）
@@ -121,7 +125,12 @@ node <解析到的脚本> --dry-run <项目根>
 3. `**/dataobject`（mybatis 优先）
 4. 皆无 → 写到 `docs/schema/generated/`，并 **WARN**：`未找到模块内 DO 惯例目录，已写入 docs/schema/generated/；请后续迁入业务模块。`
 
-**migration / DDL 草稿（所有栈均应有 SQL 草稿；alter 可参考 snippet）：**
+**非 Java 栈落盘目录（按栈，命中既有惯例即用）：**
+- prisma → 既有 `prisma/schema.prisma`（唯一真源，编辑 model 后 `prisma migrate dev` 产出 migration）
+- typeorm → 既有 `**/entities`；gorm → 既有 `**/model`；sqlalchemy → 既有 `**/models`
+- 皆无对应惯例目录 → 同落 `docs/schema/generated/`，并 **WARN**（提示迁入业务模块）
+
+**migration / DDL 草稿（所有栈均应有 migration/DDL 产出；alter 可参考 snippet；prisma 例外——以 `prisma migrate dev` 产出，不手写 SQL 草稿）：**
 - 优先既有 `**/db/migration`、`**/resources/db`、`**/sql`、`**/migrations` 等惯例目录
 - 皆无 → 退到 `docs/schema/generated/`（如 `<feature>-migration.sql`），记 WARN
 
@@ -131,6 +140,7 @@ node <解析到的脚本> --dry-run <项目根>
 
 1. 对 ApplyPlan 中每个 `create` / `alter`：
    - **jpa / mybatis：** 生成 Entity/DO 源文件 + migration/DDL 草稿
+   - **prisma / typeorm / gorm / sqlalchemy：** 生成 ORM model 源文件（prisma 为编辑 `prisma/schema.prisma`）+ migration 产出
    - **sql-fallback：** 只生成 migration/DDL（CREATE / ALTER）
    - `reuse` 且无字段差分 → 跳过写盘
 2. 目标路径已有文件 → **禁止静默覆盖**：展示新旧 diff，停等用户确认覆盖 / 跳过 / 中止。

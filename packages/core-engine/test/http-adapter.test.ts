@@ -2,7 +2,8 @@
  * HTTP adapter around JobPipeline — process-local, no browser.
  */
 
-import { readFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
@@ -31,13 +32,26 @@ async function call(
 
 describe("core-engine HTTP adapter", () => {
   let session: DemoHttpSession;
+  let tempRoot: string | undefined;
+  const previousConfigEnv = process.env.AGENT_RUNTIME_LLM_CONFIG;
 
   beforeEach(() => {
-    session = new DemoHttpSession();
+    delete process.env.AGENT_RUNTIME_LLM_CONFIG;
+    tempRoot = mkdtempSync(join(tmpdir(), "http-adapter-"));
+    session = new DemoHttpSession({ projectRoot: tempRoot });
   });
 
   afterEach(async () => {
     await session.close();
+    if (previousConfigEnv === undefined) {
+      delete process.env.AGENT_RUNTIME_LLM_CONFIG;
+    } else {
+      process.env.AGENT_RUNTIME_LLM_CONFIG = previousConfigEnv;
+    }
+    if (tempRoot) {
+      rmSync(tempRoot, { recursive: true, force: true });
+      tempRoot = undefined;
+    }
   });
 
   it("GET /api/health on memory session returns mode memory", async () => {
@@ -137,6 +151,24 @@ describe("core-engine HTTP adapter", () => {
     const after = await session.pipeline.getJob(checking!.job_id);
     expect(after?.status).toBe("checking");
     expect(await session.pipeline.listReceipts(checking!.job_id)).toHaveLength(0);
+  });
+
+  it("memory POST /api/chat without llm.json returns 未配置, not [fake-llm echo", async () => {
+    await call(session, "POST", "/api/demo/reset");
+    const listed = await call(session, "GET", "/api/jobs");
+    const jobs = (listed.body as { jobs: { job_id: string; trace_id: string; status: string }[] }).jobs;
+    const checking = jobs.find((j) => j.status === "checking");
+    expect(checking).toBeTruthy();
+
+    const chat = await call(session, "POST", "/api/chat", {
+      trace_id: checking!.trace_id,
+      step: "checking",
+      body: "请确认并提交",
+    });
+    expect(chat.status).toBe(200);
+    const reply = (chat.body as { assistant_reply?: string }).assistant_reply ?? "";
+    expect(reply).toMatch(/未配置/);
+    expect(reply).not.toContain("[fake-llm");
   });
 
   it("POST /api/jobs/:id/confirm-next advances checking → pending", async () => {

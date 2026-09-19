@@ -1,0 +1,12 @@
+{
+  "pageId": "rule_editor",
+  "source": "designs/v0/rule_editor/page.logic.md",
+  "points": [
+    { "id": "RP-01", "kind": "view_load", "logicAnchor": "§元信息/主视图 /packs/:id/rules", "caseId": "C-01" },
+    { "id": "RP-02", "kind": "action", "logicAnchor": "§操作明细/saveDraft 保存 draft", "caseId": "C-02" },
+    { "id": "RP-03", "kind": "action", "logicAnchor": "§操作明细/runFixtures 正反例", "caseId": "C-03" },
+    { "id": "RP-04", "kind": "action", "logicAnchor": "§操作明细/publish 闸门通过才发布", "caseId": "C-04" },
+    { "id": "RP-05", "kind": "state", "logicAnchor": "§状态 draft / published 可见", "caseId": "C-05" },
+    { "id": "RP-06", "kind": "action", "logicAnchor": "§操作明细/openStepChat 口语只生成草稿", "caseId": "C-06" }
+  ]
+}

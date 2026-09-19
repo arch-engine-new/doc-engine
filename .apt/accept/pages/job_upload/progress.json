@@ -1,0 +1,17 @@
+{
+  "pageId": "job_upload",
+  "cases": [
+    { "id": "C-01", "rpId": "RP-01", "status": "pass" },
+    { "id": "C-02", "rpId": "RP-02", "status": "pass" },
+    { "id": "C-03", "rpId": "RP-03", "status": "pass" },
+    { "id": "C-04", "rpId": "RP-04", "status": "pass", "note": "未选文档类型时「上传资料」disabled，禁止上传" },
+    { "id": "C-05", "rpId": "RP-05", "status": "pass" },
+    { "id": "C-06", "rpId": "RP-06", "status": "pass", "note": "rules PDF 85.7MB → 页面红字 upload exceeds 4194304 bytes" },
+    { "id": "C-07", "rpId": "RP-07", "status": "pass" },
+    { "id": "C-08", "rpId": "RP-08", "status": "pass", "note": "打开 /jobs/job_d524bab2794b4bd5/findings" },
+    { "id": "C-09", "rpId": "RP-09", "status": "pass" },
+    { "id": "C-10", "rpId": "RP-10", "status": "pass" },
+    { "id": "C-11", "rpId": "RP-11", "status": "pass" },
+    { "id": "C-12", "rpId": "RP-12", "status": "pass" }
+  ]
+}

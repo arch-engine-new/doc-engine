@@ -2,421 +2,338 @@
 
 _No utils discovered._
 
-## memory
+## index
 
 | Field | Value |
 |-------|-------|
-| Summary | core-engine 包中 blob 模块的内存（memory）实现，位于 packages/core-engine/src/blob/memory.ts，提供基于内存的 blob 存储/读写能力，不依赖磁盘或远程存储介质。 |
-| When to use | 在单元测试、示例代码或临时运行场景中需要 blob 存储但不希望引入持久化依赖时使用；也可作为 blob 存储接口在 core-engine 内的最小可用内存实现进行开发调试。 |
-| How to use | 从 packages/core-engine/src/blob/memory.ts 导入 memory 相关导出（当前扫描未捕获具体 signatures，具体导出符号以源码为准），实例化内存 blob 存储后按 blob 通用接口进行读写；生产环境需要持久化时请替换为其他 blob 实现。javadoc 暂无。 |
+| Summary | agent-runtime 包的入口文件（index.ts），位于 packages/agent-runtime/src/index.ts，通常负责聚合导出该包的公共 API。javadoc 暂无，signatures 暂无，具体导出成员暂无。 |
+| When to use | 当代码需要引入 agent-runtime 包的对外能力时，通常经由该入口文件导入；具体适用场景暂无。 |
+| How to use | 通过包名 agent-runtime import 该入口导出的成员；由于 signatures 暂无，具体导入方式与导出列表暂无。 |
 | Exports | 暂无 |
 | Related | 暂无 |
-| Tags | memory, blob, core-engine, packages, in-memory, TypeScript, util |
+| Tags | agent-runtime, index.ts, packages, TypeScript, runtime, 入口, frontend |
 | Source | refresh |
-| Path | packages/core-engine/src/blob/memory.ts |
-| Updated | 2026-08-28T22:10:10.492Z |
+| Path | packages/agent-runtime/src/index.ts |
+| Updated | 2026-09-17T02:58:27.514Z |
 
-## minio
+## initDefaultLlmProvider
 
 | Field | Value |
 |-------|-------|
-| Summary | core-engine 包中 blob（二进制大对象）存储模块的 minio 工具，封装与 MinIO / S3 兼容对象存储的交互能力（如 bucket 管理、对象上传下载、presigned URL 预签名链接）。扫描未捕获到 javadoc 与函数签名（暂无），具体能力以源码为准。 |
-| When to use | 当 core-engine 需要访问对象存储时使用，例如：blob 文件的上传、下载、删除，管理 bucket，或为前端生成 presigned URL 临时访问链接。场景涉及 minio 客户端初始化与 blob 存取时优先复用本工具。 |
-| How to use | 源码位于 packages/core-engine/src/blob/minio.ts，直接从该文件导入 minio 相关工具使用。通常需要提供 MinIO / S3 兼容存储的连接配置（endpoint、accessKey、secretKey、bucket 等）。实际导出签名暂无扫描结果（exports 为空），建议阅读源文件确认后再调用。 |
-| Exports | 暂无 |
-| Related | blob |
-| Tags | minio, blob, core-engine, object-storage, S3, bucket, presigned-url |
+| Summary | initDefaultLlmProvider 是 packages/agent-runtime/src/llm/provider.ts 中的工具函数（util），用于初始化默认的 LLM（大语言模型）provider。该函数位于 agent-runtime 的 llm 模块内，负责在运行时建立默认模型提供方，供 agent 调用链路使用。由于 javadoc 与 signatures 暂缺，具体参数与返回值暂无。 |
+| When to use | 当 agent-runtime 需要一个默认的 LLM provider（模型提供方）且调用方未显式指定 provider 时使用；适用于 llm 初始化阶段或需要兜底默认模型的场景。具体触发条件详情暂无。 |
+| How to use | 从 packages/agent-runtime/src/llm/provider.ts 导入 initDefaultLlmProvider 后调用以获得默认 LLM provider 实例。由于 signatures 为空，具体入参、返回值与配置键暂无，建议直接查看源文件 packages/agent-runtime/src/llm/provider.ts 获取准确签名与用法。 |
+| Exports | initDefaultLlmProvider |
+| Related | 暂无 |
+| Tags | initDefaultLlmProvider, agent-runtime, LLM, llm, provider, util, packages |
 | Source | refresh |
-| Path | packages/core-engine/src/blob/minio.ts |
-| Updated | 2026-08-28T22:10:25.681Z |
+| Path | packages/agent-runtime/src/llm/provider.ts |
+| Updated | 2026-09-17T02:59:09.395Z |
 
-## port
+## createLlmProvider
 
 | Field | Value |
 |-------|-------|
-| Summary | core-engine 包 OCR 模块的 port（端口）定义，位于 packages/core-engine/src/ocr/port.ts。该文件遵循 port/adapter（端口/适配器，六边形架构）模式，用于声明 OCR 能力的抽象接口契约，具体 OCR 引擎实现由 adapter 层提供并注入到 core-engine。 |
-| When to use | 当需要在 core-engine 中接入、替换或 mock OCR 引擎实现，或要为 OCR 能力编写新的 adapter（适配器）实现时，先查阅本 port 定义以确认接口契约。也适用于梳理 OCR 相关依赖注入关系的场景。 |
-| How to use | 从 packages/core-engine/src/ocr/port.ts 导入 port 定义的接口/类型，在 adapter 中实现该接口，并通过依赖注入方式向 core-engine 提供 OCR 能力。注意：本卡片暂无公开签名信息（signatures 为空），具体导出内容请直接查看源文件确认。 |
-| Exports | 暂无 |
-| Related | core-engine, ocr |
-| Tags | core-engine, ocr, port, adapter, typescript, frontend, 六边形架构, 依赖注入, 接口契约 |
+| Summary | packages/agent-runtime 中的 LLM provider 工厂函数 createLlmProvider，位于 packages/agent-runtime/src/llm/provider.ts，用于创建大语言模型（LLM）provider 实例，供 agent runtime 的调用链路统一接入 LLM 能力。 |
+| When to use | 当 agent-runtime 模块需要接入大语言模型（LLM）并获取统一封装的 provider 实例时使用，例如为 agent 执行链路注入 LLM provider；具体函数签名暂无。 |
+| How to use | 从 packages/agent-runtime/src/llm/provider.ts 导入 createLlmProvider，传入相应配置后调用以创建 LLM provider 实例，再交给 agent runtime 使用（详细入参说明暂无）。 |
+| Exports | createLlmProvider |
+| Related | 暂无 |
+| Tags | createLlmProvider, LLM, provider, agent-runtime, factory, packages, provider.ts, TypeScript |
 | Source | refresh |
-| Path | packages/core-engine/src/ocr/port.ts |
-| Updated | 2026-08-28T22:12:49.420Z |
+| Path | packages/agent-runtime/src/llm/provider.ts |
+| Updated | 2026-09-17T04:24:17.236Z |
 
-## ocr-fields
+## UnconfiguredLlmProvider
 
 | Field | Value |
 |-------|-------|
-| Summary | OCR 字段提取工具（ocr-fields），位于 packages/core-engine/src/extract/ocr-fields.ts，属于 core-engine 的 extract（抽取）子模块，用于处理 OCR 识别结果中的字段（ocr fields）抽取逻辑。暂无详细签名信息。 |
-| When to use | 当在 core-engine 引擎流水线中需要对 OCR 识别输出进行字段（fields）提取、整理或转换时使用；涉及 packages 内 extract 流程的字段处理场景可复用本工具。 |
-| How to use | 从 packages/core-engine/src/extract/ocr-fields.ts 导入对应导出（具体导出签名暂无），在 core-engine 的 extract 流水线中调用以处理 OCR 字段数据。 |
+| Summary | packages/agent-runtime 中 LLM provider 的未配置占位实现（从命名与所在模块 llm/provider.ts 推断）：UnconfiguredLlmProvider（未配置 LLM Provider 的哨兵/兜底对象），当 LLM provider 缺少配置（如 API Key、模型名、provider 配置键）时替代真实 provider，在调用时显式抛出「LLM provider 未配置」错误，避免静默失败。 |
+| When to use | 在 provider 工厂或初始化逻辑中检测到 LLM 配置缺失时，返回 UnconfiguredLlmProvider 作为默认 provider；或需要在调用 LLM 前快速失败并给出明确错误提示、而非静默降级时使用。 |
+| How to use | 从 packages/agent-runtime/src/llm/provider.ts 导入 UnconfiguredLlmProvider，在 provider 选择/工厂函数中当配置校验失败时实例化并返回给上层调用方；具体构造参数与方法签名暂无，参见源码。 |
+| Exports | UnconfiguredLlmProvider |
+| Related | 暂无 |
+| Tags | UnconfiguredLlmProvider, LLM, provider, llm-provider, agent-runtime, TypeScript, fallback, 哨兵对象, 未配置兜底 |
+| Source | refresh |
+| Path | packages/agent-runtime/src/llm/provider.ts |
+| Updated | 2026-09-17T02:59:28.647Z |
+
+## loadLlmRuntimeConfig
+
+| Field | Value |
+|-------|-------|
+| Summary | 位于 packages/agent-runtime/src/llm/config.ts 的工具函数 loadLlmRuntimeConfig，用于加载 LLM 运行时配置（LlmRuntimeConfig），是 agent-runtime 包中 LLM 配置读取的入口 util。javadoc 暂无。 |
+| When to use | 在 agent-runtime 中需要初始化或读取 LLM 运行时配置时使用；例如在调用 LLM 前，通过 loadLlmRuntimeConfig 获取 LlmRuntimeConfig 配置对象（模型、运行时参数等）。 |
+| How to use | 从 packages/agent-runtime/src/llm/config.ts 导入 loadLlmRuntimeConfig 后直接调用，获取 LlmRuntimeConfig 运行时配置；详细入参与返回值签名的公开信息暂无。 |
+| Exports | loadLlmRuntimeConfig |
+| Related | 暂无 |
+| Tags | util, loadLlmRuntimeConfig, LlmRuntimeConfig, agent-runtime, llm, config, LLM运行时配置, 配置加载 |
+| Source | refresh |
+| Path | packages/agent-runtime/src/llm/config.ts |
+| Updated | 2026-09-17T04:24:22.611Z |
+
+## FakeLlmProvider
+
+| Field | Value |
+|-------|-------|
+| Summary | agent-runtime 包中的 FakeLlmProvider：一个伪造（fake/mock）的 LLM Provider 实现，位于 packages/agent-runtime/src/llm/provider.ts，用于在不调用真实 LLM API 的情况下返回预设响应，作为 Provider 接口的替身。 |
+| When to use | 在单元测试、本地开发或前端演示（demo）场景下，需要替换真实 LLM 调用、避免网络依赖与 API 费用时，注入 FakeLlmProvider 作为 LLM Provider 的替代实现。 |
+| How to use | 从 packages/agent-runtime/src/llm/provider.ts 导入 FakeLlmProvider，在初始化 agent-runtime 时将其作为 LLM Provider 接口的实现注入，即可获得离线模拟输出。具体方法签名暂无。 |
+| Exports | FakeLlmProvider |
+| Related | 暂无 |
+| Tags | FakeLlmProvider, LLM, provider, mock, fake, agent-runtime, TypeScript, 测试 |
+| Source | refresh |
+| Path | packages/agent-runtime/src/llm/provider.ts |
+| Updated | 2026-09-17T03:00:24.476Z |
+
+## provider
+
+| Field | Value |
+|-------|-------|
+| Summary | packages/agent-runtime 下的 LLM provider（大模型供应商适配）模块，位于 src/llm/provider.ts。负责为 agent-runtime 封装大模型（LLM）服务的接入与调用，提供统一的 provider 抽象层。原文件缺少 javadoc 与导出签名，具体 API 以源码为准。 |
+| When to use | 在 agent-runtime 中需要接入、调用或切换大模型（LLM provider）时使用；当 agent 流程需要统一的 LLM 调用入口，或需要按 provider 维度隔离模型与凭据配置时，引用 packages/agent-runtime/src/llm/provider.ts。 |
+| How to use | 暂无具体导出签名信息。可通过 import 路径 packages/agent-runtime/src/llm/provider.ts 引入；建议查阅源码中导出的 provider 工厂/适配器实现，按需传入模型名称与 API 凭据等配置后调用。 |
 | Exports | 暂无 |
 | Related | 暂无 |
-| Tags | ocr, ocr-fields, fields, extract, core-engine, packages, util, OCR字段提取, frontend |
+| Tags | llm, provider, agent-runtime, packages, TypeScript, LLM Provider, 大模型, 供应商适配, AI |
 | Source | refresh |
-| Path | packages/core-engine/src/extract/ocr-fields.ts |
-| Updated | 2026-08-28T22:10:49.617Z |
+| Path | packages/agent-runtime/src/llm/provider.ts |
+| Updated | 2026-09-17T04:10:19.341Z |
 
-## handle-request
+## prompts
 
 | Field | Value |
 |-------|-------|
-| Summary | core-engine 包 http 模块下的 HTTP 请求处理工具（handle-request），位于 packages/core-engine/src/http/handle-request.ts，用于统一封装 HTTP 请求的发起、响应处理与错误处理流程。 |
-| When to use | 当业务代码需要通过 core-engine 发起 HTTP 请求、复用统一的请求/响应封装或集中处理请求异常时，使用 handle-request；避免在调用方散落重复的请求样板代码。 |
-| How to use | 从 packages/core-engine/src/http/handle-request.ts 导入 handle-request 相关导出（预计导出名为 handleRequest），传入请求配置（URL、method、headers、body 等）调用并消费其返回的响应或错误。具体函数签名暂无，使用前建议先查看源码确认入参出参。 |
-| Exports | handleRequest |
-| Related | core-engine, http |
-| Tags | frontend, packages, core-engine, http, handle-request, handleRequest, HTTP, util |
-| Source | refresh |
-| Path | packages/core-engine/src/http/handle-request.ts |
-| Updated | 2026-08-29T15:55:50.807Z |
-
-## node
-
-| Field | Value |
-|-------|-------|
-| Summary | core-engine 包中 http 模块的 Node.js 运行时 HTTP 适配工具（packages/core-engine/src/http/node.ts），为 Node 环境提供 HTTP 请求/传输能力的封装。具体导出符号暂无（扫描未捕获 signatures）。 |
-| When to use | 当项目运行在 Node.js 环境、需要通过 core-engine 发起或处理 HTTP 请求时使用本模块；浏览器等其他运行时应改用 http 目录下对应的非 node 实现。 |
-| How to use | 从 packages/core-engine/src/http/node.ts 导入所需工具（具体导出 API 暂无，建议先阅读源码确认接口签名），在 Node 运行时中调用其 HTTP 能力，作为 core-engine 的 node 侧 http 适配层接入。 |
+| Summary | core-engine 的 agent 提示词（prompts）模块，位于 packages/core-engine/src/agent/prompts.ts，集中定义/管理 agent 运行所需的 prompt 内容。注：本次扫描未捕获公开导出签名（signatures 为空），具体导出项请以源文件为准。 |
+| When to use | 需要在 core-engine 中构建、调整或复用 agent 提示词模板（prompts）时；或排查 agent 行为异常、怀疑与 prompt 内容相关时，可从此模块入手。 |
+| How to use | 暂无（扫描未捕获导出签名与调用示例），请查阅 packages/core-engine/src/agent/prompts.ts 源码确认导入路径与导出形式。 |
 | Exports | 暂无 |
-| Related | core-engine, http |
-| Tags | util, node, http, core-engine, Node.js, TypeScript, http adapter |
+| Related | 暂无 |
+| Tags | prompts, prompt, agent, core-engine, 提示词, LLM, TypeScript, monorepo, util |
 | Source | refresh |
-| Path | packages/core-engine/src/http/node.ts |
-| Updated | 2026-08-28T22:11:18.003Z |
+| Path | packages/core-engine/src/agent/prompts.ts |
+| Updated | 2026-09-17T04:10:20.393Z |
+
+## context
+
+| Field | Value |
+|-------|-------|
+| Summary | core-engine 包中 agent 模块的 context（上下文）工具，源码位于 packages/core-engine/src/agent/context.ts。该文件用于支撑 agent 执行过程中的上下文（context）构建与传递。当前缺少 javadoc 与 signatures，具体 API 定义暂无。 |
+| When to use | 暂无（无 javadoc 说明）。一般场景：在 agent 相关流程中需要创建、读取或共享上下文数据时，可参考 packages/core-engine/src/agent/context.ts 中的实现。 |
+| How to use | 暂无（无 signatures 信息）。请直接查看 packages/core-engine/src/agent/context.ts 源码确认导出内容与调用方式。 |
+| Exports | 暂无 |
+| Related | 暂无 |
+| Tags | context, agent, core-engine, packages, util, TypeScript, frontend |
+| Source | refresh |
+| Path | packages/core-engine/src/agent/context.ts |
+| Updated | 2026-09-19T06:04:57.352Z |
 
 ## session
 
 | Field | Value |
 |-------|-------|
-| Summary | core-engine 中位于 src/http 目录的 session（会话）工具模块，用于维护 HTTP 请求的会话状态（如 cookie、token 登录态）。本次扫描未提取到 javadoc 与公开签名，具体导出 API 暂无。 |
-| When to use | 在 core-engine 内发起 HTTP 请求需要统一携带或读取 session（会话）、cookie、token 登录态时使用；由于签名信息缺失，具体触发场景暂无，建议直接查看源文件确认。 |
-| How to use | 从 packages/core-engine/src/http/session 引入所需导出（具体导出项暂无签名信息），建议直接阅读 packages/core-engine/src/http/session.ts 源码确认导出函数与调用方式。 |
+| Summary | core-engine 包中的 HTTP session（会话）工具模块，位于 http 层，用于会话状态的处理与维护 |
+| When to use | 在 core-engine 的 http 请求链路中需要读取、维护或传递 session 会话信息时使用 |
+| How to use | 暂无 |
 | Exports | 暂无 |
 | Related | 暂无 |
-| Tags | session, http, core-engine, cookie, token, auth, util |
+| Tags | util, session, http, core-engine, packages, frontend |
 | Source | refresh |
 | Path | packages/core-engine/src/http/session.ts |
-| Updated | 2026-08-29T15:56:10.223Z |
+| Updated | 2026-09-17T04:11:01.514Z |
 
-## index
+## handle-request
 
 | Field | Value |
 |-------|-------|
-| Summary | packages/core-engine 的包入口 barrel 文件（packages/core-engine/src/index.ts），统一汇聚并再导出 core-engine 的公开 API，是外部消费 core-engine 引擎核心能力的唯一导出点。当前扫描未捕获到具体 export 语句（signatures 为空），实际导出清单以源码为准。 |
-| When to use | 当应用或其他子包需要引用 core-engine 提供的引擎逻辑、类型定义或工具函数时，应从该入口导入，而不是深入 src 内部深层路径；在 core-engine 中新增公开能力时，也需在此 index.ts 登记导出以对外暴露。 |
-| How to use | 在 monorepo 内通过包名或内部别名导入，例如：import { ... } from 'core-engine'（或 @scope/core-engine，取决于 workspace 配置）。因扫描阶段未提取到具体导出符号，请直接查看 packages/core-engine/src/index.ts 中的 export / export * from 语句确认可用成员。 |
+| Summary | core-engine 包（frontend scope）中的 HTTP 请求处理工具 handle-request，位于 packages/core-engine/src/http/handle-request.ts，负责封装与统一处理前端 http 请求逻辑。暂无 Javadoc 与函数签名信息。 |
+| When to use | 当需要在 core-engine 中发起、拦截或统一处理 HTTP 请求（http 请求处理）时使用 handle-request。 |
+| How to use | 暂无（无签名与文档信息，请参考源码 packages/core-engine/src/http/handle-request.ts） |
 | Exports | 暂无 |
 | Related | 暂无 |
-| Tags | frontend, packages, core-engine, index.ts, barrel, entry, re-export, TypeScript, monorepo |
+| Tags | handle-request, http, core-engine, packages, frontend, 前端, 请求处理, util |
 | Source | refresh |
-| Path | packages/core-engine/src/index.ts |
-| Updated | 2026-08-29T15:56:35.648Z |
-
-## baidu
-
-| Field | Value |
-|-------|-------|
-| Summary | baidu OCR（百度光学字符识别）工具模块，位于 core-engine 包（packages/core-engine/src/ocr/baidu.ts），封装百度 OCR 文字识别相关工具能力。具体导出签名暂无（signatures 为空），请以源文件为准。 |
-| When to use | 当需要在 frontend 的 core-engine 引擎中使用 baidu OCR 对图片进行文字识别时使用本模块；若需接入其他 OCR 供应商或通用 OCR 抽象层，应先查看 core-engine/src/ocr 目录下的其他实现。 |
-| How to use | 从 core-engine 的 ocr/baidu 模块（packages/core-engine/src/ocr/baidu.ts）导入工具函数，传入待识别图片数据及 baidu OCR 所需的配置/凭证后调用识别能力；具体导出 API 与参数签名暂无，请直接阅读源文件确认。 |
-| Exports | 暂无 |
-| Related | core-engine, ocr |
-| Tags | baidu, ocr, OCR, core-engine, packages, util, frontend, 光学字符识别, 文字识别 |
-| Source | refresh |
-| Path | packages/core-engine/src/ocr/baidu.ts |
-| Updated | 2026-08-28T22:12:03.793Z |
-
-## env
-
-| Field | Value |
-|-------|-------|
-| Summary | core-engine 中 ocr 模块的环境工具（env），位于 packages/core-engine/src/ocr/env.ts，用于 ocr 运行环境探测与环境变量读取。具体导出签名信息暂无（无 javadoc 与 signatures）。 |
-| When to use | 在 packages/core-engine 内需要判断或获取 ocr 运行环境（如运行平台、环境变量、环境开关）时，使用该 env 工具；其他模块需要复用 ocr 环境判断逻辑时也可引用。 |
-| How to use | 从 packages/core-engine/src/ocr/env.ts 导入 env 模块的导出成员使用；当前暂无函数签名与 javadoc，建议直接阅读源文件确认可用导出与调用方式。 |
-| Exports | 暂无 |
-| Related | core-engine, ocr |
-| Tags | env, ocr, core-engine, packages, util, environment, typescript, 环境探测 |
-| Source | refresh |
-| Path | packages/core-engine/src/ocr/env.ts |
-| Updated | 2026-08-28T22:12:25.754Z |
-
-## fake
-
-| Field | Value |
-|-------|-------|
-| Summary | packages/core-engine 中 ocr 目录下的 fake（伪造/模拟）OCR 实现，用于在没有真实 OCR 引擎时提供模拟数据或桩（stub）输出。原始 javadoc 与签名信息暂无。 |
-| When to use | 在 core-engine 内调试 OCR 相关流程但不想接入真实 OCR 服务时使用，例如编写单元测试、演示 demo、离线开发或模拟 OCR 识别结果。 |
-| How to use | 从 packages/core-engine/src/ocr/fake.ts 导入 fake OCR 实现并注入到依赖 OCR 的调用处，替代真实 OCR 引擎获取模拟结果；具体导出符号暂无签名信息，请直接查看源文件确认。 |
-| Exports | 暂无 |
-| Related | ocr |
-| Tags | ocr, fake, core-engine, packages, mock, stub, OCR, testing, typescript |
-| Source | refresh |
-| Path | packages/core-engine/src/ocr/fake.ts |
-| Updated | 2026-08-28T22:12:34.982Z |
-
-## job-pipeline
-
-| Field | Value |
-|-------|-------|
-| Summary | 位于 packages/core-engine/src/pipeline/job-pipeline.ts 的工具模块（util），承担 core-engine 内 job-pipeline（作业流水线）相关的编排处理逻辑；本资产的 javadoc 与 signatures 暂无，具体导出 API 待补充。 |
-| When to use | 当需要在 core-engine 中组织、串联或调度 job（作业）处理流程，或检索 pipeline / job-pipeline 相关实现时使用；具体适用场景说明暂无。 |
-| How to use | 从 packages/core-engine/src/pipeline/job-pipeline.ts 模块导入使用；由于 signatures 为空，详细调用方式与参数说明暂无，建议先阅读 job-pipeline 源码确认导出内容后再集成。 |
-| Exports | 暂无 |
-| Related | core-engine |
-| Tags | TypeScript, frontend, util, job-pipeline, core-engine, pipeline, packages |
-| Source | refresh |
-| Path | packages/core-engine/src/pipeline/job-pipeline.ts |
-| Updated | 2026-08-29T08:50:05.520Z |
+| Path | packages/core-engine/src/http/handle-request.ts |
+| Updated | 2026-09-19T06:05:05.821Z |
 
 ## agent-runtime-factory
 
 | Field | Value |
 |-------|-------|
-| Summary | 位于 packages/core-engine/src/agent/agent-runtime-factory.ts 的 util 模块，即 agent-runtime-factory（Agent 运行时工厂），用于创建/装配 core-engine 中的 Agent Runtime 实例。代码扫描未提取到 signatures 与 javadoc，具体导出 API 暂无。 |
-| When to use | 当需要在 core-engine 内统一创建或初始化 Agent Runtime 实例、避免在各处手工拼装 Agent 运行时依赖时，引用 agent-runtime-factory。具体业务触发场景说明暂无。 |
-| How to use | 在 TypeScript 前端代码中从 packages/core-engine 的 agent/agent-runtime-factory 模块导入并调用其工厂方法生成 Agent Runtime 实例；由于 signatures 暂无，入参、返回值请以 agent-runtime-factory.ts 源码实际导出为准。 |
+| Summary | Agent Runtime 工厂（agent-runtime-factory），位于 packages/core-engine/src/agent 目录下，属于 core-engine 包的工具模块，用于统一创建和配置 agent 运行时实例。 |
+| When to use | 需要在 core-engine 中创建 Agent Runtime 实例，或将 agent 的初始化与配置逻辑收敛到统一工厂入口时使用。 |
+| How to use | 从 packages/core-engine/src/agent/agent-runtime-factory.ts 导入 agent-runtime-factory 提供的工厂方法，传入 agent 配置以获取运行时实例；具体导出的 API 签名暂无。 |
 | Exports | 暂无 |
 | Related | 暂无 |
-| Tags | agent-runtime-factory, AgentRuntimeFactory, core-engine, agent, runtime, factory, util, TypeScript, frontend, packages |
+| Tags | TypeScript, Factory, Agent Runtime, agent-runtime-factory, core-engine, agent, 工厂模式, 运行时 |
 | Source | refresh |
 | Path | packages/core-engine/src/agent/agent-runtime-factory.ts |
-| Updated | 2026-08-29T03:14:58.430Z |
-
-## job-step-orchestrator
-
-| Field | Value |
-|-------|-------|
-| Summary | core-engine 中 agent 模块的任务步骤编排工具 job-step-orchestrator，位于 packages/core-engine/src/agent/job-step-orchestrator.ts，用于将 agent 任务拆分为多个 step 并按序调度编排执行。暂无 javadoc 详细说明。 |
-| When to use | 当需要在 core-engine 内对 agent 任务进行多步骤（step）编排与调度，例如步骤顺序执行、步骤间状态传递、任务流程控制时，使用本工具。 |
-| How to use | 从 packages/core-engine/src/agent/job-step-orchestrator.ts 导入 job-step-orchestrator 的编排能力，将任务步骤注册或传入编排器后交由其调度执行。当前暂无导出签名（signatures）信息，具体 API 参数请直接查阅源码。 |
-| Exports | 暂无 |
-| Related | 暂无 |
-| Tags | frontend, TypeScript, core-engine, agent, job-step-orchestrator, orchestrator, step, task-scheduling, packages |
-| Source | refresh |
-| Path | packages/core-engine/src/agent/job-step-orchestrator.ts |
-| Updated | 2026-08-29T03:14:53.174Z |
+| Updated | 2026-09-17T04:11:09.890Z |
 
 ## step-chat-bridge
 
 | Field | Value |
 |-------|-------|
-| Summary | packages/core-engine 中 agent 模块下的桥接工具，用于连接 step（步骤执行）与 chat（聊天会话）两侧，在 agent 的 step 流程和 chat 交互之间转发消息、事件或产物。具体导出符号与实现细节暂无（javadoc 与 signatures 均为空）。 |
-| When to use | 当需要在 core-engine 的 agent 执行链路中打通 step 步骤与 chat 会话（例如将 step 执行结果投递到 chat、或将 chat 输入驱动 step 流转）时使用；具体适用场景文档暂无，需结合源码确认。 |
-| How to use | 从 packages/core-engine/src/agent/step-chat-bridge.ts 导入使用；因 signatures 为空，具体导出的类/函数名暂无，接入前建议直接阅读该文件确认桥接接口与调用约定。 |
+| Summary | step-chat-bridge（步骤-会话桥接工具），位于 packages/core-engine/src/agent/step-chat-bridge.ts，用于在 core-engine 的 agent（智能体）step（步骤）执行流程与 chat（聊天会话）之间建立桥接。源码缺少 javadoc 与签名信息，具体能力暂无。 |
+| When to use | 当需要在 core-engine 中将 agent 的 step 执行事件或状态与 chat 会话进行双向传递或同步时使用；更具体的触发条件暂无。 |
+| How to use | 从 packages/core-engine/src/agent/step-chat-bridge.ts 导入 step-chat-bridge 相关导出后调用；因 signatures 暂无，具体函数签名与调用方式暂无。 |
 | Exports | 暂无 |
 | Related | 暂无 |
-| Tags | step-chat-bridge, core-engine, agent, step, chat, bridge, util, packages, frontend, typescript |
+| Tags | step-chat-bridge, util, core-engine, agent, step, chat, bridge, TypeScript, packages |
 | Source | refresh |
 | Path | packages/core-engine/src/agent/step-chat-bridge.ts |
-| Updated | 2026-08-29T03:14:49.163Z |
+| Updated | 2026-09-17T04:11:50.361Z |
 
-## tools
+## job-pipeline
 
 | Field | Value |
 |-------|-------|
-| Summary | core-engine 中 agent 的工具集定义模块，位于 packages/core-engine/src/agent/tools.ts，集中声明 agent 可调用的 tools（工具）。javadoc 暂无，signatures 为空，更多细节暂无。 |
-| When to use | 当需要在 agent 中注册、扩展或复用 tools（工具）能力，或在 packages/core-engine 中定位 agent 工具定义入口时使用本资产。 |
-| How to use | 从 packages/core-engine/src/agent/tools.ts 导入所需 tools 定义并注册到 agent 运行时；具体导出签名暂无（signatures 为空），建议直接查阅源文件确认可用的工具导出。 |
+| Summary | frontend packages 下的 job-pipeline（任务流水线）工具模块，位于 core-engine 包的 src/pipeline/job-pipeline.ts，据命名推断用于编排 job 任务的执行流程。该文件暂无 javadoc 注释与公开签名（signatures）信息，具体 API 以源码为准。 |
+| When to use | 当需要在 core-engine 中组织 job 的执行顺序、构建任务流水线（pipeline）流程，或在 packages 内复用任务编排逻辑时使用；具体导出入口暂无（javadoc 与 signatures 缺失，请先查源码确认）。 |
+| How to use | 从 packages/core-engine/src/pipeline/job-pipeline.ts 导入 job-pipeline 相关导出并按流水线方式调用；因该文件暂无 javadoc 与签名说明，建议先阅读源码确认导出成员、参数与返回值后再集成到业务代码。 |
 | Exports | 暂无 |
 | Related | 暂无 |
-| Tags | TypeScript, agent, tools, core-engine, packages, util |
+| Tags | job-pipeline, pipeline, job, core-engine, packages, TypeScript, 任务流水线, frontend |
 | Source | refresh |
-| Path | packages/core-engine/src/agent/tools.ts |
-| Updated | 2026-08-29T02:11:55.648Z |
+| Path | packages/core-engine/src/pipeline/job-pipeline.ts |
+| Updated | 2026-09-17T04:12:13.210Z |
 
-## review
+## config
 
 | Field | Value |
 |-------|-------|
-| Summary | core-engine 包流水线（pipeline）中的 review 审查步骤工具，源码位于 packages/core-engine/src/pipeline/review.ts，用于在 pipeline 执行流程中承载 review（审查）环节的处理逻辑。具体导出签名信息暂无。 |
-| When to use | 当需要在 core-engine 的 pipeline 流程中插入或调用 review 审查环节，或需要定位 pipeline/review.ts 的实现时使用本卡片。具体触发条件与前置依赖暂无。 |
-| How to use | 通过导入 packages/core-engine/src/pipeline/review.ts 使用（具体导出项暂无），通常作为 pipeline 的一个步骤与上下游 stage 组合调用。详细调用示例暂无。 |
+| Summary | agent-runtime 包内的 LLM 配置模块，源码位于 src/llm/config.ts，用于集中定义与读取 LLM（大语言模型）相关配置项。该文件的 javadoc 与 signatures 均为空，具体配置键与导出细节暂无。 |
+| When to use | 暂无 |
+| How to use | 暂无 |
 | Exports | 暂无 |
 | Related | 暂无 |
-| Tags | TypeScript, core-engine, pipeline, review, review.ts, util, packages |
+| Tags | llm, LLM（大语言模型）, config, agent-runtime, packages, util, frontend |
 | Source | refresh |
-| Path | packages/core-engine/src/pipeline/review.ts |
-| Updated | 2026-08-29T02:11:57.570Z |
+| Path | packages/agent-runtime/src/llm/config.ts |
+| Updated | 2026-09-17T04:34:38.346Z |
 
-## effective-boxes
+## library
 
 | Field | Value |
 |-------|-------|
-| Summary | core-engine 中 extract 阶段的工具模块（源文件：packages/core-engine/src/extract/effective-boxes.ts），用于计算/提取 effective boxes（有效盒，即有效边界区域）。javadoc 与函数签名信息暂无。 |
-| When to use | 当在 core-engine 的 extract 流程中需要获取或计算 effective boxes（有效盒/有效边界区域）时使用；涉及布局、渲染或区域提取相关逻辑时可优先查阅本模块。 |
-| How to use | 从 packages/core-engine/src/extract/effective-boxes.ts 按需导入。具体导出签名暂无，请直接查看该源文件确认可用的导出函数/常量后再调用。 |
+| Summary | core-engine 包 retrieve 模块下的 library 工具模块（packages/core-engine/src/retrieve/library.ts），用于 library（资产库）检索相关的工具能力封装。javadoc 暂无，公开 API 签名暂无。 |
+| When to use | 当需要在 core-engine 的 retrieve（检索）流程中复用 library（资产库）相关的工具逻辑时；具体适用条件暂无。 |
+| How to use | 暂无（未提取到公开函数签名，请直接查看 packages/core-engine/src/retrieve/library.ts 源码确认可用导出）。 |
 | Exports | 暂无 |
 | Related | 暂无 |
-| Tags | effective-boxes, core-engine, extract, frontend, util, boxes |
+| Tags | util, library, retrieve, core-engine, packages, frontend |
 | Source | refresh |
-| Path | packages/core-engine/src/extract/effective-boxes.ts |
-| Updated | 2026-08-29T08:47:43.748Z |
+| Path | packages/core-engine/src/retrieve/library.ts |
+| Updated | 2026-09-19T05:51:00.415Z |
 
-## ledger
+## ports
 
 | Field | Value |
 |-------|-------|
-| Summary | core-engine 引擎包持久化层（persistence）下的 ledger（账本）工具模块，源码位于 packages/core-engine/src/persistence/ledger.ts，承担 ledger 账本数据的持久化处理职责；模块暂无 javadoc 与 signatures，具体导出接口暂无。 |
-| When to use | 在 core-engine 中需要对 ledger（账本）数据进行持久化读写或维护时使用；由于该模块暂无 javadoc 说明，建议结合 persistence 目录下的其他模块共同判断适用场景。 |
-| How to use | 从 packages/core-engine/src/persistence/ledger.ts 引入该工具模块；因未提供 signatures，导出的 API 暂无记录，使用前请直接阅读源码确认可用的 ledger 相关函数或类型。 |
+| Summary | core-engine 的 retrieve（检索）模块端口定义文件，位于 packages/core-engine/src/retrieve/ports.ts，用于抽象 core-engine 检索流程与外部依赖之间的边界（ports / 端口适配器模式）。该文件当前 javadoc 为暂无，signatures 为空，具体导出接口暂无。 |
+| When to use | 在 core-engine 中为 retrieve（检索）链路接入外部实现（adapter / 适配器）时使用；需要查看或实现 ports 端口接口、扩展检索相关依赖注入边界时参考此文件。 |
+| How to use | 暂无（signatures 与 javadoc 均为空，请直接阅读 packages/core-engine/src/retrieve/ports.ts 源码确认导出内容与用法）。 |
 | Exports | 暂无 |
 | Related | 暂无 |
-| Tags | ledger, persistence, core-engine, packages, util, TypeScript, 账本, 持久化 |
+| Tags | ports, retrieve, core-engine, packages, TypeScript, 端口适配器, ports-and-adapters, 边界抽象 |
 | Source | refresh |
-| Path | packages/core-engine/src/persistence/ledger.ts |
-| Updated | 2026-08-29T15:57:10.352Z |
+| Path | packages/core-engine/src/retrieve/ports.ts |
+| Updated | 2026-09-19T07:46:41.259Z |
 
-## migrate
+## rerank
 
 | Field | Value |
 |-------|-------|
-| Summary | core-engine 的 persistence（持久化）层数据迁移工具，位于 packages/core-engine/src/persistence/migrate.ts，提供 migrate（迁移）能力，用于处理持久化数据的结构或版本迁移。当前扫描未捕获 Javadoc 与函数签名，具体行为以源码为准。 |
-| When to use | 当需要为 core-engine 的 persistence（持久化）层执行 migrate（数据迁移）、升级持久化数据结构或版本时使用本工具；因缺少 Javadoc 与签名信息，具体适用场景建议结合 packages/core-engine/src/persistence/migrate.ts 源码确认。 |
-| How to use | 从 packages/core-engine/src/persistence/migrate.ts 导入 migrate 相关导出并调用；signatures 为空，入参与返回值请直接查阅源码确认，待补充签名信息后可更新本卡片。 |
-| Exports | migrate |
-| Related | 暂无 |
-| Tags | frontend, core-engine, persistence, migrate, 数据迁移, util, packages |
-| Source | refresh |
-| Path | packages/core-engine/src/persistence/migrate.ts |
-| Updated | 2026-08-29T15:57:38.793Z |
-
-## pg-store
-
-| Field | Value |
-|-------|-------|
-| Summary | pg-store 是 core-engine 包 persistence 层的持久化存储工具，基于 pg（PostgreSQL）实现数据库读写与状态落盘。 |
-| When to use | 当 core-engine 需要将运行状态、任务数据持久化到 PostgreSQL（pg）数据库，或需要统一的数据存储层时使用 pg-store。 |
-| How to use | 在 packages/core-engine 中从 persistence/pg-store 引入该模块，通过其 pg（PostgreSQL）连接执行读写；具体导出 API 暂无（signatures 为空），建议直接阅读 packages/core-engine/src/persistence/pg-store.ts 源码确认调用方式。 |
-| Exports | 暂无 |
-| Related | core-engine |
-| Tags | pg-store, pg, PostgreSQL, persistence, core-engine, 存储层, util |
-| Source | refresh |
-| Path | packages/core-engine/src/persistence/pg-store.ts |
-| Updated | 2026-08-29T15:58:36.661Z |
-
-## store
-
-| Field | Value |
-|-------|-------|
-| Summary | core-engine 的持久化 store 工具，位于 packages/core-engine/src/persistence/store.ts，负责引擎数据的持久化（persistence）存取。具体导出的方法与类签名信息暂无。 |
-| When to use | 当在 core-engine（packages）中需要保存、恢复或读写持久化状态（persistence store），例如将引擎状态落盘存储或从存储中还原数据时使用本工具。 |
-| How to use | 从 packages/core-engine/src/persistence/store.ts 导入 store 相关导出并调用其持久化读写接口；由于本资产暂无可用签名信息，具体 API 用法请直接查阅 store.ts 源文件确认。 |
+| Summary | rerank（重排序）工具函数，位于 packages/core-engine 的 retrieve（检索）模块，源码路径 packages/core-engine/src/retrieve/rerank.ts。暂无 javadoc 与导出签名，推测用于对检索召回的结果按相关性或分数进行二次排序。 |
+| When to use | 当通过 core-engine 的 retrieve 检索召回一批结果后，需要在返回给上层之前对结果做 rerank（重排序，例如按相关性得分重新排序）时使用。具体的适用条件与限制暂无 javadoc 信息。 |
+| How to use | 暂无签名信息；请直接阅读 packages/core-engine/src/retrieve/rerank.ts 源码确认导出形式（默认导出或命名导出 rerank）与入参结构，再在检索流程中导入并传入召回结果调用。完整调用示例暂无。 |
 | Exports | 暂无 |
 | Related | 暂无 |
-| Tags | TypeScript, util, store, persistence, core-engine, packages |
+| Tags | TypeScript, rerank, retrieve, core-engine, packages, 重排序, 检索 |
 | Source | refresh |
-| Path | packages/core-engine/src/persistence/store.ts |
-| Updated | 2026-08-29T15:59:03.984Z |
+| Path | packages/core-engine/src/retrieve/rerank.ts |
+| Updated | 2026-09-19T07:46:47.149Z |
 
-## seed
+## embeddings
 
 | Field | Value |
 |-------|-------|
-| Summary | core-engine 流水线（pipeline）中的 seed 工具模块，位于 packages/core-engine/src/pipeline/seed.ts，用于生成种子数据或初始化 pipeline 状态；模块 javadoc 与公开签名信息暂无。 |
-| When to use | 当需要在 core-engine 的 pipeline 阶段进行种子数据初始化、构造初始状态或复用统一 seed 入口时使用；具体适用场景暂无注释说明。 |
-| How to use | 从 packages/core-engine/src/pipeline/seed.ts 导入使用；该模块暂无公开签名（signatures）与 javadoc，建议直接阅读 seed.ts 源码确认导出形式与调用方式。 |
+| Summary | core-engine 包中 retrieve（检索）模块的 embeddings 工具，负责向量 embedding 的生成与处理，为语义检索/RAG 流水线提供向量表示支持。 |
+| When to use | 在 core-engine 的 retrieve（检索）链路中需要对文本或数据生成向量 embedding、进行相似度计算或构建语义检索基础能力时使用。 |
+| How to use | 暂无 |
 | Exports | 暂无 |
 | Related | 暂无 |
-| Tags | seed, core-engine, pipeline, TypeScript, util, seed.ts, 种子数据, 初始化 |
+| Tags | embeddings, vector, retrieve, RAG, 语义检索, core-engine, TypeScript, util |
 | Source | refresh |
-| Path | packages/core-engine/src/pipeline/seed.ts |
-| Updated | 2026-08-29T15:59:35.292Z |
+| Path | packages/core-engine/src/retrieve/embeddings.ts |
+| Updated | 2026-09-19T07:47:19.600Z |
 
-## types
+## QdrantVectorStore
 
 | Field | Value |
 |-------|-------|
-| Summary | packages/core-engine 的 TypeScript 类型定义模块（src/types.ts），集中声明核心引擎（core-engine）的公共类型、接口与类型别名，供引擎内部及跨包引用。具体导出签名暂无扫描信息。 |
-| When to use | 在开发或修改 packages/core-engine 相关功能、需要为变量/函数参数/返回值标注 core-engine 类型时使用；其他包（如 frontend 应用）需要复用 core-engine 的类型定义而非运行时逻辑时，也应从本模块导入。 |
-| How to use | 通过 `import type { ... } from` 相对路径（如 `../types`）或 core-engine 包入口导入所需类型；具体可导入的导出项暂无签名信息，请直接查看 packages/core-engine/src/types.ts 源文件确认实际导出内容。 |
+| Summary | QdrantVectorStore 是 packages/core-engine 中 retrieve（检索）模块的向量存储工具，封装 Qdrant 向量数据库客户端，提供向量数据写入与相似度检索能力，典型用于 RAG 场景的 retrieve 召回环节。 |
+| When to use | 当 core-engine 需要接入 Qdrant 进行向量存储、语义相似度检索（如 RAG 的 retrieve 阶段、embedding 召回）时使用 QdrantVectorStore。 |
+| How to use | 暂无公开签名信息；可从 packages/core-engine/src/retrieve/qdrant.ts 导入 QdrantVectorStore，用于向量集合的写入与相似度查询，具体 API 见源码。 |
 | Exports | 暂无 |
 | Related | 暂无 |
-| Tags | TypeScript, types, core-engine, 类型定义, packages, frontend, type-definitions |
+| Tags | QdrantVectorStore, Qdrant, vector store, 向量检索, retrieve, RAG, embedding, core-engine, packages, TypeScript |
 | Source | refresh |
-| Path | packages/core-engine/src/types.ts |
-| Updated | 2026-08-29T15:59:58.082Z |
+| Path | packages/core-engine/src/retrieve/qdrant.ts |
+| Updated | 2026-09-19T08:22:16.583Z |
 
-## document-pipeline
+## StandardLibrary
 
 | Field | Value |
 |-------|-------|
-| Summary | core-engine 中的 document-pipeline（文档流水线）工具，位于 packages/core-engine/src/pipeline/document-pipeline.ts，用于对文档数据执行 pipeline 式流转处理。具体导出 API 与实现细节暂无。 |
-| When to use | 当在 packages/core-engine 内需要对文档（document）执行分阶段流水线（pipeline）处理时使用本资产；具体触发场景暂无。 |
-| How to use | 从 packages/core-engine/src/pipeline/document-pipeline.ts 引入 document-pipeline 并接入文档处理链路（具体导出签名暂无，可参考同目录 pipeline 相关模块组合使用）。 |
+| Summary | 标准库 StandardLibrary（util），位于 packages/core-engine/src/retrieve/library.ts，属于 core-engine 的 retrieve（检索）链路的基础工具资产；javadoc 暂无，公开签名暂未提取，具体能力待补充。 |
+| When to use | 暂无（可参考：需要在 core-engine retrieve 检索流程中复用 StandardLibrary 标准库能力时） |
+| How to use | 暂无（源码位置：packages/core-engine/src/retrieve/library.ts，请结合 StandardLibrary 导出项阅读使用） |
 | Exports | 暂无 |
 | Related | 暂无 |
-| Tags | document-pipeline, pipeline, core-engine, packages, frontend, util, document |
+| Tags | util, StandardLibrary, library.ts, core-engine, retrieve, packages, frontend, TypeScript |
 | Source | refresh |
-| Path | packages/core-engine/src/pipeline/document-pipeline.ts |
-| Updated | 2026-08-29T15:59:18.382Z |
+| Path | packages/core-engine/src/retrieve/library.ts |
+| Updated | 2026-09-19T08:37:44.666Z |
 
-## fill-service
+## JobPipeline
 
 | Field | Value |
 |-------|-------|
-| Summary | core-engine 包内的 Excel 填充服务（fill-service），位于 packages/core-engine/src/excel/fill-service.ts，用于处理 Excel 数据/单元格填充相关逻辑。候选未提供 signatures 与 javadoc，具体导出 API 暂无。 |
-| When to use | 前端需要生成或填充 Excel 内容（如报表导出、模板数据填充、单元格写入）且项目依赖 core-engine 包时使用本服务。 |
-| How to use | 暂无具体调用示例（候选 signatures 为空）；一般可从 packages/core-engine/src/excel/fill-service 模块导入 fill-service 相关函数使用。 |
+| Summary | 暂无文档说明。根据命名与路径，JobPipeline（任务流水线）位于 packages/core-engine/src/pipeline/job-pipeline.ts，属于 core-engine 包中的 pipeline（流水线）模块。 |
+| When to use | 暂无 |
+| How to use | 暂无 |
 | Exports | 暂无 |
 | Related | 暂无 |
-| Tags | TypeScript, frontend, packages, core-engine, excel, fill, fill-service |
+| Tags | JobPipeline, core-engine, pipeline, job-pipeline, util, TypeScript |
 | Source | refresh |
-| Path | packages/core-engine/src/excel/fill-service.ts |
-| Updated | 2026-08-29T15:55:24.550Z |
+| Path | packages/core-engine/src/pipeline/job-pipeline.ts |
+| Updated | 2026-09-19T08:37:46.009Z |
 
-## effective-mappings
+## StandardIngestWorker
 
 | Field | Value |
 |-------|-------|
-| Summary | core-engine 中 excel 模块下的映射工具，用于计算 effective-mappings（最终生效的 Excel 列/字段映射），一般在默认映射与自定义覆盖配置合并后得出实际生效结果。源码位于 packages/core-engine/src/excel/effective-mappings.ts。 |
-| When to use | 在 Excel 导入/导出流程中需要确定最终生效的列映射（effective-mappings）时使用，例如：合并默认列映射与用户覆盖配置、为 core-engine 的 excel 处理链路提供实际生效的字段映射等场景。 |
-| How to use | 从 packages/core-engine/src/excel/effective-mappings.ts 导入 effective-mappings 相关函数，传入原始映射与覆盖配置，获取合并后最终生效的映射结果。该候选的 signatures 与 javadoc 暂无（扫描未捕获导出签名），使用前请查阅源码确认具体导出函数名与参数。 |
+| Summary | StandardIngestWorker：packages/core-engine 中的标准 ingest（摄取/入库）worker，位于 src/retrieve/ingest-worker.ts，服务于 retrieve（检索）链路的资料摄取环节。javadoc 暂无，公开签名信息暂无。 |
+| When to use | 需要在 core-engine 的 retrieve（检索）链路中执行标准 ingest（摄取）任务时参考该 worker；具体触发条件与能力暂无文档描述。 |
+| How to use | 暂无 |
 | Exports | 暂无 |
 | Related | 暂无 |
-| Tags | TypeScript, frontend, excel, effective-mappings, core-engine, mapping, util |
+| Tags | StandardIngestWorker, ingest-worker, ingest, worker, retrieve, core-engine, packages, util, TypeScript |
 | Source | refresh |
-| Path | packages/core-engine/src/excel/effective-mappings.ts |
-| Updated | 2026-08-29T15:54:56.901Z |
+| Path | packages/core-engine/src/retrieve/ingest-worker.ts |
+| Updated | 2026-09-19T08:52:43.990Z |
 
-## pg-migrate
+## live-ports
 
 | Field | Value |
 |-------|-------|
-| Summary | core-engine 包 persistence（持久层）目录下的 PostgreSQL 数据库迁移工具（pg-migrate），用于管理数据库 schema 的版本迁移与升级，文件位于 packages/core-engine/src/persistence/pg-migrate.ts。 |
-| When to use | 当 core-engine 需要对 PostgreSQL 执行数据库迁移（migration）、初始化表结构或随版本发布升级 schema 时使用；适合服务启动时自动执行 migrate 或部署流程中调用。 |
-| How to use | 从 packages/core-engine/src/persistence/pg-migrate.ts 引入（具体导出签名暂无，signatures 为空）；通常在启动脚本或部署钩子中调用迁移入口，建立 PostgreSQL 连接后执行迁移（up/down），建议与 core-engine 的 persistence 层其他模块配合使用。 |
+| Summary | core-engine（核心引擎）retrieve 模块下的 live-ports 工具，与实时端口（live ports）的检索/获取能力相关；该文件暂无 JSDoc 与函数签名信息，细节待补充。 |
+| When to use | 暂无 |
+| How to use | 暂无 |
 | Exports | 暂无 |
-| Related | core-engine, persistence |
-| Tags | pg-migrate, PostgreSQL, pg, migration, migrate, persistence, core-engine, database, sql, util |
+| Related | 暂无 |
+| Tags | live-ports, core-engine, retrieve, util, packages, TypeScript |
 | Source | refresh |
-| Path | packages/core-engine/src/persistence/pg-migrate.ts |
-| Updated | 2026-08-29T15:58:07.242Z |
-
-## mock
-
-| Field | Value |
-|-------|-------|
-| Summary | core-engine 的 mock（模拟）适配器，位于 packages/core-engine/src/adapter/mock.ts，用于在没有真实依赖的情况下为引擎提供可用的 mock adapter 行为，便于测试与本地联调。 |
-| When to use | 当需要为 core-engine 提供 mock 数据源或模拟 adapter（适配器）实现时使用，例如单元测试、本地开发环境或尚无真实后端服务的场景。 |
-| How to use | 从 packages/core-engine/src/adapter/mock.ts 导入该 mock 适配器，并将其作为 adapter 注入 core-engine。暂无更多 API 细节。 |
-| Exports | 暂无 |
-| Related | core-engine, adapter |
-| Tags | mock, adapter, core-engine, packages, util, testing |
-| Source | refresh |
-| Path | packages/core-engine/src/adapter/mock.ts |
-| Updated | 2026-08-29T15:54:34.375Z |
-
-
-
-
-
-
-
-
-
-
-
-
-
+| Path | packages/core-engine/src/retrieve/live-ports.ts |
+| Updated | 2026-09-19T10:53:45.446Z |

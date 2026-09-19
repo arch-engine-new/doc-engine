@@ -1,0 +1,16 @@
+{
+  "pageId": "standard_lib",
+  "title": "标准库",
+  "capabilities": [
+    "list"
+  ],
+  "signals": [
+    {
+      "kind": "list",
+      "excerpt": "- pageType: list",
+      "path": "designs/v0/standard_lib/page.logic.md"
+    }
+  ],
+  "sourcePath": "designs/v0/standard_lib/page.logic.md",
+  "contentHash": "35948c8ec8bd24da5097613fee6d6b73d9ff8f70a6e6012c3b5b46a9d4c98a30"
+}

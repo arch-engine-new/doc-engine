@@ -16,30 +16,30 @@
 | StateStore | Persistence interface for agent-runtime: runs, node executions, checkpoints, tool calls, events, HITL interrupts. Implemented by SQLiteStateStore. | packages/agent-runtime/src/index.ts | 2026-08-25T10:38:37.387Z |
 | ToolExecutionResult | Output of a tool execution: toolName, input, output, status (completed/failed/timeout/cancelled/error), durationMs, attempt, idempotencyKey and error info. | packages/agent-runtime/src/index.ts | 2026-08-25T10:43:23.544Z |
 | AgentRuntime | agent-runtime 对外契约：graph 作者面（GraphDefinition/CompiledGraph/NodeType/RetryPolicy）、run 生命周期（RunStatus/RunMetadata/SchedulerResult/ChannelMap）、HITL（HitlDecision/HitlInterruptStatus）、持久化（StateStore/SQLiteStateStore）、可观测（EventRow/EventType）、控制面（RunView）、工具（ToolExecutionResult）。源码载体 src/contracts/agent-runtime.ts；实现 barrel packages/agent-runtime/src/index.ts。 | src/contracts/agent-runtime.ts | 2026-08-25T12:07:00.969Z |
-| GraphCompileError |  | packages/agent-runtime/src/graph/compiler.ts | 2026-08-29T03:15:17.004Z |
-| GraphNode |  | packages/agent-runtime/src/graph/types.ts | 2026-08-29T03:15:17.004Z |
-| HitlGateway |  | packages/agent-runtime/src/hitl/gateway.ts | 2026-08-29T03:15:17.004Z |
-| EventType |  | packages/agent-runtime/src/obs/event-log.ts | 2026-08-29T03:15:17.004Z |
-| EventLog |  | packages/agent-runtime/src/obs/event-log.ts | 2026-08-29T03:15:17.004Z |
-| SQLiteStateStore |  | packages/agent-runtime/src/persistence/sqlite-store.ts | 2026-08-29T03:15:17.004Z |
-| StoredCheckpoint |  | packages/agent-runtime/src/persistence/types.ts | 2026-08-29T03:15:17.004Z |
-| StoredToolCall |  | packages/agent-runtime/src/persistence/types.ts | 2026-08-29T03:15:17.004Z |
-| StoredRunEvent |  | packages/agent-runtime/src/persistence/types.ts | 2026-08-29T03:15:17.004Z |
-| StoredHitlInterrupt |  | packages/agent-runtime/src/persistence/types.ts | 2026-08-29T03:15:17.004Z |
-| CheckpointService |  | packages/agent-runtime/src/runtime/checkpoint-service.ts | 2026-08-29T03:15:17.004Z |
-| NodeResult |  | packages/agent-runtime/src/runtime/node-executors.ts | 2026-08-29T03:15:17.004Z |
-| NodeExecutor |  | packages/agent-runtime/src/runtime/node-executors.ts | 2026-08-29T03:15:17.004Z |
-| SchedulerOptions |  | packages/agent-runtime/src/runtime/scheduler.ts | 2026-08-29T03:15:17.004Z |
-| ExecutionContext |  | packages/agent-runtime/src/runtime/state.ts | 2026-08-29T03:15:17.004Z |
-| RunMetadata |  | packages/agent-runtime/src/runtime/state.ts | 2026-08-29T03:15:17.004Z |
-| NodeExecutionRecord |  | packages/agent-runtime/src/runtime/state.ts | 2026-08-29T03:15:17.004Z |
-| ChannelMap |  | packages/agent-runtime/src/runtime/state.ts | 2026-08-29T03:15:17.004Z |
-| ToolRuntime |  | packages/agent-runtime/src/tools/runtime.ts | 2026-08-29T03:15:17.004Z |
+| GraphCompileError |  | packages/agent-runtime/src/graph/compiler.ts | 2026-09-10T06:52:30.929Z |
+| GraphNode |  | packages/agent-runtime/src/graph/types.ts | 2026-09-10T06:52:30.929Z |
+| HitlGateway |  | packages/agent-runtime/src/hitl/gateway.ts | 2026-09-10T06:52:30.929Z |
+| EventType |  | packages/agent-runtime/src/obs/event-log.ts | 2026-09-10T06:52:30.929Z |
+| EventLog |  | packages/agent-runtime/src/obs/event-log.ts | 2026-09-10T06:52:30.929Z |
+| SQLiteStateStore |  | packages/agent-runtime/src/persistence/sqlite-store.ts | 2026-09-10T06:52:30.929Z |
+| StoredCheckpoint |  | packages/agent-runtime/src/persistence/types.ts | 2026-09-10T06:52:30.929Z |
+| StoredToolCall |  | packages/agent-runtime/src/persistence/types.ts | 2026-09-10T06:52:30.929Z |
+| StoredRunEvent |  | packages/agent-runtime/src/persistence/types.ts | 2026-09-10T06:52:30.929Z |
+| StoredHitlInterrupt |  | packages/agent-runtime/src/persistence/types.ts | 2026-09-10T06:52:30.929Z |
+| CheckpointService |  | packages/agent-runtime/src/runtime/checkpoint-service.ts | 2026-09-10T06:52:30.929Z |
+| NodeResult |  | packages/agent-runtime/src/runtime/node-executors.ts | 2026-09-10T06:52:30.929Z |
+| NodeExecutor |  | packages/agent-runtime/src/runtime/node-executors.ts | 2026-09-10T06:52:30.929Z |
+| SchedulerOptions |  | packages/agent-runtime/src/runtime/scheduler.ts | 2026-09-10T06:52:30.929Z |
+| ExecutionContext |  | packages/agent-runtime/src/runtime/state.ts | 2026-09-10T06:52:30.929Z |
+| RunMetadata |  | packages/agent-runtime/src/runtime/state.ts | 2026-09-10T06:52:30.929Z |
+| NodeExecutionRecord |  | packages/agent-runtime/src/runtime/state.ts | 2026-09-10T06:52:30.929Z |
+| ChannelMap |  | packages/agent-runtime/src/runtime/state.ts | 2026-09-10T06:52:30.929Z |
+| ToolRuntime |  | packages/agent-runtime/src/tools/runtime.ts | 2026-09-10T06:52:30.929Z |
 | ZhipuLlmProvider | 智谱 GLM OpenAI 兼容 Chat Completions Provider：读取 .apt/agent-runtime.llm.json，POST /chat/completions。 | packages/agent-runtime/src/llm/zhipu-provider.ts | 2026-08-26T06:34:54.943Z |
 | LlmRuntimeConfig | LLM 运行时配置：baseUrl/model/apiKey；从 .apt/agent-runtime.llm.json 加载，不依赖 arch.secrets.json。 | packages/agent-runtime/src/llm/config.ts | 2026-08-26T06:34:55.242Z |
-| LlmProvider |  | packages/agent-runtime/src/llm/provider.ts | 2026-08-29T03:15:17.004Z |
+| LlmProvider |  | packages/agent-runtime/src/llm/provider.ts | 2026-09-10T06:52:30.929Z |
 | JobRow | PostgreSQL Job ledger row for walking skeleton pipeline | docs/schema/generated/core-engine-rows.ts | 2026-08-26T11:20:04.986Z |
-| FindingRow | Rule hit row; blocking and optional clause_id for standard fit | docs/schema/generated/core-engine-rows.ts | 2026-08-26T11:20:06.278Z |
+| FindingRow | Rule hit row; one clause_id per row. Table fit expands to FindingRow[] so each SUPPORTS clause is its own grounded finding. | docs/schema/generated/core-engine-rows.ts | 2026-09-15T08:10:31.270Z |
 | ConversationThreadRow | Step chat thread keyed by trace_id + step for HITL | docs/schema/generated/core-engine-rows.ts | 2026-08-26T11:20:06.333Z |
 | JobPipeline | Job pipeline for SLICE-1 walking skeleton: runFixtureJob, appendChat, listAudit | packages/core-engine/src/pipeline/job-pipeline.ts | 2026-08-26T11:35:28.089Z |
 | RuleInterpreter | Minimal rule interpreter: required(field) and compare ISO dates; evaluate(fields, rules) → findings | packages/core-engine/src/rules/interpreter.ts | 2026-08-26T11:35:28.118Z |
@@ -83,47 +83,47 @@
 | VolumeDesk | Volume preview desk: buildPreviewTree + previewVolume snapshot. tree.submitted always false; no Receipt; groupKeys from spec pack not industry presets. | packages/core-engine/src/pipeline/volume.ts | 2026-08-27T03:42:48.389Z |
 | PreviewVolumeResult | previewVolume return: VolumePreviewRow plus parsed tree with submitted always false. | packages/core-engine/src/pipeline/volume.ts | 2026-08-27T03:42:48.879Z |
 | ClauseRow | Clause ledger row: clause_id globally unique (use ${versionId}:humanNo); heading, body, span_json, qdrant_point_id=clause_id | docs/schema/generated/core-engine-rows.ts | 2026-08-27T04:34:16.417Z |
-| StandardLibrary | Standard library orchestrator: ingest by heading, search via Qdrant/Neo4j ports + IndependentReranker (not chat complete), attach Finding.clause_id only from retrieve hits. No industry presets. | packages/core-engine/src/retrieve/library.ts | 2026-08-27T04:34:17.672Z |
+| StandardLibrary | Ingest by layout units; searchSemantic keeps tableHits. reindexVectorsFromLedger walks ledger LayoutUnits and upserts with unit_id/file_name/chunk_kind payload; embed() is always awaited; table payload must not carry a non-empty clause_id. attachHit rejects table/annex unit ids. Never invent clause_id. | packages/core-engine/src/retrieve/library.ts | 2026-09-19T08:37:32.612Z |
 | SearchHit | Retrieve/search hit: clause_id, standard_version_id, span, retrieve_path (vector\|graph\|exact), optional graph path edges | packages/core-engine/src/retrieve/ports.ts | 2026-08-27T04:34:18.795Z |
-| RetrieveHit | Retrieve hit alias of SearchHit: clause_id + standard_version_id + span + retrieve_path and optional graph path | packages/core-engine/src/retrieve/ports.ts | 2026-08-27T04:34:19.940Z |
+| RetrieveHit | Provenance retrieve hit with optional ledger heading/body for detail and chat; table/annex clause_id stays null; hits table must not render body. | packages/core-engine/src/retrieve/ports.ts | 2026-09-19T06:36:10.739Z |
 | AdapterReceipt | Mock adapter pending-mount receipt: non-empty receipt_id + status; writes without receipt_id must fail | packages/core-engine/src/adapter/mock.ts | 2026-08-27T04:34:20.164Z |
-| StandardDocRow |  | docs/schema/generated/core-engine-rows.ts | 2026-08-29T03:15:17.004Z |
-| StandardVersionRow |  | docs/schema/generated/core-engine-rows.ts | 2026-08-29T03:15:17.004Z |
-| GraphEdge |  | packages/agent-runtime/src/graph/types.ts | 2026-08-29T03:15:17.004Z |
-| HashEmbeddings |  | packages/core-engine/src/retrieve/embeddings.ts | 2026-08-29T03:15:17.004Z |
-| VectorPoint |  | packages/core-engine/src/retrieve/ports.ts | 2026-08-29T03:15:17.004Z |
-| VectorHit |  | packages/core-engine/src/retrieve/ports.ts | 2026-08-29T03:15:17.004Z |
-| VectorStore |  | packages/core-engine/src/retrieve/ports.ts | 2026-08-29T03:15:17.004Z |
-| GraphStore |  | packages/core-engine/src/retrieve/ports.ts | 2026-08-29T03:15:17.004Z |
-| Embeddings |  | packages/core-engine/src/retrieve/ports.ts | 2026-08-29T03:15:17.004Z |
-| RetrievePorts |  | packages/core-engine/src/retrieve/ports.ts | 2026-08-29T03:15:17.004Z |
-| ClauseSpan |  | packages/core-engine/src/retrieve/ports.ts | 2026-08-29T03:15:17.004Z |
-| ChatComplete |  | packages/core-engine/src/retrieve/ports.ts | 2026-08-29T03:15:17.004Z |
-| EdgeKind |  | packages/core-engine/src/retrieve/ports.ts | 2026-08-29T03:15:17.004Z |
+| StandardDocRow |  | docs/schema/generated/core-engine-rows.ts | 2026-09-10T06:52:30.929Z |
+| StandardVersionRow |  | docs/schema/generated/core-engine-rows.ts | 2026-09-10T06:52:30.929Z |
+| GraphEdge |  | packages/agent-runtime/src/graph/types.ts | 2026-09-10T06:52:30.929Z |
+| HashEmbeddings |  | packages/core-engine/src/retrieve/embeddings.ts | 2026-09-10T06:52:30.929Z |
+| VectorPoint | Vector store point: id + embedding + provenance payload. Upsert must run assertVectorPayload; stores hash/return unit_id and must not backfill clause_id from point.id. | packages/core-engine/src/retrieve/ports.ts | 2026-09-15T06:01:23.358Z |
+| VectorHit |  | packages/core-engine/src/retrieve/ports.ts | 2026-09-10T06:52:30.929Z |
+| VectorStore |  | packages/core-engine/src/retrieve/ports.ts | 2026-09-10T06:52:30.929Z |
+| GraphStore | Graph port with upsertNode(label, id, props) so LayoutUnit is not MERGEd into :Clause. upsertEdge MERGEs by endpoint label; queryPath(kind) keeps SUPERSEDES paths free of PARENT_OF. | packages/core-engine/src/retrieve/ports.ts | 2026-09-15T06:16:40.308Z |
+| Embeddings | Retrieve embedding port. embed(text) returns number[] \| Promise<number[]> so live HTTP embedding can be async; HashEmbeddings/FixtureEmbeddings may still return a sync 48-dim vector for CI. | packages/core-engine/src/retrieve/ports.ts | 2026-09-19T07:46:18.495Z |
+| RetrievePorts |  | packages/core-engine/src/retrieve/ports.ts | 2026-09-10T06:52:30.929Z |
+| ClauseSpan |  | packages/core-engine/src/retrieve/ports.ts | 2026-09-10T06:52:30.929Z |
+| ChatComplete |  | packages/core-engine/src/retrieve/ports.ts | 2026-09-10T06:52:30.929Z |
+| EdgeKind | Graph edge kinds including PARENT_OF, BELONGS_TO, SUPPORTS so LayoutUnit can sit beside Clause without MERGE-as-Clause. | packages/core-engine/src/retrieve/ports.ts | 2026-09-15T06:16:41.321Z |
 | DemoHttpAdapter | HTTP adapter request/response types and session for JobPipeline demo server | packages/core-engine/src/http/handle-request.ts | 2026-08-27T12:03:02.748Z |
-| IngestStandardResult |  | packages/core-engine/src/retrieve/library.ts | 2026-08-29T03:15:17.004Z |
-| LedgerStore | Async ledger interface wrapping SQLite tests and Postgres live | packages/core-engine/src/persistence/ledger.ts | 2026-08-28T06:12:44.499Z |
+| IngestStandardResult |  | packages/core-engine/src/retrieve/library.ts | 2026-09-10T06:52:30.929Z |
+| LedgerStore | Async ledger wrapping SQLite tests and Postgres live; layout units and ingest pages keep provenance and index_error separate from OCR failures | packages/core-engine/src/persistence/ledger.ts | 2026-09-15T05:40:47.345Z |
 | PostgresLedger | Postgres LedgerStore: $n params, ON CONFLICT DO NOTHING, wipeLedger TRUNCATE CASCADE on t_* tables | packages/core-engine/src/persistence/pg-store.ts | 2026-08-28T07:09:37.512Z |
 | SqliteLedger | SQLite LedgerStore wrapper: Promise.resolve around CoreEngineStore, no deasync | packages/core-engine/src/persistence/ledger.ts | 2026-08-28T07:09:37.534Z |
 | resolveEngineMode | Resolve memory vs live engine mode from DATABASE_URL QDRANT_URL NEO4J_URI NEO4J_PASSWORD; all empty memory, any missing throws | packages/core-engine/src/persistence/live-env.ts | 2026-08-28T07:09:37.557Z |
-| runPgMigration | Idempotent apply of docs/schema/generated/core-engine-migration.sql against Postgres via pg | packages/core-engine/src/persistence/pg-migrate.ts | 2026-08-28T07:09:38.632Z |
-| liveRetrievePorts | Live RetrievePorts: QdrantVectorStore plus Neo4jGraphStore plus HashEmbeddings IndependentReranker FakePrequery; missing env throws at construct | packages/core-engine/src/retrieve/live-ports.ts | 2026-08-28T07:09:40.061Z |
+| runPgMigration | Idempotent apply of generated Postgres DDL plus ensureRagLayoutColumns for t_clause file_name/page_* on legacy ledgers | packages/core-engine/src/persistence/pg-migrate.ts | 2026-09-15T05:40:51.312Z |
+| liveRetrievePorts | Live RetrievePorts: Qdrant + Neo4j + DashScope text-embedding-v3; prequery is ZhipuPrequery; rerank is HttpReranker (dedicated HTTP /reranks, not IndependentReranker, does not share embed or llm); missing DASHSCOPE_API_KEY or Unconfigured/Fake LLM throws; never HashEmbeddings or FakePrequery fallback. | packages/core-engine/src/retrieve/live-ports.ts | 2026-09-19T13:22:19.549Z |
 | EngineMode | EngineMode union: memory or live with connection strings for postgres qdrant neo4j | packages/core-engine/src/persistence/live-env.ts | 2026-08-28T07:09:40.071Z |
-| StandardEdgeRow |  | docs/schema/generated/core-engine-rows.ts | 2026-08-29T03:15:17.004Z |
-| FakePrequery |  | packages/core-engine/src/retrieve/prequery.ts | 2026-08-29T03:15:17.004Z |
-| IndependentReranker |  | packages/core-engine/src/retrieve/rerank.ts | 2026-08-29T03:15:17.004Z |
+| StandardEdgeRow |  | docs/schema/generated/core-engine-rows.ts | 2026-09-10T06:52:30.929Z |
+| FakePrequery | Deterministic prequery: table captions (\表/\见\表/\附\表) rewrite to semantic so EXACT_RE cannot steal 8.5.1 from \表 8.5.1-1. | packages/core-engine/src/retrieve/prequery.ts | 2026-09-15T07:47:14.744Z |
+| IndependentReranker |  | packages/core-engine/src/retrieve/rerank.ts | 2026-09-10T06:52:30.929Z |
 | BlobStore | Object store port for original uploads (MinIO in live, memory in tests). DocumentRow.file_uri holds s3:// URI after put. | packages/core-engine/src/blob/port.ts | 2026-08-28T21:55:45.593Z |
-| OcrPort | OCR vendor port: recognize(bytes) returns full-page text; field parsing is parseOcrFields + extractByTemplate. | packages/core-engine/src/ocr/port.ts | 2026-08-28T21:55:45.621Z |
-| JobView |  | apps/web/src/services/types.ts | 2026-08-29T03:15:17.004Z |
-| BlobPutInput |  | packages/core-engine/src/blob/port.ts | 2026-08-29T03:15:17.004Z |
-| OcrRecognizeInput |  | packages/core-engine/src/ocr/port.ts | 2026-08-29T03:15:17.004Z |
-| OcrRecognizeResult |  | packages/core-engine/src/ocr/port.ts | 2026-08-29T03:15:17.004Z |
-| StepChatBridge | Embeds agent-runtime ControlPlane for per-message step chat; returns LLM reply and optional proposal_id from check_wording Tool. | packages/core-engine/src/agent/step-chat-bridge.ts | 2026-08-29T01:36:39.188Z |
-| ControlPlane |  | packages/agent-runtime/src/api/control.ts | 2026-08-29T03:15:17.004Z |
-| ToolRegistry |  | packages/agent-runtime/src/tools/registry.ts | 2026-08-29T03:15:17.004Z |
+| OcrPort | OCR vendor port: recognize still returns flattened Job text; recognizeLayout returns unflattened VL markdown (pipes intact) for standard ingest. | packages/core-engine/src/ocr/port.ts | 2026-09-15T03:42:06.371Z |
+| JobView |  | apps/web/src/services/types.ts | 2026-09-10T06:52:30.929Z |
+| BlobPutInput |  | packages/core-engine/src/blob/port.ts | 2026-09-10T06:52:30.929Z |
+| OcrRecognizeInput |  | packages/core-engine/src/ocr/port.ts | 2026-09-10T06:52:30.929Z |
+| OcrRecognizeResult |  | packages/core-engine/src/ocr/port.ts | 2026-09-10T06:52:30.929Z |
+| StepChatBridge | Per-message step-chat graph: prepare, optional search_clause, llm, optional check_wording, assemble reply without writing Receipt. | packages/core-engine/src/agent/step-chat-bridge.ts | 2026-09-09T10:15:54.514Z |
+| ControlPlane |  | packages/agent-runtime/src/api/control.ts | 2026-09-10T06:52:30.929Z |
+| ToolRegistry |  | packages/agent-runtime/src/tools/registry.ts | 2026-09-10T06:52:30.929Z |
 | JobStepOrchestrator | Job-level HITL orchestration: startRun on cognitive steps, resumeHitl on confirm-next. | packages/core-engine/src/agent/job-step-orchestrator.ts | 2026-08-29T03:15:15.191Z |
 | AgentRuntimeFactory | Shared ControlPlane factory for StepChat and JobStepOrchestrator with persistent SQLiteStateStore. | packages/core-engine/src/agent/agent-runtime-factory.ts | 2026-08-29T03:15:15.167Z |
-| FakeLlmProvider |  | packages/agent-runtime/src/llm/provider.ts | 2026-08-29T03:15:17.004Z |
+| FakeLlmProvider |  | packages/agent-runtime/src/llm/provider.ts | 2026-08-30T06:56:05.959Z |
 | DocTypeRow | Document type ledger row: pack_id, parent_doc_type_id, name | docs/schema/generated/core-engine-rows.ts | 2026-08-29T08:45:01.154Z |
 | FieldDefRow | DocType-level field definition without coordinates; merged with template FieldBox at extraction. | docs/schema/generated/core-engine-rows.ts | 2026-08-29T10:30:02.796Z |
 | resolveEffectiveBoxes | Merges ancestor FieldDefs with template FieldBoxes; box coordinates override inherited defs. | packages/core-engine/src/extract/effective-boxes.ts | 2026-08-29T10:30:02.844Z |
@@ -136,6 +136,42 @@
 | FieldFillRuleRow | DocType-level deterministic fill rule for Excel gap fill | docs/schema/generated/core-engine-rows.ts | 2026-08-29T15:39:30.437Z |
 | CompletenessRuleRow | Pack-level required document type for gap scan | docs/schema/generated/core-engine-rows.ts | 2026-08-29T15:39:31.993Z |
 | uploadDocument | C4 mock adapter: multipart upload Excel document to middle platform with receipt gate | packages/core-engine/src/adapter/mock.ts | 2026-08-29T15:47:59.792Z |
+| DocumentArtifactView |  | apps/web/src/services/types.ts | 2026-09-10T06:52:30.929Z |
+| DocumentGapView |  | apps/web/src/services/types.ts | 2026-09-10T06:52:30.929Z |
+| TemplateView |  | apps/web/src/services/types.ts | 2026-09-10T06:52:30.929Z |
+| ExcelCellMappingWrite |  | apps/web/src/services/types.ts | 2026-09-10T06:52:30.929Z |
+| SpecPackView |  | apps/web/src/services/types.ts | 2026-09-10T06:52:30.929Z |
+| FieldFillRuleWrite |  | packages/core-engine/src/persistence/store.ts | 2026-09-10T06:52:30.929Z |
+| CompletenessRuleWrite |  | packages/core-engine/src/persistence/store.ts | 2026-09-10T06:52:30.929Z |
+| LedgerConflictError |  | packages/core-engine/src/pipeline/job-pipeline.ts | 2026-09-10T06:52:30.929Z |
+| shouldSearchClause | Decide whether step-chat should call read-only search_clause: false without pack; true on clause keywords or checking/check_findings/standard_lib steps. | packages/core-engine/src/agent/prompts.ts | 2026-09-09T10:15:25.039Z |
+| SearchStandardInput |  | packages/core-engine/src/retrieve/library.ts | 2026-09-10T06:52:30.929Z |
+| MaybeAsync | Sync or Promise wrapper so sqlite CoreEngineStore and async LedgerStore both satisfy seed store method returns | packages/core-engine/src/pipeline/seed.ts | 2026-09-10T01:22:24.857Z |
+| PaddleOcrEnvConfig | Live PaddleOCR AI Studio env: access token plus model, jobUrl, pollTimeoutMs. Empty token returns null so assembly can 503 or skip health instead of FakeOcr; token must never appear in logs or Error text. | packages/core-engine/src/ocr/env.ts | 2026-09-14T11:29:44.185Z |
+| PaddleOcr | Live OcrPort for PaddleOCR AI Studio. recognize still flattens VL markdown for Job parseOcrFields; recognizeLayout returns unflattened markdown so table pipes survive standard ingest. Same submit/poll/jsonl; no DELETE. | packages/core-engine/src/ocr/paddleocr.ts | 2026-09-15T08:36:05.328Z |
+| flattenOcrMarkdown | Strip Paddle VL markdown (# headings, */_ emphasis, table pipes) so the frozen parseOcrFields regex can still extract 编号/日期A/日期B labels without changing that parser. | packages/core-engine/src/ocr/pdf-text.ts | 2026-09-14T13:02:48.064Z |
+| extractPdfUnicodeText | Decode PDF Unicode text layer via unpdf (PDF.js CMaps). Returns empty string when undecodable so the usable-layer gate can fall through to OCR. Must not use latin1 parenthesis regex. | packages/core-engine/src/ocr/pdf-text.ts | 2026-09-14T13:22:03.420Z |
+| hasUsablePdfTextLayer | True when decoded PDF text is readable copy: Han ≥ 8, or Unicode letters ≥ 40 with at least one Han. Zero-Han parenthesis/latin1 soup stays false so scanned PDFs go to OcrPort. | packages/core-engine/src/ocr/pdf-text.ts | 2026-09-14T13:22:40.198Z |
+| readPaddleOcrEnv | Read live PaddleOCR env: token required else null; optional model/jobUrl/pollTimeoutMs with defaults. Never interpolate token into logs. | packages/core-engine/src/ocr/env.ts | 2026-09-14T17:16:17.483Z |
+| PaddleOcrRuntimeDeps | Injectable fetch/now/sleep/pollIntervalMs for PaddleOcr so CI never hits aistudio or sleeps 5s. | packages/core-engine/src/ocr/paddleocr.ts | 2026-09-14T17:16:18.560Z |
+| ChunkKind | Layout unit kind for vector payload and hits: clause, table, or annex. Tables must not reuse clause_id as identity. | packages/core-engine/src/retrieve/ports.ts | 2026-09-15T03:42:04.834Z |
+| LayoutUnitRow | Layout unit row contract for RAG provenance tables | docs/schema/generated/core-engine-rows.ts | 2026-09-15T10:05:37.972Z |
+| IngestPageRow | Per-page ingest tick status; index_error is vector upsert fail and must not be stored as ocr_error | docs/schema/generated/core-engine-rows.ts | 2026-09-15T05:40:50.868Z |
+| LayoutEdgeRow | Auto PARENT_OF/BELONGS_TO/SUPPORTS edges; t_standard_edge stays human CITES/SUPERSEDES | docs/schema/generated/core-engine-rows.ts | 2026-09-15T05:41:16.964Z |
+| IngestRunRow | PDF ingest batch; insertIngestRun also creates N pending pages so ticks can record index_error | docs/schema/generated/core-engine-rows.ts | 2026-09-15T05:41:16.979Z |
+| assertVectorPayload | Vector payload gate: unit_id provenance, no table clause_id backfill | packages/core-engine/src/retrieve/payload.ts | 2026-09-15T10:05:39.160Z |
+| splitLayoutUnits | Split standard markdown into clause and GFM/VL table layout units. Reuses splitClauses for headings; table blocks keep pipe grids. Must not flatten OCR markdown. | packages/core-engine/src/retrieve/layout-split.ts | 2026-09-15T06:53:48.405Z |
+| extractPdfUnicodePages | Per-page Unicode PDF text via unpdf mergePages:false. Standard ingest must keep page boundaries; Job extractPdfUnicodeText still uses mergePages:true. | packages/core-engine/src/ocr/pdf-text.ts | 2026-09-15T08:36:06.166Z |
+| StandardIngestWorker | PDF page-tick ingest worker; OCR vs index_error split | packages/core-engine/src/retrieve/ingest-worker.ts | 2026-09-15T10:05:39.142Z |
+| renderPdfPagePng | Rasterize one 1-based PDF page to PNG for standard ingest OCR. Tests inject a stub via setPdfPageRaster so CI does not need @napi-rs/canvas. Live path uses unpdf renderPageAsImage. Failures throw; callers must not fall back to passing original PDF bytes to Paddle. | packages/core-engine/src/ocr/pdf-raster.ts | 2026-09-15T09:03:45.962Z |
+| UnconfiguredLlmProvider | User-facing LLM fallback when .apt/agent-runtime.llm.json is missing or invalid. complete() returns Chinese 未配置 copy and never echoes the prompt, so HITL system text cannot leak into chat. Distinct from FakeLlmProvider, which remains the test echo double. | packages/agent-runtime/src/llm/provider.ts | 2026-09-17T02:58:42.883Z |
+| JobContextSnapshot | Read-only LLM prompt snapshot. retrieve/standard_lib omits Job file/findings and uses retrieve_hits_summary (this-turn hits or 未命中). | packages/core-engine/src/agent/context.ts | 2026-09-17T03:31:21.117Z |
+| BuildJobContextOptions | Optional packId and RetrieveHit[] so buildJobContext can assemble pack retrieve chat without a Job. | packages/core-engine/src/agent/context.ts | 2026-09-17T03:31:21.259Z |
+| StepChatInput | Step-chat input: Job steps use traceId; retrieve/standard_lib may send packId and current-page hits instead of listJobs()[0]. | packages/core-engine/src/agent/step-chat-bridge.ts | 2026-09-17T03:31:21.473Z |
+| RetrieveHitView | Provenance search hit view with optional heading and body for detail panel; table/annex keep clause_id null. | apps/web/src/services/types.ts | 2026-09-19T06:23:36.606Z |
+| DashScopeEmbeddings | Live Embeddings via DashScope compatible-mode text-embedding-v3 (dim 1024). Reads DASHSCOPE_API_KEY at construct; missing/blank key throws. Never falls back to HashEmbeddings. liveRetrievePorts injects the same instance into IndependentReranker. | packages/core-engine/src/retrieve/embeddings.ts | 2026-09-19T08:02:54.087Z |
+| QdrantVectorStore | Qdrant VectorStore for collection `clauses`. Constructor accepts optional injected `client` for tests. ensureCollection reads getCollection().config.params.vectors.size; if the collection exists and size !== dim it deleteCollection('clauses') then createCollection with Cosine size=dim. Matching size skips delete. Vectors are never truncated or padded. upsert/search call ensureCollection with the incoming vector length. | packages/core-engine/src/retrieve/qdrant.ts | 2026-09-19T08:21:46.633Z |
+| ZhipuPrequery | Production glm prequery: rewrite + intent via ChatComplete. Tests keep FakePrequery. Must not be used as rerank. | packages/core-engine/src/retrieve/prequery.ts | 2026-09-19T10:53:26.137Z |
 
 ## Pending Missing Requests
 

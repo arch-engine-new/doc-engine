@@ -1,0 +1,184 @@
+{
+  "connectLevel": "real-backend",
+  "source": "query_connect_status unavailable (MCP reads .ai/arch/db.json; start_init writes .ai/db.json without connectStatus). Snapshot reflects live /api wiring in apps/web views.",
+  "pages": [
+    {
+      "page": "project_home",
+      "pageId": "project_home",
+      "route": "/projects",
+      "component": "apps/web/src/views/project_home/index.vue",
+      "mockFiles": [],
+      "fieldNeeds": [],
+      "backendCoverage": [
+        { "api": "listProjects", "matched": ["GET /api/projects"], "missing": [] },
+        { "api": "createProject", "matched": ["POST /api/projects"], "missing": [] },
+        { "api": "listSpecPacks", "matched": ["GET /api/projects/:projectId/packs"], "missing": [] },
+        { "api": "createSpecPack", "matched": ["POST /api/packs"], "missing": [] }
+      ],
+      "apiLinks": [
+        "GET /api/projects",
+        "POST /api/projects",
+        "GET /api/projects/:projectId/packs",
+        "POST /api/packs",
+        "GET /api/packs/:id/templates",
+        "POST /api/templates",
+        "POST /api/chat"
+      ],
+      "status": "connected"
+    },
+    {
+      "page": "template_annotate",
+      "pageId": "template_annotate",
+      "route": "/templates/:id/annotate",
+      "component": "apps/web/src/views/template_annotate/index.vue",
+      "mockFiles": [],
+      "fieldNeeds": [],
+      "backendCoverage": [
+        { "api": "getTemplate", "matched": ["GET /api/templates/:id"], "missing": [] },
+        { "api": "listFieldBoxes", "matched": ["GET /api/templates/:id/boxes"], "missing": [] },
+        { "api": "saveFieldBoxes", "matched": ["PUT /api/templates/:id/boxes"], "missing": [] }
+      ],
+      "apiLinks": [
+        "GET /api/templates/:id",
+        "GET /api/templates/:id/boxes",
+        "PUT /api/templates/:id/boxes",
+        "POST /api/chat"
+      ],
+      "status": "connected"
+    },
+    {
+      "page": "rule_editor",
+      "pageId": "rule_editor",
+      "route": "/packs/:id/rules",
+      "component": "apps/web/src/views/rule_editor/index.vue",
+      "mockFiles": [],
+      "fieldNeeds": [],
+      "backendCoverage": [
+        { "api": "saveDraft", "matched": ["POST /api/rules/draft"], "missing": [] },
+        { "api": "addFixture", "matched": ["POST /api/rules/:versionId/fixtures"], "missing": [] },
+        { "api": "runFixtures", "matched": ["POST /api/rules/:versionId/run-fixtures"], "missing": [] },
+        { "api": "publish", "matched": ["POST /api/rules/:versionId/publish"], "missing": [] }
+      ],
+      "apiLinks": [
+        "POST /api/rules/draft",
+        "POST /api/rules/:versionId/fixtures",
+        "POST /api/rules/:versionId/run-fixtures",
+        "POST /api/rules/:versionId/publish",
+        "GET /api/dict/rule_status",
+        "POST /api/chat"
+      ],
+      "status": "connected"
+    },
+    {
+      "page": "standard_lib",
+      "pageId": "standard_lib",
+      "route": "/packs/:id/standards",
+      "component": "apps/web/src/views/standard_lib/index.vue",
+      "mockFiles": [],
+      "fieldNeeds": [],
+      "backendCoverage": [
+        { "api": "ingestStandard", "matched": ["POST /api/standards/ingest"], "missing": [] },
+        { "api": "searchStandard", "matched": ["POST /api/standards/search"], "missing": [] },
+        { "api": "bindEffectiveVersion", "matched": ["POST /api/packs/:id/effective-version"], "missing": [] },
+        { "api": "addStandardEdge", "matched": ["POST /api/standards/edges"], "missing": [] }
+      ],
+      "apiLinks": [
+        "POST /api/standards/ingest",
+        "POST /api/standards/search",
+        "POST /api/packs/:id/effective-version",
+        "POST /api/standards/edges",
+        "GET /api/dict/retrieve_path",
+        "GET /api/dict/standard_edge_kind",
+        "POST /api/chat"
+      ],
+      "status": "connected"
+    },
+    {
+      "page": "job_upload",
+      "pageId": "job_upload",
+      "route": "/jobs",
+      "component": "apps/web/src/views/job_upload/index.vue",
+      "mockFiles": [],
+      "fieldNeeds": [],
+      "backendCoverage": [
+        { "api": "listJobs", "matched": ["GET /api/jobs"], "missing": [] },
+        { "api": "runFixtureJob", "matched": ["POST /api/jobs/fixture"], "missing": [] }
+      ],
+      "apiLinks": ["GET /api/jobs", "POST /api/jobs/fixture", "POST /api/jobs/:id/confirm-next", "POST /api/chat"],
+      "status": "connected"
+    },
+    {
+      "page": "pending_review",
+      "pageId": "pending_review",
+      "route": "/pending",
+      "component": "apps/web/src/views/pending_review/index.vue",
+      "mockFiles": [],
+      "fieldNeeds": [],
+      "backendCoverage": [
+        { "api": "listProposals", "matched": ["GET /api/proposals"], "missing": [] },
+        { "api": "confirmProposal", "matched": ["POST /api/proposals/:id/confirm"], "missing": [] }
+      ],
+      "apiLinks": [
+        "GET /api/proposals",
+        "PATCH /api/proposals/:id",
+        "POST /api/proposals/:id/confirm",
+        "POST /adapter/pending-mount",
+        "POST /api/chat"
+      ],
+      "status": "connected"
+    },
+    {
+      "page": "check_findings",
+      "pageId": "check_findings",
+      "route": "/jobs/:id/findings",
+      "component": "apps/web/src/views/check_findings/index.vue",
+      "mockFiles": [],
+      "fieldNeeds": [],
+      "backendCoverage": [
+        { "api": "getFindings", "matched": ["GET /api/jobs/:id/findings"], "missing": [] },
+        { "api": "getExtraction", "matched": ["GET /api/jobs/:id/extraction"], "missing": [] }
+      ],
+      "apiLinks": ["GET /api/jobs/:id/findings", "GET /api/jobs/:id/extraction", "POST /api/chat"],
+      "status": "connected"
+    },
+    {
+      "page": "volume_preview",
+      "pageId": "volume_preview",
+      "route": "/jobs/:id/volume",
+      "component": "apps/web/src/views/volume_preview/index.vue",
+      "mockFiles": [],
+      "fieldNeeds": [],
+      "backendCoverage": [
+        { "api": "getVolumePreview", "matched": ["GET /api/jobs/:id/volume"], "missing": [] },
+        { "api": "previewVolume", "matched": ["POST /api/jobs/:id/volume"], "missing": [] }
+      ],
+      "apiLinks": [
+        "GET /api/jobs/:id/volume",
+        "POST /api/jobs/:id/volume",
+        "POST /api/packs/:id/group-keys",
+        "POST /api/chat"
+      ],
+      "status": "connected"
+    },
+    {
+      "page": "audit_trace",
+      "pageId": "audit_trace",
+      "route": "/audit/:traceId",
+      "component": "apps/web/src/views/audit_trace/index.vue",
+      "mockFiles": [],
+      "fieldNeeds": [],
+      "backendCoverage": [
+        { "api": "getTrace", "matched": ["GET /api/audit/:traceId"], "missing": [] },
+        { "api": "listStepChats", "matched": ["GET /api/audit/:traceId/chats"], "missing": [] }
+      ],
+      "apiLinks": ["GET /api/audit/:traceId", "GET /api/audit/:traceId/chats"],
+      "status": "connected"
+    }
+  ],
+  "summary": {
+    "total": 9,
+    "connected": 9,
+    "partial": 0,
+    "notConnected": 0
+  }
+}

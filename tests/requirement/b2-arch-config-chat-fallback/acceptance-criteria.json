@@ -1,0 +1,9 @@
+{
+  "source": "docs/apt/plans/2026-09-17-b2-arch-config-chat-fallback-plan.md",
+  "verifiedAt": "2026-09-17T04:32:00.000Z",
+  "criteria": [
+    { "id": "AC-1", "description": "arch chat 有效时非 FakeLlmProvider", "passed": true, "attempts": 0 },
+    { "id": "AC-2", "description": "回复不以 [fake-llm 开头", "passed": true, "attempts": 0 },
+    { "id": "AC-3", "description": "loader 读取 chat 字段", "passed": true, "attempts": 0 }
+  ]
+}

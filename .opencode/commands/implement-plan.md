@@ -1,7 +1,7 @@
 ---
 description: 按已批准的 APT plan 编排子 Agent 串行实现并自动闭环（配合 /plan-from-spec）
 ---
-<!-- apt-template-version: 10.6.10 -->
+<!-- apt-template-version: 10.9.0 -->
 你是 **APT 编排代理**（非 inline 编码者）。用户已用 **`/plan-from-spec`** 生成实现方案，并说「确认」开始编码。
 
 用户应提供 plan 路径（如 `docs/apt/plans/2026-06-17-foo-plan.md`）。若未提供，先询问。
@@ -19,6 +19,8 @@ description: 按已批准的 APT plan 编排子 Agent 串行实现并自动闭�
 3. Preflight 已 PASS 后若中途出现传输/加载层 MCP 失败 → 按 `_mcp-preflight.md` §5 中断。
 
 **未再次 Preflight PASS 前，禁止**读 plan 进入实现编排。
+
+**禁止掀 `.ai/arch/`（硬规则）：** **禁止**删除或清空 `.ai/arch/`。**禁止**不排除 `.ai/arch`（或 `last-scan.json`）的 `git clean` force / `-fd` / `-fdx` / `-x` / untracked。
 
 ### 0.05 读取 projectType + 套用 Profile（Preflight 后、读 plan 前）
 
@@ -101,43 +103,21 @@ Preflight **PASS** 后、读 plan **之前**：
 全部 Task Gate 通过后：
 
 1. **不要**等待 `/finish-feature`。
-2. **立即**执行下列闭环（见 `templates/_feature-closeout.md`）。
+2. **立即**执行闭环（禁止跳过）——步骤**全文**见下方引用。
 3. 最终报告单独列出 **「闭环摘要」**。
 
-<!-- keep in sync with templates/_feature-closeout.md -->
+<!-- SSOT: finish-feature.md -->
 
-你已完成核心实现，**必须**执行下列闭环（禁止跳过）。
+闭环步骤**全文**遵循 `templates/finish-feature.md` §0-§2（唯一真源）——§0 架构变更同步 / §1 TS 契约 / §2 闭环后自检；本命令**禁止**复制步骤正文。
 
-### 0. 架构变更同步（必须）
-
-1. 调用 **`audit_arch_changes`**（默认 `since: last-scan`）。无 `last-scan.json` 时报告需先 `start-init`。
-2. 对 **`modified`** 每一项：调用 **`refresh_asset`**（`sourcePath` 必填）。禁止仅用旧 summary 调 `register_asset` 代替。
-3. 对 **`new`** / **`unregistered`**：调用 **`refresh_asset`**（从源码入库）。
-4. 对 **`deleted`**：调用 **`remove_asset`**（`assetId` 或 `sourcePath`）。
-5. 若四类皆空：在报告中写明「无架构资产变更」。
-
-可选补救：在项目根执行 `sync-changes` 或 `sync-changes --dry-run` 预览。
-
-### 1. TS 契约（若有对外 TS 类型）
-
-1. 检查是否新建可供外部调用的接口、类或函数。
-2. 确保 `src/contracts/` 或对应目录有严格 TS 类型定义。
-3. 每个新契约调用 **`register_contract`**（`name`, `description`, `tsFilePath`）。
-
-### 2. 闭环后自检（简要）
-
-此处仅做闭环后最小确认：
-
-- 每个 `register_contract`：确认 `.ai/INDEX.md` 已更新。
-- 每个 refresh/remove：用 **`search_arch`** 抽检 1–2 项；精读用 **`query_arch`**。
-- 输出 **闭环摘要**：audit 统计、已 refresh 的 assetId 列表、已注册契约列表。
+硬门索引：含 §0.5 Java 路径前缀 / §0.6 OpenAPI reindex / §0.7 Java assetCoverage 硬门——命中任一未跑不得宣称闭环。
 
 ### 3. 自动验收门禁（必须，v10.2.7）
 
 闭环摘要输出后，**必须自动执行 `/verify`**（把 plan 路径作为参数传入），**不得跳过**：
 
 - **verify PASS** → 实现完成。输出最终交付摘要（plan、完成范围、verify 结果）。更新 `.apt/verify/latest.md`。
-- **verify FAIL** → **停住**，输出 Failures 清单。提示：运行 **`/finish-feature`** 修复后重新 **`/verify`**。不得自行修改实现代码（verify 是只读门禁）。
-- **verify BLOCKED**（MCP 不可用 / 缺 last-scan）→ **停住**，提示先 `start-init` 后重试。
+- **verify FAIL** → **停住**，输出 Failures 清单，按 Verify Report 的 Recommended next steps 分流（应与 `classify-verify-failures` 一致；禁止「FAIL → 一律 `/finish-feature`」）：含**实现类**维度 FAIL（Plan 对照、可检索性、代码质量、测试/构建、测试用例覆盖率、Connect 门禁、设计 audit、产品对齐、外部 Harness）→ 提示 **`$apt-plan-from-verify`**（默认读 `.apt/verify/latest.md`）→ 确认后 **`/implement-plan`** → 再 **`/verify`**；**仅** closeout 维度 FAIL（架构 audit、契约登记）→ 提示 **`/finish-feature`** 修复后重新 **`/verify`**。不得自行修改实现代码（verify 是只读门禁）。
+- **verify BLOCKED**（MCP 不可用 / 缺 last-scan）→ **停住**，提示先 `/apt-init` 或 `/finish-feature` 后重试。
 
 **禁止**：跳过 verify、把 verify 结果写为 PASS 而实际未跑、或 verify FAIL 后继续输出"完成"。

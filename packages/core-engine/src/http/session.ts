@@ -93,25 +93,30 @@ export class DemoHttpSession {
   private stepChatBridge: StepChatBridge | null = null;
   private agentFactory: AgentRuntimeFactory | null = null;
   private documentPipeline: DocumentPipeline | null = null;
+  /** Tests point this at an empty temp root so a checkout llm.json cannot leak. */
+  private readonly projectRoot?: string;
 
   /**
    * Tests construct this with no args so vitest stays sqlite+memory even if
    * the process has live env keys. Vite uses openFromEnv() via getSharedSession().
+   * Optional projectRoot isolates LLM config from the repo checkout.
    */
   constructor(options?: {
-    pipeline: JobPipeline;
-    mode: "memory" | "live";
+    pipeline?: JobPipeline;
+    mode?: "memory" | "live";
     live?: LiveEngineMode;
+    projectRoot?: string;
   }) {
-    if (options) {
+    if (options?.pipeline) {
       this.pipeline = options.pipeline;
-      this.mode = options.mode;
+      this.mode = options.mode ?? "memory";
       this.liveConfig = options.live ?? null;
     } else {
       this.pipeline = JobPipeline.openStandardLibrary();
       this.mode = "memory";
       this.liveConfig = null;
     }
+    this.projectRoot = options?.projectRoot;
   }
 
   /** First shared session follows env so Vite .env actually hits the three stores. */
@@ -125,11 +130,17 @@ export class DemoHttpSession {
     });
   }
 
+  /**
+   * Shared ControlPlane for StepChat and job-step HITL.
+   * Memory/demo user sessions must not force FakeLlmProvider — missing llm.json
+   * should surface UnconfiguredLlmProvider instead of echoing HITL prompts.
+   */
   async getAgentRuntimeFactory(): Promise<AgentRuntimeFactory> {
     if (!this.agentFactory) {
       this.agentFactory = await AgentRuntimeFactory.getOrCreate({
         pipeline: this.pipeline,
-        forceFakeLlm: this.mode === "memory",
+        projectRoot: this.projectRoot,
+        storePath: this.mode === "memory" ? ":memory:" : undefined,
       });
       this.pipeline.stepOrchestrator = this.agentFactory.getJobStepOrchestrator();
     }

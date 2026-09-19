@@ -1,0 +1,124 @@
+{
+  "plan": "docs/apt/plans/2026-08-27-frontend-connect-plan.md",
+  "framework": "vue",
+  "target": "apps/web",
+  "tasks": [
+    {
+      "id": "S",
+      "kind": "scaffold",
+      "domain": "web",
+      "pageIds": [],
+      "apiIds": []
+    },
+    {
+      "id": "A-http",
+      "kind": "backend",
+      "domain": "core-engine-http",
+      "pageIds": [
+        "project_home",
+        "template_annotate",
+        "rule_editor",
+        "standard_lib",
+        "job_upload",
+        "pending_review",
+        "check_findings",
+        "volume_preview",
+        "audit_trace"
+      ],
+      "apiIds": [
+        "listProjects",
+        "createProject",
+        "listSpecPacks",
+        "createSpecPack",
+        "getTemplate",
+        "listFieldBoxes",
+        "saveFieldBoxes",
+        "saveDraft",
+        "addFixture",
+        "runFixtures",
+        "publish",
+        "ingestStandard",
+        "searchStandard",
+        "bindEffectiveVersion",
+        "addStandardEdge",
+        "listJobs",
+        "runFixtureJob",
+        "appendChat",
+        "confirmNext",
+        "listProposals",
+        "editWording",
+        "confirmProposal",
+        "getFindings",
+        "getExtraction",
+        "previewVolume",
+        "getVolumePreview",
+        "getTrace",
+        "listStepChats",
+        "pendingMount"
+      ]
+    },
+    {
+      "id": "B-job_upload",
+      "kind": "wire",
+      "domain": "core-engine",
+      "pageIds": ["job_upload"],
+      "apiIds": ["listJobs", "runFixtureJob", "appendChat", "confirmNext"]
+    },
+    {
+      "id": "B-check_findings",
+      "kind": "wire",
+      "domain": "core-engine",
+      "pageIds": ["check_findings"],
+      "apiIds": ["getFindings", "getExtraction", "appendChat", "confirmNext"]
+    },
+    {
+      "id": "B-pending_review",
+      "kind": "wire",
+      "domain": "core-engine",
+      "pageIds": ["pending_review"],
+      "apiIds": ["listProposals", "editWording", "confirmProposal", "appendChat", "pendingMount"]
+    },
+    {
+      "id": "B-project_home",
+      "kind": "wire",
+      "domain": "core-engine",
+      "pageIds": ["project_home"],
+      "apiIds": ["listProjects", "createProject", "listSpecPacks", "createSpecPack", "appendChat"]
+    },
+    {
+      "id": "B-template_annotate",
+      "kind": "wire",
+      "domain": "core-engine",
+      "pageIds": ["template_annotate"],
+      "apiIds": ["getTemplate", "listFieldBoxes", "saveFieldBoxes", "appendChat"]
+    },
+    {
+      "id": "B-rule_editor",
+      "kind": "wire",
+      "domain": "core-engine",
+      "pageIds": ["rule_editor"],
+      "apiIds": ["saveDraft", "addFixture", "runFixtures", "publish", "appendChat"]
+    },
+    {
+      "id": "B-volume_preview",
+      "kind": "wire",
+      "domain": "core-engine",
+      "pageIds": ["volume_preview"],
+      "apiIds": ["previewVolume", "getVolumePreview", "appendChat"]
+    },
+    {
+      "id": "B-standard_lib",
+      "kind": "wire",
+      "domain": "core-engine",
+      "pageIds": ["standard_lib"],
+      "apiIds": ["ingestStandard", "searchStandard", "bindEffectiveVersion", "addStandardEdge", "appendChat"]
+    },
+    {
+      "id": "B-audit_trace",
+      "kind": "wire",
+      "domain": "core-engine",
+      "pageIds": ["audit_trace"],
+      "apiIds": ["getTrace", "listStepChats"]
+    }
+  ]
+}

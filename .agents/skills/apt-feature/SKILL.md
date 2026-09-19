@@ -20,6 +20,8 @@ description: 单命令全流程：寻址 → 计划 → 子 Agent 编排实现 �
 
 **未再次 Preflight PASS 前，禁止**进入页面工厂、寻址、派子 Agent、写业务代码。
 
+**禁止掀 `.ai/arch/`（硬规则）：** **禁止**删除或清空 `.ai/arch/`。**禁止**不排除 `.ai/arch`（或 `last-scan.json`）的 `git clean` force / `-fd` / `-fdx` / `-x` / untracked。
+
 ## 0. 页面工厂与批量门禁
 
 | 场景 | 路径 |
@@ -29,6 +31,16 @@ description: 单命令全流程：寻址 → 计划 → 子 Agent 编排实现 �
 | Phase A 未完成 | `node scripts/check-v0-freeze.mjs` **FAIL** 或 `_pages.md` 存在 `approved ≠ yes` → **禁止批量 UI 实现**（可先单页 handoff 或非 UI 逻辑） |
 
 **logic SSOT：** `designs/v0/<page-id>/page.logic.md`（经 `query_design(page:)` 读）为冻结业务真相。实现偏离时 **先改 logic** → 单页 `design-sync` → 再改代码；**禁止**静默漂移。
+
+## 0.2 微型需求收敛（轻链入口，寻址前必须）
+
+Goal 采集后、§0.1/§1 依赖寻址前，先完成最小需求收敛（本节 Goal/验收标准两字段即「**§0.2 需求收敛落痕**」），**禁止**跳过直接寻址：
+
+1. **一句话目标**：用一句话**复述**用户目标（做什么、不做什么），向用户可见即止，不展开多轮澄清。
+2. **验收标准**：定 **1–3 条可判定验收标准**——每条须能以命令输出或走查结果判 PASS/FAIL，不写空泛描述。
+   - 交互模式：列出目标复述与验收标准，请用户**确认**或修正后锁定。
+   - 全自动 / 非交互模式（如 `/apt-goal` 驱动）：AI 自答拟定，**必须落痕**（在 §2 计划头部标注「全自动自答，未经用户确认」）。
+3. **并入 plan 头部**：一句话目标与验收标准作为 **Goal** 与 **验收标准** 两个字段写入 §2 开发计划头部，供 §3.5 需求验收点提取与 §4 /verify 对照；**缺任一字段不得进入实现编排**。
 
 ## 0.1 任务与依赖
 
@@ -43,6 +55,7 @@ description: 单命令全流程：寻址 → 计划 → 子 Agent 编排实现 �
 3. 列出本页需要的**语义组件**，逐个 **`query_design`**（`component: <id>`）。
 4. 若缺组件/页面定义，或 `gaps` 含 **`manifest-not-approved`** / **`no-implementation-ref`** / **`missing-logic`** → **`report_design_gap`**，**停止 UI 实现**（可先写接口与纯逻辑）。
 5. **以冻结 logic 为 SSOT**（`page.logic.md` / `query_design` 返回的 logic 摘要）：与 PM 设计或实现不一致时，**先更新 logic 并 re-sync**，不得直接在 `src/` 偏离。
+5.5. **armed 硬前置**：armed 项目（`.apt/create/armed.json` armed:true，或 `designs/v0/_pages.md` 存在兜底）且本任务涉及既有 `designs/v0` 页面 → 先对照该页 `page.logic.md` 覆盖度：需求新增的操作 / 字段 / 校验 / 状态未在 logic 中体现 → **停**，引导「先跑 `$apt-create` refine 产出变更页标准输出（page.logic.md + manifest + PRD + `_pages.md` approved=no），再回来实现」；**禁止**直接改 `src/` 绕过。
 6. `query_design(scope: global)` 返回的 `bindings`：有则按 `_meta.framework` 优先用组件库映射；无则 tokens + 语义结构实现。
 
 无 `.ai/design/profile.json` 时：报告需先执行 `design-sync` 或 `/design-system`。
@@ -64,7 +77,7 @@ description: 单命令全流程：寻址 → 计划 → 子 Agent 编排实现 �
 
 ## 2. 开发计划
 
-汇总：功能范围、每个依赖的寻址结果（契约 / 架构文档 + `sourcePath`）、拟改动的模块与文件、风险点。
+汇总：头部先落 **Goal** 与 **验收标准** 两字段（取自 §0.2 需求收敛落痕，缺任一不得进入实现编排），随后功能范围、每个依赖的寻址结果（契约 / 架构文档 + `sourcePath`）、拟改动的模块与文件、风险点。
 
 **等待我说「确认」后再进入实现编排。**
 
@@ -134,7 +147,7 @@ description: 单命令全流程：寻址 → 计划 → 子 Agent 编排实现 �
 
 加载 Skill **apt-requirement-test**，执行需求验收闭环：
 
-1. 从 brainstorming spec / page.logic.md / plan Part 1 提取验收点
+1. 从 brainstorming spec / page.logic.md / plan Part 1 提取验收点；聊天级计划另取 §0.2 需求收敛落痕（§2 计划头部 Goal 与验收标准两字段）
 2. 逐点验证实现是否符合需求
 3. 不过 → 子 Agent 修复 → 重验（最多 3 轮）
 4. 每轮修复后增量资产同步（audit → refresh/remove/register）
@@ -150,50 +163,19 @@ description: 单命令全流程：寻址 → 计划 → 子 Agent 编排实现 �
 2. **立即**执行下列闭环（禁止跳过）。
 3. 最终报告单独列出 **「闭环摘要」**。
 
-<!-- keep in sync with templates/_feature-closeout.md -->
+<!-- SSOT: finish-feature.md -->
 
-你已完成核心实现，**必须**执行下列闭环（禁止跳过）。
+闭环步骤**全文**遵循 `templates/finish-feature.md` §0-§2（唯一真源）——§0 架构变更同步 / §1 TS 契约 / §2 闭环后自检；本命令**禁止**复制步骤正文。
 
-### 0. 架构变更同步（必须）
-
-1. 调用 **`audit_arch_changes`**（默认 `since: last-scan`）。无 `last-scan.json` 时报告需先 `start-init`。
-2. 对 **`modified`** 每一项：调用 **`refresh_asset`**（`sourcePath` 必填）。禁止仅用旧 summary 调 `register_asset` 代替。
-3. 对 **`new`** / **`unregistered`**：调用 **`refresh_asset`**（从源码入库）。
-4. 对 **`deleted`**：调用 **`remove_asset`**（`assetId` 或 `sourcePath`）。
-5. 若四类皆空：在报告中写明「无架构资产变更」。
-
-可选补救：在项目根执行 `sync-changes` 或 `sync-changes --dry-run` 预览。
-
-### 0.5 Java API 路径前缀（若本次涉及）
-
-若 audit 显示大量 API `modified` 且根因是路径前缀规则而非业务逻辑变更：
-
-1. `query_path_rules` 或 `query_arch` 诊断当前 path
-2. `update_java_path_rules` 一次写入规则并重算 API 索引
-3. `query_arch` / `search_arch` 验证 path 已正确
-4. **禁止**对每个 Controller 循环 `refresh_asset`
-
-### 1. TS 契约（若有对外 TS 类型）
-
-1. 检查是否新建可供外部调用的接口、类或函数。
-2. 确保 `src/contracts/` 或对应目录有严格 TS 类型定义。
-3. 每个新契约调用 **`register_contract`**（`name`, `description`, `tsFilePath`）。
-
-### 2. 闭环后自检（简要）
-
-此处仅做闭环后最小确认：
-
-- 每个 `register_contract`：确认 `.ai/INDEX.md` 已更新。
-- 每个 refresh/remove：用 **`search_arch`** 抽检 1–2 项；精读用 **`query_arch`**。
-- 输出 **闭环摘要**：audit 统计、已 refresh 的 assetId 列表、已注册契约列表。
+硬门索引：含 §0.5 Java 路径前缀 / §0.6 OpenAPI reindex / §0.7 Java assetCoverage / §0.8 logic 同步硬门——命中任一未跑不得宣称闭环。
 
 ### 3. 自动验收门禁（必须，v10.2.7）
 
-闭环摘要输出后，**必须自动执行 `/verify`**（把 plan 路径作为参数传入），**不得跳过**：
+闭环摘要输出后，**必须自动执行 `/verify`**（有 plan 路径时作为参数传入；轻链无 plan 文件时**不传**参并明示走「无 plan 对照模式」，禁止让 `/verify` 拾取 `docs/apt/plans/` 旧 plan），**不得跳过**：
 
 - **verify PASS** → 实现完成。输出最终交付摘要（plan、完成范围、verify 结果）。更新 `.apt/verify/latest.md`。
-- **verify FAIL** → **停住**，输出 Failures 清单。提示：运行 **`/finish-feature`** 修复后重新 **`/verify`**。不得自行修改实现代码（verify 是只读门禁）。
-- **verify BLOCKED**（MCP 不可用 / 缺 last-scan）→ **停住**，提示先 `start-init` 后重试。
+- **verify FAIL** → **停住**，输出 Failures 清单，按 Verify Report 的 Recommended next steps 分流（应与 `classify-verify-failures` 一致；禁止「FAIL → 一律 `/finish-feature`」）：含**实现类**维度 FAIL（Plan 对照、可检索性、代码质量、测试/构建、测试用例覆盖率、Connect 门禁、设计 audit、产品对齐、外部 Harness）→ 提示 **`$apt-plan-from-verify`**（默认读 `.apt/verify/latest.md`）→ 确认后 **`/implement-plan`** → 再 **`/verify`**；**仅** closeout 维度 FAIL（架构 audit、契约登记）→ 提示 **`/finish-feature`** 修复后重新 **`/verify`**。不得自行修改实现代码（verify 是只读门禁）。
+- **verify BLOCKED**（MCP 不可用 / 缺 last-scan）→ **停住**，提示先 `/apt-init` 或 `/finish-feature` 后重试。
 
 **禁止**：跳过 verify、把 verify 结果写为 PASS 而实际未跑、或 verify FAIL 后继续输出"完成"。
 

@@ -1,6 +1,6 @@
 ---
 ---
-<!-- apt-template-version: 10.6.10 -->
+<!-- apt-template-version: 10.9.0 -->
 # $apt-create — 从零做产品
 
 PM 说产品想法，一条命令产出 PRD + 原型工程 + 页面逻辑（+ 原生规格）。

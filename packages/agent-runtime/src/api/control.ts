@@ -581,6 +581,8 @@ export class ControlPlane {
   }
 }
 
+import { initDefaultLlmProvider } from "../llm/provider.js";
+
 /**
  * Create a ControlPlane with default dependencies.
  * Convenience function for quick setup.
@@ -589,6 +591,8 @@ export class ControlPlane {
  * @returns ControlPlane instance
  */
 export async function createControlPlane(store?: StateStore): Promise<ControlPlane> {
+  initDefaultLlmProvider(process.env.APT_PROJECT_ROOT);
+
   const runManager = new RunManager();
   let eventLog: EventLog;
   let hitlGateway: HitlGateway | undefined;

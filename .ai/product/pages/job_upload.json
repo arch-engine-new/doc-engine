@@ -1,0 +1,22 @@
+{
+  "pageId": "job_upload",
+  "title": "上传与任务",
+  "capabilities": [
+    "file_upload",
+    "list"
+  ],
+  "signals": [
+    {
+      "kind": "file_upload",
+      "excerpt": "- `POST /api/jobs/upload` 须携带 `doc_type_id`（或 `template_id` 二选一）；缺则 400。",
+      "path": "designs/v0/job_upload/page.logic.md"
+    },
+    {
+      "kind": "list",
+      "excerpt": "- pageType: list",
+      "path": "designs/v0/job_upload/page.logic.md"
+    }
+  ],
+  "sourcePath": "designs/v0/job_upload/page.logic.md",
+  "contentHash": "9cdd8567ae85c63a3888da1ce550c9be20329323dc78d468a9e03b71c3a67e9c"
+}

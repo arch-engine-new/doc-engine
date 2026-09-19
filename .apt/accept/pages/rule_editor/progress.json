@@ -1,0 +1,35 @@
+{
+  "pageId": "rule_editor",
+  "cases": [
+    {
+      "id": "C-01",
+      "rpId": "RP-01",
+      "status": "pass"
+    },
+    {
+      "id": "C-02",
+      "rpId": "RP-02",
+      "status": "pass"
+    },
+    {
+      "id": "C-03",
+      "rpId": "RP-03",
+      "status": "pass"
+    },
+    {
+      "id": "C-04",
+      "rpId": "RP-04",
+      "status": "pass"
+    },
+    {
+      "id": "C-05",
+      "rpId": "RP-05",
+      "status": "pass"
+    },
+    {
+      "id": "C-06",
+      "rpId": "RP-06",
+      "status": "pass"
+    }
+  ]
+}

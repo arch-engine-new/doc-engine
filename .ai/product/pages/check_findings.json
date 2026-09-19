@@ -1,0 +1,16 @@
+{
+  "pageId": "check_findings",
+  "title": "检查结果",
+  "capabilities": [
+    "export"
+  ],
+  "signals": [
+    {
+      "kind": "export",
+      "excerpt": "| export | 导出 | 文件 |",
+      "path": "designs/v0/check_findings/page.logic.md"
+    }
+  ],
+  "sourcePath": "designs/v0/check_findings/page.logic.md",
+  "contentHash": "42abaacc569a792b528b0bfc3d890983047a6b7cd5b464b411c3d565d7f373e4"
+}

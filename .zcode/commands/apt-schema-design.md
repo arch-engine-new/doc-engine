@@ -1,6 +1,6 @@
 ---
 ---
-<!-- apt-template-version: 10.6.10 -->
+<!-- apt-template-version: 10.9.0 -->
 # $apt-schema-design — 多轮库表设计
 
 以 `page.logic` 为主输入，对照 EntityGraph 多轮补齐表/字段，产出含 mermaid E-R 的 schema MD 与账本，供线下评审（**禁止**写 DO）。

@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>规则编辑与发布</title>
+  <link rel="stylesheet" href="../styles/tokens.css" />
+  <link rel="stylesheet" href="../styles/global.css" />
+</head>
+<body data-step="rule_draft" data-trace="trc_local">
+<nav class="app-nav">
+  <span class="brand">工程资料核心引擎</span>
+  <a href="../project_home/index.html">项目</a>
+  <a href="../template_annotate/index.html">模板</a>
+  <a class="active" href="../rule_editor/index.html">规则</a>
+  <a href="../standard_lib/index.html">标准库</a>
+  <a href="../job_upload/index.html">任务</a>
+  <a href="../pending_review/index.html">待审</a>
+  <a href="../check_findings/index.html">检查</a>
+  <a href="../volume_preview/index.html">组卷</a>
+  <a href="../audit_trace/index.html">审计</a>
+</nav>
+<div class="wrap">
+  <h1>规则编辑与发布</h1>
+  <p class="sub">DSL 子集：required / compare / regex / eq。缺正例或反例时 Publish 不可用。</p>
+  <div class="card">
+    <p><strong>R1</strong> required(编号) · blocking</p>
+    <p><strong>R2</strong> compare(日期A, ≤, 日期B) · blocking</p>
+    <p>夹具：正例 1 · 反例 1 <span class="tag ok">闸门通过</span></p>
+    <p><button class="btn">发布 published</button> <button class="btn ghost" disabled>发布（缺反例）</button></p>
+  </div>
+</div>
+<script src="../mock/step-chat.js"></script>
+</body>
+</html>

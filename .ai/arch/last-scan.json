@@ -1,59 +1,21 @@
 {
   "version": 2,
-  "commit": "dd15e5b7c77c53cf122852a40ce57b423397e6fc",
+  "commit": "6fd6452149c6597a68d2b6b69d28986684868ecd",
   "branch": "master",
-  "scannedAt": "2026-09-01T06:06:06.607Z",
+  "scannedAt": "2026-09-14T07:13:21.442Z",
   "modules": {
-    "agent-runtime": {
-      "sourcePath": "packages/agent-runtime",
-      "assetCount": 0,
-      "fileHashes": {
-        "packages/agent-runtime/src/api/http.ts": "ae9b844c40253be34b6291053d9ff5f93eb251e2ff97751a9993f09aebc8be53",
-        "packages/agent-runtime/src/graph/compiler.ts": "10caa4b05b58671a1cc5f47d995cce89b37ad207cdf93df34ea224f99624219d",
-        "packages/agent-runtime/src/obs/otel-hooks.ts": "349ea8a4246cf34103a7df8e7b84e3289fe9ca4cd9dd88dcc4c7187a16bcef5c",
-        "packages/agent-runtime/examples/crash-recovery/main.ts": "5e0d5ccae8c36f68c5ddcb28128511d5813446646a13a545c1003a8809b9c08a",
-        "packages/agent-runtime/src/api/control.ts": "415cd7f36deced8de9becf85c80b48112efff702a5775610cd4f9db9397b20e0",
-        "packages/agent-runtime/src/llm/provider.ts": "e59220007e904d38f2d4e85edea5fefe5dbefa93c7f1e793babca541e9ca8c6d",
-        "packages/agent-runtime/src/llm/config.ts": "34ef512037228cd15bf43c96da094df3e6609c5476bf881292080c0bdb1ce78c",
-        "packages/agent-runtime/src/llm/zhipu-provider.ts": "94ebe14db79984dcfd306e7fb3b7dc1d3e95cf85eaf29ecdf9674f1a1ce165a3",
-        "packages/agent-runtime/src/tools/runtime.ts": "43d0052d30bc21cd8d884f3be565b917a0696bbee2ce25d200d9d1d5e54b5c9a",
-        "packages/agent-runtime/src/tools/registry.ts": "2a6d111c070b651ec1addc461675c85786d6f4fdd40524aa544a0035f3bfde5d"
-      }
-    },
-    "packages": {
-      "sourcePath": "packages",
-      "assetCount": 0,
-      "fileHashes": {
-        "packages/core-engine/src/pipeline/seed.ts": "06d231ccc45a3ad02a0984dd5b9493a1096fbaece92cdd53180d4b264b7a4ac1",
-        "packages/core-engine/src/persistence/migrate.ts": "1d99b7c64380fac853e67c2e02b746b5ed457072fe27fedbe3e4797db19872ed",
-        "packages/core-engine/src/persistence/store.ts": "130f3caf537a5fa7b246026549e8932745fc322a25a19ed34ace8f422fbf1900",
-        "packages/core-engine/src/rules/interpreter.ts": "fa35b41081008a7a532de771f2a4ea2b0620fb32bfcdebc65f9e03e4d315242c",
-        "packages/core-engine/src/pipeline/job-pipeline.ts": "0d5a6428df797aac3e3635655cfe2c5953974273474a1811a659bd8c384300de",
-        "packages/core-engine/src/index.ts": "fa42b9290f7dd0c04db5c34949d08262556b180a900f8df72a8357926b61ceb7",
-        "packages/core-engine/src/ids.ts": "c0483f938e91c98568b9a3704302dd18d797ce682849327cbfe87f166d02dc15",
-        "packages/core-engine/src/persistence/sqlite-slice1.sql": "b83d06d9638d5b7ccb50fa5eb5fd9b168cfda50471907f45f87969116e171b75",
-        "packages/core-engine/src/types.ts": "51fe14868c6b806ab6779eba0c4ac47991c8ce1e5b645cbc1513d82ea32882f4",
-        "packages/core-engine/src/extract/field-box.ts": "d53be12b6e20f67f80c9daa4b372db69f7a5477c2db913c30812d4c93a94c173",
-        "packages/core-engine/src/rules/publish.ts": "706e0eb35ff88295426266ecb15891fd1a07fced192ae602193ea674a469e32f",
-        "packages/core-engine/src/pipeline/review.ts": "3d4a380cf021edb36d2ef7746dc807aa927918308dbfeb23dd104656c6b57be6",
-        "packages/core-engine/src/pipeline/volume.ts": "bb7d7cd5b4893f5b69eeff5825bd14b5e089d6710dcf3e723471832d9878eb81",
-        "packages/core-engine/src/retrieve/library.ts": "897f934799eb08c579e1ab4cc7249526173a9c9fc63c0717b6a664baa594921f",
-        "packages/core-engine/src/retrieve/qdrant.ts": "112cea2fb8a82dee3840e6adc5dd94a194c0280c21679609403e580e1a87304b",
-        "packages/core-engine/src/retrieve/neo4j.ts": "aaf4d721cafce70c37acf5c9b317cd8738666722a8fbdf4b8c20067d1b898bc3"
-      }
-    },
     "core-engine": {
       "sourcePath": "core-engine",
       "assetCount": 0,
       "fileHashes": {
-        "docs/schema/generated/core-engine-rows.ts": "9233b5e38c3f26d0439ad2a3d771a55ef007be66cdebd2cd67098a7da50abb9b"
+        "docs/schema/generated/core-engine-rows.ts": "65c4ad38f7a7d70e2ef3974d7baf5cd31705bffc1c4177c1ab7cb9964ff69f87"
       }
     },
     "docs": {
       "sourcePath": "docs",
       "assetCount": 0,
       "fileHashes": {
-        "docs/schema/generated/core-engine-rows.ts": "f2cdd6041669c1c8ad249f2a008873c208f2a1fe19098a2388e89f990eba6eff"
+        "docs/schema/generated/core-engine-rows.ts": "65c4ad38f7a7d70e2ef3974d7baf5cd31705bffc1c4177c1ab7cb9964ff69f87"
       }
     }
   },
@@ -61,17 +23,65 @@
     "agent-runtime": {
       "sourcePath": "packages/agent-runtime",
       "assetCount": 65,
-      "fileHashes": {}
+      "fileHashes": {
+        "packages/agent-runtime/src/index.ts": "8df013b7288be324030eee80beccb48547c5dab086ac597461e457c9cbd49b69",
+        "packages/agent-runtime/src/llm/provider.ts": "b7a2e3768888e245a1694778bc5c9bc189680609613bf7b421c455e408e9c9c2",
+        "packages/agent-runtime/src/llm/config.ts": "b77383b7b9d6bc4a8b03882eaf2122692fde6e0163d9fb027d933235d91a9ca8"
+      }
     },
     "core-engine": {
       "sourcePath": "packages/core-engine",
-      "assetCount": 122,
-      "fileHashes": {}
+      "assetCount": 123,
+      "fileHashes": {
+        "packages/core-engine/src/ocr/env.ts": "c33cdf4f28ac62c893b48a773a2df738241298f835dc92db49f01b2202f828ad",
+        "packages/core-engine/src/ocr/port.ts": "3fde49b3ef49dff82aea4e5e5cc1e43e4d9d2229fe145c21e0ae59394596981a",
+        "packages/core-engine/src/ocr/paddleocr.ts": "186655d510df3bf39259798bdc6fe213e21721346d7b791b530d52ada93efa24",
+        "packages/core-engine/src/ocr/pdf-text.ts": "a3213fb490168399cafcaf0c0594fe83317a7169f7af33889ef248b1305537b5",
+        "packages/core-engine/src/pipeline/job-pipeline.ts": "9b214d18b4810c10f115d52f02a524545d33df5f5d366b06367f032bd3cb308a",
+        "packages/core-engine/src/http/session.ts": "2f8a52de0310b128f7115fe7f3725bf9a52f1ea40f496916b5d9301398ffb5df",
+        "packages/core-engine/src/http/handle-request.ts": "e3187fbaf5f137957c0ad436288e9a928a9c49ebb2f5b8f90cda6d800e0ba5fc",
+        "packages/core-engine/src/index.ts": "a8065ee95b653b3d2e560bbd9ed7687d499bfcb4dc371ceb2a30b76bdfe3189a",
+        "packages/core-engine/src/ocr/fake.ts": "142eac54b6d191c926f7a9ab1c2a71cdd6b16bbdf827bb172183ac7777f0557c",
+        "packages/core-engine/src/retrieve/ports.ts": "4c16923ff32881bb6b2efd015f06af973dc13cf0d246437fe67b4844f608a5db",
+        "packages/core-engine/src/persistence/pg-store.ts": "7cdcf3c7ca304f3d2272d0bbeb5f828e161664fbad38c8ed3151842ed2ad67cf",
+        "packages/core-engine/src/persistence/ledger.ts": "3ab95ad5d22d4928fc07354f184c4a67d60bf8003ad8a8fdec1a9be03faa5145",
+        "packages/core-engine/src/persistence/pg-migrate.ts": "5fe2e7ec107ba433906ec54dbec7ed1ab0f3d5b4cca325b43fffa3aeb1aea1f1",
+        "packages/core-engine/src/persistence/migrate.ts": "9805d7e1866036dafd87bd8283c6b0a387fec95afe304e020ec708c47f59897d",
+        "packages/core-engine/src/types.ts": "f36a8ddc59f17abdfbdf1e09e72926e1c070da9d0adbdcff4e66cdd28f67133b",
+        "packages/core-engine/src/retrieve/payload.ts": "ff37032b738267b12aebbd8a1b82c5911963d30533daa29e21f0ddd9b4c2d0ef",
+        "packages/core-engine/src/retrieve/qdrant.ts": "5f029f4de0bad94aea844584b96d5e5e8a6822583068498004fd50809c232c96",
+        "packages/core-engine/src/retrieve/neo4j.ts": "da4946a62441fde442bc4983172ea32680e9f295273a65cae5d308b90e7ebe1e",
+        "packages/core-engine/src/retrieve/memory-graph.ts": "907fa96768b32f189bdefe424d2d00374f5e617837d301cb666ca2f7d1fa3ccb",
+        "packages/core-engine/src/http/dicts.ts": "321cdeb6e8c74fe0949a23f6f84baa9422be532384918edd3b5aa3dd4f11e02e",
+        "packages/core-engine/src/retrieve/library.ts": "1b29f276a338894f6be56a1273e86a836b82c7bdb2bd7c3bda8fca031d119ca1",
+        "packages/core-engine/src/retrieve/layout-split.ts": "205cceba81268a812226f25bb579d1f20491e3d21b9d08fa692797873341bab7",
+        "packages/core-engine/src/retrieve/prequery.ts": "91ea835de699fc9135e220f98179df7b19d153651a8b73270e26d6273889f355",
+        "packages/core-engine/src/ocr/pdf-raster.ts": "d48f169c115d80bb4264274e66c3e3123a601e0d25d7115feaf4f544a34b9912",
+        "packages/core-engine/src/retrieve/ingest-worker.ts": "79cb2e47d6c3f30ad06712cb07db64f5d049bfb4d7e9b8dd585cf44a1879cd8b",
+        "packages/core-engine/test/live-rag-ingest.test.ts": "f67c73d6cbbb63bd9134e929cb8ce8f320889263d233f08a1d08461b04ab4031",
+        "packages/core-engine/src/persistence/store.ts": "0560ba551d0253aa0f70b8d4120fc380b938a8b25a97fd577db1e7ba5e3fb16f",
+        "packages/core-engine/src/retrieve/memory-vector.ts": "c5adf1b9c06f282eb67585e0d1f2c82f60f46d5f10f7c741562d7ca8f04afabd",
+        "packages/core-engine/src/agent/context.ts": "20d259fae90dc215ed7f3dcd07a73089a145341b383fdb73999a4a9daeecae1b",
+        "packages/core-engine/src/agent/prompts.ts": "e108919568122b317ac52b0c72ca9bd6f14995a24badf8a30fc6169ca0d86720",
+        "packages/core-engine/src/agent/step-chat-bridge.ts": "cc7ac1cb720aa6703031c329d210c031ae5b043ae0a91d915720ec292ccae07b",
+        "packages/core-engine/src/agent/agent-runtime-factory.ts": "ec46b90d98876817caf09c5225ea079918e8ec88f33d1de4046fccce22426837",
+        "packages/core-engine/src/retrieve/rerank.ts": "dd3253541094a5ff2e428b833815bc2f16eb0c2d793b097488bbd40277acd9b6",
+        "packages/core-engine/src/retrieve/embeddings.ts": "6df7f4ec29fb22947ced956c6696dafe59a634a70e34e8829db321270c748da1",
+        "packages/core-engine/src/retrieve/live-ports.ts": "0be4cf436d4572ee332cd0514ab5f802985df067ed1406c3aa697aa6451881ee"
+      }
     },
     "web": {
       "sourcePath": "apps/web",
-      "assetCount": 50,
-      "fileHashes": {}
+      "assetCount": 53,
+      "fileHashes": {
+        "apps/web/src/views/standard_lib/RetrieveHitsTable.vue": "ef6f970e9145aaefc9523a445eb056d0c8b00812fe3fbe28ec5b48bb7dcf8f90",
+        "apps/web/src/views/standard_lib/index.vue": "7c0ee0cedeb61b16b7637ea6d0471a2bd82cc5a6e18d51cb205a249a7336fc7d",
+        "apps/web/src/views/standard_lib/PdfTickPanel.vue": "8e62f6c8e3496182cf0181a2b0187907e056e2644eefe17c515c36c59a79d996",
+        "apps/web/src/services/http.ts": "87c847ebacd889228fcc10ec66d4d89dfbba8f6e70d55b055aeeaf740d9cbae9",
+        "apps/web/src/services/types.ts": "a9ed91ab715830a5cac34a67d528657ba178e776f5b7c5212b46f9441805f409",
+        "apps/web/src/components/StepChat.vue": "4b1eab3c4fefec3ba34bf526776d9e841804442bbf85e6e4f809f6882c99569b",
+        "apps/web/src/views/standard_lib/HitDetailPanel.vue": "6cddd72d15ebbab894c960e6d66c61feccd21c8aeec1dba6a1d51d6b9ce026b5"
+      }
     }
   },
   "pathRulesHash": "d487fe672dbca127a94bc25b005bdff95cde9a935483ec9992bb8611b1770fbd",

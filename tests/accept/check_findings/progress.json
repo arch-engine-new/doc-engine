@@ -1,0 +1,13 @@
+{
+  "pageId": "check_findings",
+  "cases": [
+    { "id": "C-01", "rpId": "RP-01", "status": "pass" },
+    { "id": "C-02", "rpId": "RP-02", "status": "pass" },
+    { "id": "C-03", "rpId": "RP-03", "status": "pass" },
+    { "id": "C-04", "rpId": "RP-04", "status": "pass" },
+    { "id": "C-05", "rpId": "RP-05", "status": "pass", "note": "中间交工证书 Job 已 pending，页面提供「去待审」；checking 才启用「同意进入待审」" },
+    { "id": "C-06", "rpId": "RP-06", "status": "pass" },
+    { "id": "C-07", "rpId": "RP-07", "status": "pass" },
+    { "id": "C-08", "rpId": "RP-08", "status": "pass" }
+  ]
+}

@@ -35,6 +35,10 @@ describe("agent connect", () => {
     expect(shouldSearchClause("checking", "你好", "pack-1")).toBe(true);
     expect(shouldSearchClause("check_findings", "你好", "pack-1")).toBe(true);
     expect(shouldSearchClause("standard_lib", "你好", "pack-1")).toBe(true);
+    expect(shouldSearchClause("retrieve", "你好", "pack-1")).toBe(true);
+    expect(shouldSearchClause("retrieve", "你好", "pack-1")).toBe(
+      shouldSearchClause("standard_lib", "你好", "pack-1"),
+    );
     expect(shouldSearchClause("uploaded", "你好", "pack-1")).toBe(false);
   });
 

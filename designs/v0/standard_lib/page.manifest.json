@@ -1,0 +1,12 @@
+{
+  "id": "standard_lib",
+  "pageType": "list",
+  "feature": "core-engine",
+  "title": "标准库",
+  "route": "/packs/:id/standards",
+  "description": "生产级 RAG + PDF 逐页 tick；tickAll 循环已有 tick。命中行打开详情读 heading+body。验收 A11–A14、A17、A18。",
+  "status": "approved",
+  "source": "generated",
+  "generatedAt": "2026-09-19T05:25:00.000Z",
+  "generator": "pm-agent-v10-refine-handfill"
+}

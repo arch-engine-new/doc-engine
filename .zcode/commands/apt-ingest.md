@@ -1,6 +1,6 @@
 ---
 ---
-<!-- apt-template-version: 10.6.10 -->
+<!-- apt-template-version: 10.9.0 -->
 # $apt-ingest — 摄入已有原型工程
 
 PM 已有前端原型工程，一条命令产出页面逻辑（+ 原生规格）。

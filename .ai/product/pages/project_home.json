@@ -1,0 +1,67 @@
+{
+  "pageId": "project_home",
+  "title": "项目与规范包",
+  "capabilities": [
+    "dict_options",
+    "file_upload",
+    "iot",
+    "list"
+  ],
+  "signals": [
+    {
+      "kind": "file_upload",
+      "excerpt": "| generateInspectionBatch | DocType 行「生成检验批」 | generate → upload；更新 artifact 状态与 trace，展示「已上传」标签 | 无 | 登录即可 |",
+      "path": "designs/v0/project_home/page.logic.md"
+    },
+    {
+      "kind": "list",
+      "excerpt": "| listProjects | 进入页 | 加载项目与规范包列表 | 无 | 登录即可 |",
+      "path": "designs/v0/project_home/page.logic.md"
+    },
+    {
+      "kind": "iot",
+      "excerpt": "| openAnnotate | 点击「标注模板」或 DocType 行「标注」 | 跳转 /templates/:id/annotate | 无 | 登录即可 |",
+      "path": "designs/v0/project_home/page.logic.md"
+    },
+    {
+      "kind": "dict_options",
+      "excerpt": "| 归属项目 | Select | MOCK→API | listProjects | id | name | 无 | mount |",
+      "path": "designs/v0/project_home/page.logic.md"
+    },
+    {
+      "kind": "dict_options",
+      "excerpt": "| valueType | Select | dict | dictValueType | value | label | 无 | mount |",
+      "path": "designs/v0/project_home/page.logic.md"
+    }
+  ],
+  "sourcePath": "designs/v0/project_home/page.logic.md",
+  "contentHash": "edc5455ea0f9f43fc22e738911ec3b6bcfa6eddcfa763a436f204356435bd68e",
+  "optionSources": [
+    {
+      "field": "归属项目",
+      "control": "Select",
+      "source": "MOCK→API",
+      "intentApiOrDictType": "listProjects"
+    },
+    {
+      "field": "valueType",
+      "control": "Select",
+      "source": "dict",
+      "intentApiOrDictType": "dictValueType"
+    }
+  ],
+  "archObligations": [
+    {
+      "kind": "list_api",
+      "ref": "listProjects",
+      "storage": "db_required",
+      "pageId": "project_home"
+    },
+    {
+      "kind": "dict_catalog",
+      "ref": "dictValueType",
+      "storage": "db_required",
+      "pageId": "project_home"
+    }
+  ]
+}

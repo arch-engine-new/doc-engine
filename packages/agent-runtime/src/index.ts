@@ -96,6 +96,25 @@ export type {
 export { runGraph } from "./runtime/scheduler.js";
 
 /**
+ * LLM provider abstraction.
+ * FakeLlmProvider is the test double; UnconfiguredLlmProvider is the user-visible
+ * missing-config path so chat never echoes HITL system prompts.
+ */
+export type { LlmProvider, LlmCompleteOptions } from "./llm/provider.js";
+export {
+  UNCONFIGURED_LLM_MESSAGE,
+  UnconfiguredLlmProvider,
+  FakeLlmProvider,
+  getDefaultLlmProvider,
+  setDefaultLlmProvider,
+  createLlmProvider,
+  initDefaultLlmProvider,
+} from "./llm/provider.js";
+export type { LlmRuntimeConfig } from "./llm/config.js";
+export { loadLlmRuntimeConfig } from "./llm/config.js";
+export { ZhipuLlmProvider } from "./llm/zhipu-provider.js";
+
+/**
  * RunManager: run lifecycle, metadata, cancellation.
  */
 export type {

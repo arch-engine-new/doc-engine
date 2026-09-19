@@ -31,7 +31,7 @@ $apt-plan-from-verify [<verify-report-path>]
 4. plan 路径：`docs/apt/plans/YYYY-MM-DD-verify-fix-<slug>-plan.md`；`Status: draft`；头部引用 verify report path + Overall。
 5. MCP 寻址：按修复项 `query_contract` / `search_arch` / `query_arch`；缺依赖 → `report_missing` 并停止。
 6. **禁止**在本命令写/改生产代码、跑 audit、改 verify 模板。
-7. 写完 plan 后提示用户确认 → `/implement-plan` → 再 `/verify`。
+7. 写完 plan 后提示用户确认 → 用户确认后按 §5 **确认-翻转条款**把 plan 内 `Status` 改为 `approved` → `/implement-plan` → 再 `/verify`。
 
 ## 执行步骤
 
@@ -121,6 +121,8 @@ node <解析到的脚本> <项目根>
 2. `/implement-plan`（或 `apt-implement-plan`）  
 3. 再 `/verify`
 
+**确认-翻转条款：** 用户确认修复方案后，**本命令**将 plan 内 `Status` 改为 `approved`（仅改该行，参照 plan-from-spec §3.4 惯例）；未确认前保持 `draft`，禁入 `/implement-plan`。
+
 若本轮为**降级**：只打降级表对应说明 + 建议命令，**确认未写 plan**。
 
 ## 禁止
@@ -129,7 +131,7 @@ node <解析到的脚本> <项目根>
 - `recommended` ≠ `plan-from-verify` 仍写 plan
 - 在本命令修改业务/实现源码、跑 `audit_arch_changes`、改 `templates/verify.md`
 - 把仅 closeout FAIL 当实现修复范围
-- 静默把 Status 标为 approved（保持 `draft`，等人确认后再 implement）
+- 未经用户确认把 Status 标为 approved（确认前保持 `draft`、禁入 `/implement-plan`；确认后的翻转按 §5 确认-翻转条款执行）
 
 ## 与上下游关系
 

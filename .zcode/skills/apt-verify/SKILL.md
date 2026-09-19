@@ -6,6 +6,8 @@ description: 实现后验收门禁：对照 plan、audit 只读、契约与可�
 
 **写侧 MCP 禁止（硬规则）：** 不得调用 `refresh_asset`、`register_contract`、`remove_asset`、`register_ui_pattern`、`update_java_path_rules`。不得执行 `design-sync` 等设计知识写侧操作。若用户要求「verify 并顺便修复」，说明 verify 只做检查：实现类 FAIL → **`$apt-plan-from-verify`**；仅 closeout FAIL → **`/finish-feature`**（见 Recommended next steps，应与 `classify-verify-failures` 一致）。
 
+**禁止掀 `.ai/arch/`（硬规则）：** **禁止**删除或清空 `.ai/arch/`。**禁止**不排除 `.ai/arch`（或 `last-scan.json`）的 `git clean` force / `-fd` / `-fdx` / `-x` / untracked。
+
 用户可提供 plan 路径（如 `docs/apt/plans/2026-06-22-foo-plan.md`）。若未提供，尝试 `docs/apt/plans/` 下最近修改的 `*-plan.md`，或询问用户。
 
 ## 0.0 MCP Preflight（必须，最先执行）
@@ -21,12 +23,14 @@ description: 实现后验收门禁：对照 plan、audit 只读、契约与可�
 
 **未再次 Preflight PASS 前，禁止**进入 §0 上下文与后续验收维度。
 
+**即使 `query_project_status` 返回 `nextAction=start_init`，也禁止按其裸跑 `start-init` 或 `--full`。** 该 hint 不是本命令的扫描入口；有非空 `arch-index.json` 的残局只许 §2 的 shell `start-init --repair-anchor`。
+
 ## 0. 上下文
 
 1. 若提供 plan 路径，**允许直接读取** plan 文件。
 2. 有 plan 时：确认头部 **`Status: approved`**。若为 `draft`，**停止**并提示先审阅 plan。
 3. 若无 plan，在最终报告中注明「无 plan 对照模式」，Phase 1 标为 SKIP。
-4. 从 plan Part 1 或用户描述归纳**待验收范围**（改了哪些文件、功能边界）。
+4. 从 plan Part 1 或用户描述归纳**待验收范围**（改了哪些文件、功能边界）；无 plan 轻链时另取 `/feature` §0.2 需求收敛落痕（聊天级 Goal/验收标准）作对照锚点。
 5. 查契约、架构、设计知识一律走 MCP；**禁止**未经 MCP 直接打开 `.ai/` 下文件。
 
 ## 1. Plan 对照（有 plan 时）
@@ -43,16 +47,15 @@ description: 实现后验收门禁：对照 plan、audit 只读、契约与可�
 
 无 plan → 本阶段 **SKIP**。
 
-## 2. 架构一致性（只读）
+## 2. 架构一致性（只读；残局唯一写盘例外见下）
 
-1. 调用 **`audit_arch_changes`**（`since: last-scan`）。
-2. **仅解读报告**：列出 `modified` / `new` / `unregistered` / `deleted` 数量与清单。
-3. 若四类**皆空** → 本阶段 **PASS**。
-4. 若任一类非空 → 本阶段 **FAIL**（知识库与源码未同步）；建议 `/finish-feature` 或 `sync-changes`。
+按是否**可用 last-scan**分支（缺文件、`version≠2`、JSON 损坏一律视为不可用）：
 
-无 `last-scan.json` → 本阶段 **BLOCKED**，提示先 `start-init`。
+1. **有可用 last-scan：** 现网只读调用 **`audit_arch_changes`**（`since: last-scan`）。**仅解读报告**：列出 `modified` / `new` / `unregistered` / `deleted` 数量与清单。四类**皆空** → 本阶段 **PASS**。任一类非空 → 本阶段 **FAIL**（知识库与源码未同步）；建议 `/finish-feature`。
+2. **无可用 last-scan 且有非空 `arch-index.json`：** 本阶段**唯一写盘例外**——在项目根执行 shell **`start-init --repair-anchor`**（**不是** MCP `refresh_asset`；**禁止**裸跑 `start-init` 或 `--full`）。修复成功后再 `audit_arch_changes`。**本轮架构不得 PASS**（四类皆空也不算过）。Recommended **只** `/finish-feature`。**禁止**把 `sync-changes` 或增量 `start-init` 当该残局首选。修复失败 → 本阶段 **BLOCKED**，下一步 `/apt-init`。
+3. **无可用 last-scan 且无非空 index：** Overall **BLOCKED**，下一步 `/apt-init`（或 `/finish-feature`）。
 
-**禁止**在本阶段调用 `refresh_asset` / `remove_asset` / `update_java_path_rules`。
+**禁止**在本阶段调用 `refresh_asset` / `remove_asset` / `update_java_path_rules`（上款 shell `start-init --repair-anchor` 除外，仍不得经 MCP `refresh_asset` 修锚点）。
 
 ## 2.5. 设计一致性（只读，含 UI 时）
 
@@ -103,6 +106,21 @@ description: 实现后验收门禁：对照 plan、audit 只读、契约与可�
 4. 本维度 **FAIL → Overall 必须 FAIL**（不得 PASS / 不得用 SKIP 掩盖）。
 
 **禁止**在本阶段写入 `.apt/connect/` 或调用写侧 MCP。
+
+## 2.8. logic 同步（只读，armed 项目）
+
+**触发条件：** 项目 armed——存在 `.apt/create/armed.json`（`armed: true`）或 `designs/v0/_pages.md`（兜底信号）。未 armed → 本阶段 **SKIP**（老项目零影响）。
+
+1. 执行只读门禁脚本：`node scripts/check-logic-sync.cjs --base <锚点>`；锚点取**上次 verify PASS 之后的提交**（无记录则 `HEAD`）。
+2. **仅解读退出码：**
+   - exit `0` → 本阶段 **PASS**。
+   - exit `1` → 本阶段 **FAIL**；Failures 逐条列出脚本输出的 C1/C2/C3 页与修复路径行（修复路径：**`$apt-create --refine`（PM 层）或 `reconcile_page_logic`；禁止手改 `page.logic.md` 凑同步**）。
+   - exit `2` → 本阶段 **BLOCKED**（git / 环境不可用，不算 FAIL），Failures 注明原因。
+3. 本维度 **FAIL → Overall 必须 FAIL**（不得用 SKIP 掩盖）。
+
+Summary 表新增一行：`| logic 同步 | PASS/FAIL/SKIP/BLOCKED |`（置「产品对齐」之后、「Connect 门禁」之前）。
+
+**禁止**在本阶段调用 `$apt-create --refine` / `reconcile_page_logic` 或修改 `designs/v0/**/page.logic.md` 凑同步——verify 只做检查，修复交人工 refine（见 Recommended next steps）。
 
 ## 3. 契约完整性（只读）
 
@@ -155,6 +173,8 @@ description: 实现后验收门禁：对照 plan、audit 只读、契约与可�
 5. 接口用例（T4+，来自 dev-handoff.md）未覆盖 → **WARN**（记入备注，不单独判 FAIL）。
 6. 无 test-cases.md → **SKIP**（向后兼容，不影响现有项目）。
 
+Summary 表新增一行：`| 测试用例覆盖率 | PASS/FAIL/SKIP |`。
+
 ### 5.6 外部 Harness 维度（sourceDoc / activeSpec 引用可执行规格时必须）
 
 **触发条件：** `.apt/goal.md` frontmatter **`sourceDoc`** 或 **activeSpec**（活跃规格路径）引用**可执行规格**——todobackend.com 套件、RealWorld 探针、OpenAPI 测试套件、仓库内 JS/HTTP 测试脚本的 URL 或路径。无引用 → 本阶段 **SKIP**（Summary 记 SKIP，`## Harness` 段写一句「无触发」即可）。
@@ -201,11 +221,13 @@ Summary 表新增一行：`| 外部 Harness | PASS/FAIL/SKIP/BLOCKED |`。
 | 架构 audit | PASS/FAIL/BLOCKED |
 | 设计 audit | PASS/FAIL/SKIP |
 | 产品对齐 | PASS/FAIL/BLOCKED/SKIP |
+| logic 同步 | PASS/FAIL/SKIP/BLOCKED |
 | Connect 门禁 | PASS/FAIL/SKIP |
 | 契约登记 | PASS/FAIL |
 | 可检索性 | PASS/FAIL |
 | 代码质量 | PASS/FAIL/SKIP |
 | 测试/构建 | PASS/FAIL/SKIP |
+| 测试用例覆盖率 | PASS/FAIL/SKIP |
 | 外部 Harness | PASS/FAIL/SKIP/BLOCKED |
 
 ## Harness
@@ -224,12 +246,13 @@ Summary 表新增一行：`| 外部 Harness | PASS/FAIL/SKIP/BLOCKED |`。
 - [F1] ...
 
 ## Recommended next steps
-（应与 `scripts/classify-verify-failures.cjs` / `classify-verify-failures` 一致；禁止「FAIL → 一律 `/finish-feature`」）
+（应与 `scripts/classify-verify-failures.cjs` / `classify-verify-failures` 一致；禁止「FAIL → 一律 `/finish-feature`」。缺 last-scan / 无非空 index 的 Overall BLOCKED **不受**「与分类器整表一致」约束，不得把 `recommended=unblock` 抄成裸扫描入口。）
 
 - Overall **PASS** → `/finish-feature`（闭环：audit / refresh / 契约）
-- Overall **FAIL** 且含**实现类**维度 FAIL（Plan 对照、可检索性、代码质量、测试/构建、测试用例覆盖率、Connect 门禁、设计 audit、产品对齐、外部 Harness）→ `$apt-plan-from-verify`（默认读 `.apt/verify/latest.md`）→ 确认后 `/implement-plan` → 再 `/verify`
+- Overall **FAIL** 且含**实现类**维度 FAIL（Plan 对照、可检索性、代码质量、测试/构建、测试用例覆盖率、Connect 门禁、设计 audit、产品对齐、logic 同步、外部 Harness）→ `$apt-plan-from-verify`（默认读 `.apt/verify/latest.md`）→ 确认后 `/implement-plan` → 再 `/verify`
 - Overall **FAIL** 且**仅** closeout 维度 FAIL（架构 audit、契约登记）→ `/finish-feature` 后重新 `/verify`
-- Overall **BLOCKED** / infra（`mcp_unavailable` / 需 start-init / product-init）→ `start-init` / `product-init` / 修 MCP 后重新 `/verify`
+- 架构段刚走 `start-init --repair-anchor` 残局 → 即使四类空也是架构 FAIL；Recommended **只** `/finish-feature`（禁止该残局首选 `sync-changes` 或增量 `start-init`）
+- Overall **BLOCKED** / infra（`mcp_unavailable` / 无可用 last-scan 且无非空 index / 需 product-init）→ `/apt-init` 或 `/finish-feature` / `product-init` / 修 MCP 后重新 `/verify`
 - FAIL 但 Summary 无法分类 → 修正报告格式后重新 `/verify`（`re-verify`）
 ```
 
@@ -237,9 +260,10 @@ Summary 表新增一行：`| 外部 Harness | PASS/FAIL/SKIP/BLOCKED |`。
 
 - MCP Preflight FAIL / 中途 MCP 传输层不可用 → **BLOCKED**（非业务 FAIL；见 §0.0）
 - 任一必选维度 FAIL → **FAIL**
-- 仅缺 arch `last-scan` / 需 `start-init` → **BLOCKED**
+- 仅缺可用 last-scan **且** 无非空 `arch-index.json` → **BLOCKED**（下一步 `/apt-init` 或 `/finish-feature`）
 - 仅缺产品索引 / 需 `product-init` → **BLOCKED**（见 §2.6）
 - Connect 门禁 FAIL → **FAIL**（见 §2.7；不得 Overall PASS）
+- logic 同步 FAIL → **FAIL**（见 §2.8；不得 Overall PASS）
 - 外部 Harness 任一套件 FAIL → **FAIL**（见 §5.6；不得只过知识门禁）
 - 全部 PASS → **PASS**
 

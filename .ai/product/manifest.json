@@ -1,5 +1,16 @@
 {
   "version": 1,
-  "pages": [],
-  "updatedAt": "2026-08-25T03:17:52.244Z"
+  "pages": [
+    "agent-runtime-control",
+    "audit_trace",
+    "check_findings",
+    "job_upload",
+    "pending_review",
+    "project_home",
+    "rule_editor",
+    "standard_lib",
+    "template_annotate",
+    "volume_preview"
+  ],
+  "updatedAt": "2026-09-19T05:35:07.204Z"
 }

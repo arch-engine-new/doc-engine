@@ -2,130 +2,72 @@
 
 _No component discovered._
 
+## StepChat
+
+| Field | Value |
+|-------|-------|
+| Summary | StepChat：分步骤聊天/引导式对话组件（Vue 单文件组件，位于 apps/web/src/components/StepChat.vue）。javadoc 暂无，具体 props、事件与内部状态定义暂无。 |
+| When to use | 需要在页面中嵌入按步骤（step）推进的聊天或问答交互界面时使用；具体可配置项与适用子场景暂无。 |
+| How to use | 在 Vue 页面或组件中通过 import StepChat from 'apps/web/src/components/StepChat.vue' 引入，并在 template 中以 <StepChat /> 方式挂载；具体 props / events 传参方式暂无。 |
+| Exports | 暂无 |
+| Related | 暂无 |
+| Tags | component, Vue, StepChat, 聊天, 分步对话, 前端, frontend, apps |
+| Source | refresh |
+| Path | apps/web/src/components/StepChat.vue |
+| Updated | 2026-09-17T04:10:21.745Z |
+
 ## index
 
 | Field | Value |
 |-------|-------|
-| Summary | 待审核视图页面组件，位于 apps/web/src/views/pending_review/index.vue，是 pending_review（待审核）业务页面的入口 Vue SFC。该扫描未提取到 javadoc 或方法签名，组件内部逻辑暂无。 |
-| When to use | 当需要在 apps/web 前端应用中实现或修改 pending_review（待审核）相关页面时使用本组件，例如待审核列表展示、审核入口跳转等场景。 |
-| How to use | 作为 Vue Router 视图组件使用：在路由配置中将路径映射到 apps/web/src/views/pending_review/index.vue（通常通过 () => import(...) 动态导入其 default 导出）。如需扩展功能，直接编辑该 index.vue 文件；如需复用子逻辑，建议拆分子组件后在本页面中引入。 |
-| Exports | default |
-| Related | 暂无 |
-| Tags | Vue, SFC, pending_review, index.vue, apps/web, views, RouterView, 待审核 |
-| Source | refresh |
-| Path | apps/web/src/views/pending_review/index.vue |
-| Updated | 2026-08-30T06:55:48.532Z |
-
-## DocumentGapsPanel
-
-| Field | Value |
-|-------|-------|
-| Summary | Vue 面板组件 DocumentGapsPanel，位于项目首页视图目录 apps/web/src/views/project_home/ 下，用于在项目首页展示文档缺口（Document Gaps）信息，帮助用户发现缺失或与代码不一致的文档。 |
-| When to use | 在 apps/web 前端项目首页需要呈现文档缺口概览、检查文档完整性时使用该组件；作为 project_home 视图的子面板挂载。 |
-| How to use | 在 project_home 视图（apps/web/src/views/project_home/）中引入并挂载 DocumentGapsPanel 组件；具体 props、事件与导出签名暂无（signatures 为空）。 |
-| Exports | DocumentGapsPanel |
-| Related | 暂无 |
-| Tags | Vue, DocumentGapsPanel, project_home, Document Gaps, 文档缺口, component, frontend, apps/web |
-| Source | refresh |
-| Path | apps/web/src/views/project_home/DocumentGapsPanel.vue |
-| Updated | 2026-08-29T15:53:52.369Z |
-
-## ProjectPackTable
-
-| Field | Value |
-|-------|-------|
-| Summary | 项目首页（project_home）视图中的 ProjectPackTable 表格组件，用于以表格形式集中展示项目的 Pack（项目包）数据列表。 |
-| When to use | 在 apps/web 的 project_home（项目首页）页面需要展示、浏览项目 Pack 列表数据（如项目包记录、状态列等）时使用。 |
-| How to use | 组件文件位于 apps/web/src/views/project_home/ProjectPackTable.vue，可在 project_home 相关视图中以 Vue 组件方式引入并渲染；暂无公开签名信息，具体 props 与 emit 事件以源码为准。 |
-| Exports | ProjectPackTable |
-| Related | project_home |
-| Tags | Vue, ProjectPackTable, project_home, Pack, table, component, apps/web |
-| Source | refresh |
-| Path | apps/web/src/views/project_home/ProjectPackTable.vue |
-| Updated | 2026-08-29T15:50:22.710Z |
-
-## ExcelCellMappingPanel
-
-| Field | Value |
-|-------|-------|
-| Summary | ExcelCellMappingPanel 是位于 template_annotate（模板标注）视图目录下的 Vue 单元格映射面板组件，用于在模板标注流程中建立并展示 Excel 单元格与模板字段之间的映射（cell mapping）关系。 |
-| When to use | 在 template_annotate（模板标注）页面中需要可视化配置或调整 Excel 单元格与模板字段的映射关系、查看映射结果时使用 ExcelCellMappingPanel 组件。 |
-| How to use | 在 template_annotate 相关视图中导入 ExcelCellMappingPanel（Vue SFC 组件，默认导出）并挂载到模板标注页面，传入待映射的 Excel 单元格数据与模板字段数据进行映射配置。具体 props/emits 签名扫描未捕获，暂无，需查看组件源码确认。 |
-| Exports | ExcelCellMappingPanel（default export，Vue SFC 组件） |
-| Related | template_annotate |
-| Tags | Vue, Vue3, SFC, ExcelCellMappingPanel, template_annotate, Excel, cell mapping, 单元格映射, 模板标注 |
-| Source | refresh |
-| Path | apps/web/src/views/template_annotate/ExcelCellMappingPanel.vue |
-| Updated | 2026-08-30T06:55:51.343Z |
-
-## ProjectHomeDialogs
-
-| Field | Value |
-|-------|-------|
-| Summary | 项目首页（project_home）的弹窗集合组件 ProjectHomeDialogs，位于 apps/web/src/views/project_home/，集中承载首页视图各类对话框（dialog）的渲染与开关控制。 |
-| When to use | 在 apps/web 项目首页视图需要统一挂载或管理多个弹窗时使用，通常由 project_home 首页主视图引入，避免各弹窗散落在主视图模板中。 |
-| How to use | 在 project_home 相关视图（如 ProjectHome 主页面）中引入 ProjectHomeDialogs 组件，通过 props 或事件驱动各 dialog 的显示、隐藏与数据传递。 |
+| Summary | apps/web 前端应用中的标准库（standard_lib）视图入口组件，文件路径为 apps/web/src/views/standard_lib/index.vue。该组件作为 standard_lib（标准库）页面的 Vue 视图入口，负责承载标准库相关功能的页面级渲染逻辑。 |
+| When to use | 当需要在 apps/web 前端中访问或修改 standard_lib（标准库）页面的界面与交互逻辑时使用；路由配置中指向 apps/web/src/views/standard_lib/ 目录时，该 index.vue 即为对应视图入口。 |
+| How to use | 暂无 |
 | Exports | 暂无 |
 | Related | 暂无 |
-| Tags | Vue, component, ProjectHomeDialogs, project_home, dialog, apps/web |
+| Tags | Vue, component, view, standard_lib, apps, web, views, index.vue |
 | Source | refresh |
-| Path | apps/web/src/views/project_home/ProjectHomeDialogs.vue |
-| Updated | 2026-08-29T15:52:53.644Z |
+| Path | apps/web/src/views/standard_lib/index.vue |
+| Updated | 2026-09-19T06:23:11.736Z |
 
-## InheritedFieldsPanel
+## StandardLib
 
 | Field | Value |
 |-------|-------|
-| Summary | InheritedFieldsPanel 是 template_annotate（模板标注）视图下的继承字段面板组件，位于 apps/web/src/views/template_annotate/InheritedFieldsPanel.vue，用于在模板标注场景中展示和处理继承（Inherited）字段信息。 |
-| When to use | 在模板标注（template_annotate）页面需要向用户展示继承自上级模板或数据源的字段列表，并支持查看/选用这些继承字段时使用 InheritedFieldsPanel。暂无更详细的触发条件说明。 |
-| How to use | 从 apps/web/src/views/template_annotate/InheritedFieldsPanel.vue 导入 InheritedFieldsPanel 组件，在模板标注相关视图中注册并渲染，通过 props 传入继承字段数据。暂无具体的 props 与事件签名说明。 |
-| Exports | InheritedFieldsPanel |
-| Related | 暂无 |
-| Tags | Vue, InheritedFieldsPanel, template_annotate, apps/web, 继承字段, 模板标注, 组件 |
-| Source | refresh |
-| Path | apps/web/src/views/template_annotate/InheritedFieldsPanel.vue |
-| Updated | 2026-08-29T15:52:57.347Z |
-
-## WordingReviewPanel
-
-| Field | Value |
-|-------|-------|
-| Summary | WordingReviewPanel（文案审核面板）是位于 apps/web/src/views/pending_review 目录下的 Vue 视图组件，用于展示和操作待审核文案（pending_review）列表。 |
-| When to use | 当需要在 Web 端实现文案审核流程、进入 pending_review 待审核页面、或对 WordingReviewPanel 进行扩展修改时使用本组件。 |
-| How to use | 在 apps/web 项目的路由或父视图中引用 WordingReviewPanel.vue；无对外导出的方法签名（signatures 为空），具体调用方式暂无。 |
+| Summary | 前端视图组件 StandardLib，位于 apps/web/src/views/standard_lib/index.vue，是「标准库（standard_lib）」页面入口，用于标准资产库的展示/管理。组件详细说明暂无（javadoc 为「暂无」）。 |
+| When to use | 需要在 apps/web 前端中提供标准库（standard_lib）浏览或管理页面时使用；具体业务约束暂无（signatures 为空）。 |
+| How to use | 作为 Vue 路由页面挂载：在 apps/web 的路由配置中注册 views/standard_lib/index.vue 对应路由；或在父组件中 import StandardLib 后以 <StandardLib /> 使用。具体 props/events 暂无。 |
 | Exports | 暂无 |
 | Related | 暂无 |
-| Tags | Vue, WordingReviewPanel, pending_review, 文案审核, apps/web |
+| Tags | Vue, frontend, StandardLib, standard_lib, 标准库, views, apps/web |
 | Source | refresh |
-| Path | apps/web/src/views/pending_review/WordingReviewPanel.vue |
-| Updated | 2026-08-30T06:55:40.062Z |
+| Path | apps/web/src/views/standard_lib/index.vue |
+| Updated | 2026-09-17T12:10:22.890Z |
 
-## SignatureConfirmDialog
+## HitDetailPanel
 
 | Field | Value |
 |-------|-------|
-| Summary | 待审核（pending_review）流程中的签字确认弹窗组件 SignatureConfirmDialog，位于 apps/web/src/views/pending_review/SignatureConfirmDialog.vue，用于在审核处理页面弹出签名/签字确认交互。 |
-| When to use | 在 pending_review（待审核）相关视图中，需要用户对审核操作进行签字确认（SignatureConfirm）时使用本弹窗组件。 |
-| How to use | 从 apps/web/src/views/pending_review/SignatureConfirmDialog.vue 导入组件，按 Vue 单文件组件方式在 pending_review 视图中挂载使用；具体 props/emits 暂无。 |
+| Summary | standard_lib（标准库）视图下的命中详情面板组件 HitDetailPanel，用于展示检索命中（hit）条目的详细内容，文件位于 apps/web/src/views/standard_lib/HitDetailPanel.vue。 |
+| When to use | 当用户在 standard_lib 标准库页面点击某条检索命中结果，需要查看该 hit 的详情信息时，使用 HitDetailPanel 渲染详情面板。 |
+| How to use | 在 standard_lib 相关视图中引入 HitDetailPanel.vue 并注册为子组件，将选中的命中条目数据通过 props 传入即可渲染；具体 props 与事件定义暂无。 |
 | Exports | 暂无 |
-| Related | apps/web/src/views/pending_review |
-| Tags | Vue, component, SignatureConfirmDialog, pending_review, signature, dialog, confirm, web |
+| Related | 暂无 |
+| Tags | Vue, component, HitDetailPanel, standard_lib, views, apps, frontend, 命中详情面板 |
 | Source | refresh |
-| Path | apps/web/src/views/pending_review/SignatureConfirmDialog.vue |
-| Updated | 2026-08-30T06:55:48.135Z |
+| Path | apps/web/src/views/standard_lib/HitDetailPanel.vue |
+| Updated | 2026-09-19T06:23:52.638Z |
 
-## SignatureReviewPanel
+## RetrieveHitsTable
 
 | Field | Value |
 |-------|-------|
-| Summary | 签字审核面板组件（SignatureReviewPanel），位于 apps/web/src/views/pending_review/ 目录，用于待审核（pending_review）流程中签字/签名材料的展示与审核操作界面。该组件为 Vue 单文件组件，本身未附带 javadoc 与公开 signatures，细节暂无。 |
-| When to use | 在 apps/web 的待审核（pending_review）视图中，需要向审核人展示签字/签名内容并执行审核操作（如通过、驳回）时使用该面板。 |
-| How to use | 从 apps/web/src/views/pending_review/SignatureReviewPanel.vue 导入该 Vue 单文件组件，嵌入 pending_review 相关页面或路由视图作为审核子面板；通过 props 传入待审核的签字数据并监听审核结果事件完成流程流转。具体 props / emits 签名暂无（源码未提供 signatures 与 javadoc）。 |
-| Exports | SignatureReviewPanel |
+| Summary | 标准库（standard_lib）模块下的检索命中结果表格组件 RetrieveHitsTable，位于 apps/web/src/views/standard_lib/RetrieveHitsTable.vue，用于以表格形式展示检索（retrieve）返回的命中条目（hits）。组件 javadoc 暂无，具体 props 与事件定义暂无。 |
+| When to use | 在标准库（standard_lib）页面中需要展示检索（retrieve）结果列表时使用；当需要将 hits 检索命中数据以统一表格样式呈现、避免各处重复实现结果表格时，复用该组件。 |
+| How to use | 在 standard_lib 相关视图中 import RetrieveHitsTable（路径 apps/web/src/views/standard_lib/RetrieveHitsTable.vue），将检索返回的 hits 数据通过 props 传入进行渲染；具体 props 名称、事件与插槽定义暂无，请查看源码确认。 |
+| Exports | 暂无 |
 | Related | 暂无 |
-| Tags | Vue, SignatureReviewPanel, pending_review, apps/web, 签字审核, 待审核, 审核面板, component |
+| Tags | Vue, Vue组件, RetrieveHitsTable, standard_lib, 标准库, retrieve, hits, 检索, 检索命中, 表格, table, views, apps, web, frontend |
 | Source | refresh |
-| Path | apps/web/src/views/pending_review/SignatureReviewPanel.vue |
-| Updated | 2026-08-30T06:55:48.413Z |
-
-
+| Path | apps/web/src/views/standard_lib/RetrieveHitsTable.vue |
+| Updated | 2026-09-19T06:23:57.609Z |

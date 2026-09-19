@@ -1,0 +1,14 @@
+{
+  "next": [
+    "job_upload",
+    "check_findings",
+    "pending_review",
+    "rule_editor",
+    "project_home",
+    "template_annotate",
+    "volume_preview",
+    "audit_trace"
+  ],
+  "batchSize": 5,
+  "note": "本批只跑 standard_lib（入库/检索/Docker 三库对账）。gate PASS。"
+}

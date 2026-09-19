@@ -15,6 +15,19 @@ const CLAUSE_STEPS = new Set(["checking", "check_findings", "standard_lib"]);
 
 const CLAUSE_INTENT = /条款|规范|标准|查条|search_clause/;
 
+/**
+ * Vue standard_lib posts step=retrieve; prompts/search treat it as standard_lib.
+ */
+export function normalizeChatStep(step: string): string {
+  return step === "retrieve" ? "standard_lib" : step;
+}
+
+/** Pack-scoped HITL (no Job findings). retrieve is the Vue alias for standard_lib. */
+export function isRetrieveChatStep(step: string): boolean {
+  return normalizeChatStep(step) === "standard_lib";
+}
+
+/** True when this HITL step may emit a check_wording proposal (never a Receipt). */
 export function shouldDraftWording(step: string, userMessage: string): boolean {
   return WORDING_STEPS.has(step) && WORDING_INTENT.test(userMessage);
 }
@@ -31,7 +44,7 @@ export function shouldSearchClause(
   if (!packId) {
     return false;
   }
-  return CLAUSE_INTENT.test(userMessage) || CLAUSE_STEPS.has(step);
+  return CLAUSE_INTENT.test(userMessage) || CLAUSE_STEPS.has(normalizeChatStep(step));
 }
 
 /** Deterministic wording for auto check_wording when blocking findings exist. */
@@ -43,6 +56,7 @@ export function buildAutoWording(jobId: string, blocking: FindingRow[]): string 
   return `针对 job ${jobId} 的 blocking finding，建议待审措辞：${summary}。请在待审页确认后生效。`;
 }
 
+/** Per-step HITL system prompt; retrieve aliases standard_lib so Vue step=retrieve cites clauses. */
 export function stepSystemPrompt(step: string): string {
   const base =
     "你是工程资料核心引擎的本步对话助手（HITL）。用中文简要回答。" +
@@ -65,5 +79,6 @@ export function stepSystemPrompt(step: string): string {
     project_home: "项目首页。可问如何建空规范包；不预置行业条文。",
   };
 
-  return `${base}\n${perStep[step] ?? "就本页结果提问。"}`;
+  const key = normalizeChatStep(step);
+  return `${base}\n${perStep[key] ?? "就本页结果提问。"}`;
 }

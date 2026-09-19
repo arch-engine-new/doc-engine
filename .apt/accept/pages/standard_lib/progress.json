@@ -1,0 +1,98 @@
+{
+  "pageId": "standard_lib",
+  "ranAt": "2026-09-19T10:07:39.431Z",
+  "packId": "pack_88632d0869d7468c",
+  "versionId": "sver_b2e66c52b1e749bb",
+  "cases": [
+    {
+      "id": "C-01",
+      "rpId": "RP-01",
+      "status": "pass",
+      "note": "GET /packs/pack_88632d0869d7468c/standards 200 spa=#app (标题由 Vue 挂载)"
+    },
+    {
+      "id": "C-02",
+      "rpId": "RP-02",
+      "status": "pass",
+      "note": "ingest-pdf 202 run=ing_79fc654db141401e"
+    },
+    {
+      "id": "C-03",
+      "rpId": "RP-03",
+      "status": "pass",
+      "note": "建设工程质量管理条例 ingest 82 clauses sver_b2e66c52b1e749bb"
+    },
+    {
+      "id": "C-04",
+      "rpId": "RP-04",
+      "status": "pass",
+      "note": "Qdrant clauses points_count=88 vector_size=1024 unit_id=version:第N条"
+    },
+    {
+      "id": "C-05",
+      "rpId": "RP-05",
+      "status": "pass",
+      "note": "CITES,SUPERSEDES,APPLIES_TO,REQUIRES,SUPPORTS,PARENT_OF,BELONGS_TO"
+    },
+    {
+      "id": "C-06",
+      "rpId": "RP-06",
+      "status": "pass",
+      "note": "CITES sver_b2e66c52b1e749bb:第六十四条 -> sver_b2e66c52b1e749bb:第二十八条"
+    },
+    {
+      "id": "C-07",
+      "rpId": "RP-07",
+      "status": "pass",
+      "note": "hits=8 top=第六十四条 违反本条例规定，施工单位在施工中偷工减料的，使用不合格的建筑材料、建"
+    },
+    {
+      "id": "C-08",
+      "rpId": "RP-08",
+      "status": "pass",
+      "note": "effective=sver_b2e66c52b1e749bb"
+    },
+    {
+      "id": "C-09",
+      "rpId": "RP-09",
+      "status": "pass",
+      "note": "reply=“偷工减料”的禁止性规定对应检索命中的 **sver_b2e66c52b1e749bb:第二十八条**，标题为：“第二十八条 施工单位必须按照工程设计图纸和施工"
+    },
+    {
+      "id": "C-10",
+      "rpId": "RP-10",
+      "status": "pass",
+      "note": "bound ordinance version indexed"
+    },
+    {
+      "id": "C-11",
+      "rpId": "RP-11",
+      "status": "pass",
+      "note": "{\"file_name\":\"content_5468867.htm\",\"page\":\"1-1\",\"unit_id\":\"sver_b2e66c52b1e749bb:第二条\",\"clause_id\":\"sver_b2e66c52b1e749bb:第二条\",\"path\":\"exact\"}"
+    },
+    {
+      "id": "C-12",
+      "rpId": "RP-12",
+      "status": "pass",
+      "note": "tick1 page=1 status=ok done=false"
+    },
+    {
+      "id": "C-13",
+      "rpId": "RP-13",
+      "status": "fail",
+      "note": "page.logic 要求 PrimaryButton「处理全部页」循环 tick；PdfTickPanel 仅有「处理一页」。API 二次 tick done=true"
+    },
+    {
+      "id": "C-14",
+      "rpId": "RP-14",
+      "status": "pass",
+      "note": "第六十四条 引用 → graph 命中 第二十八条（CITES）；连写「第六十四条引用哪条」会被 第.+条 吞掉哪条"
+    },
+    {
+      "id": "C-15",
+      "rpId": "RP-15",
+      "status": "pass",
+      "note": "heading+body present for openHitDetail: body=本条例所称建设工程，是指土木工程、建筑工程、线路管道和设备安装工程及装修工程。"
+    }
+  ]
+}

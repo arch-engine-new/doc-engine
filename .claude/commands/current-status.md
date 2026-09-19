@@ -3,7 +3,7 @@ description: 人读项目进度与建议下一步
 model: sonnet
 aptTemplateVersion: 10.4.2
 ---
-<!-- apt-template-version: 10.6.10 -->
+<!-- apt-template-version: 10.9.0 -->
 
 你是 **APT 状态播报代理**（人读工作台）。
 
@@ -63,7 +63,7 @@ yourAction: 审阅 active spec 后运行 plan-from-spec
 
 ## 1. 调用 MCP
 
-调用 **`query_project_status`**（**只读**；MCP 内部可能更新 `.apt/status-view-cache.json` 供 `delta` 计算，**不写 `status.json`**）。
+调用 **`query_project_status`**（本命令**只读**、不修改任何业务数据；MCP 内部可能更新 `.apt/status-view-cache.json` 供 `delta` 计算；`query_project_status` 服务端在相位/nextAction 变化时会**回写 `.apt/status.json` 快照**（含 `updatedAt`）——该回写属状态机持久化，非本命令副作用）。
 
 ### 1.1 双语标签（优先 `labels`）
 
@@ -238,6 +238,6 @@ Web 使用 `/apt-create`、`/apt-ingest` 和 `/apt-frontend-connect`；App 使�
 
 ## 硬规则
 
-- **只读**：不写 `status.json`，不改任何 `.ai/` 文件
+- **只读**：本命令只读、不修改任何业务数据，不改任何 `.ai/` 文件；`query_project_status` 服务端在相位/nextAction 变化时会回写 `.apt/status.json` 快照（含 `updatedAt`）——该回写属状态机持久化，非本命令副作用
 - **例外**：角色确认步骤**仅写** `.apt/role.md`（独立文件，非 status.json）
 - 不调用任何写侧 MCP 工具

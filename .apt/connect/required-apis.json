@@ -1,0 +1,277 @@
+{
+  "apis": [
+    {
+      "id": "listProjects",
+      "method": "GET",
+      "path": "/api/projects",
+      "status": "wired",
+      "pages": ["project_home"],
+      "note": "Wired from project_home"
+    },
+    {
+      "id": "createProject",
+      "method": "POST",
+      "path": "/api/projects",
+      "status": "wired",
+      "pages": ["project_home"],
+      "note": "Wired from project_home"
+    },
+    {
+      "id": "listSpecPacks",
+      "method": "GET",
+      "path": "/api/projects/:projectId/packs",
+      "status": "wired",
+      "pages": ["project_home"],
+      "note": "Wired from project_home; response includes templates[]"
+    },
+    {
+      "id": "createSpecPack",
+      "method": "POST",
+      "path": "/api/packs",
+      "status": "wired",
+      "pages": ["project_home"],
+      "note": "Wired from project_home; default name 空规范包"
+    },
+    {
+      "id": "listTemplates",
+      "method": "GET",
+      "path": "/api/packs/:id/templates",
+      "status": "wired",
+      "pages": ["project_home"],
+      "note": "Wired from project_home / demo-session hydrate"
+    },
+    {
+      "id": "createTemplate",
+      "method": "POST",
+      "path": "/api/templates",
+      "status": "wired",
+      "pages": ["project_home"],
+      "note": "Wired from project_home after createSpecPack"
+    },
+    {
+      "id": "getSpecPack",
+      "method": "GET",
+      "path": "/api/packs/:id",
+      "status": "wired",
+      "pages": ["rule_editor", "standard_lib", "volume_preview"],
+      "note": "Wired from rule_editor / standard_lib / volume_preview"
+    },
+    {
+      "id": "setGroupKeys",
+      "method": "POST",
+      "path": "/api/packs/:id/group-keys",
+      "status": "wired",
+      "pages": ["volume_preview"],
+      "note": "Wired from volume_preview; no industry key presets"
+    },
+    {
+      "id": "getTemplate",
+      "method": "GET",
+      "path": "/api/templates/:id",
+      "status": "wired",
+      "pages": ["template_annotate"],
+      "note": "Wired from template_annotate"
+    },
+    {
+      "id": "listFieldBoxes",
+      "method": "GET",
+      "path": "/api/templates/:id/boxes",
+      "status": "wired",
+      "pages": ["template_annotate"],
+      "note": "Wired from template_annotate"
+    },
+    {
+      "id": "saveFieldBoxes",
+      "method": "PUT",
+      "path": "/api/templates/:id/boxes",
+      "status": "wired",
+      "pages": ["template_annotate"],
+      "note": "Wired from template_annotate save button; chat cannot save"
+    },
+    {
+      "id": "saveDraft",
+      "method": "POST",
+      "path": "/api/rules/draft",
+      "status": "wired",
+      "pages": ["rule_editor"],
+      "note": "Wired from rule_editor"
+    },
+    {
+      "id": "addFixture",
+      "method": "POST",
+      "path": "/api/rules/:versionId/fixtures",
+      "status": "wired",
+      "pages": ["rule_editor"],
+      "note": "Wired from rule_editor pass+fail"
+    },
+    {
+      "id": "runFixtures",
+      "method": "POST",
+      "path": "/api/rules/:versionId/run-fixtures",
+      "status": "wired",
+      "pages": ["rule_editor"],
+      "note": "Wired from rule_editor"
+    },
+    {
+      "id": "publish",
+      "method": "POST",
+      "path": "/api/rules/:versionId/publish",
+      "status": "wired",
+      "pages": ["rule_editor"],
+      "note": "Wired from rule_editor; disabled until gate; chat cannot publish"
+    },
+    {
+      "id": "ingestStandard",
+      "method": "POST",
+      "path": "/api/standards/ingest",
+      "status": "wired",
+      "pages": ["standard_lib"],
+      "note": "Wired from standard_lib leave-request textarea"
+    },
+    {
+      "id": "searchStandard",
+      "method": "POST",
+      "path": "/api/standards/search",
+      "status": "wired",
+      "pages": ["standard_lib"],
+      "note": "Wired from standard_lib"
+    },
+    {
+      "id": "bindEffectiveVersion",
+      "method": "POST",
+      "path": "/api/packs/:id/effective-version",
+      "status": "wired",
+      "pages": ["standard_lib"],
+      "note": "Wired from standard_lib"
+    },
+    {
+      "id": "addStandardEdge",
+      "method": "POST",
+      "path": "/api/standards/edges",
+      "status": "wired",
+      "pages": ["standard_lib"],
+      "note": "Wired from standard_lib; kind from dict standard_edge_kind"
+    },
+    {
+      "id": "listJobs",
+      "method": "GET",
+      "path": "/api/jobs",
+      "status": "wired",
+      "pages": ["job_upload", "check_findings", "pending_review"],
+      "note": "Wired from job_upload / check_findings / pending_review via apps/web src/services/http.ts"
+    },
+    {
+      "id": "runFixtureJob",
+      "method": "POST",
+      "path": "/api/jobs/fixture",
+      "status": "wired",
+      "pages": ["job_upload"],
+      "note": "Wired from job_upload (ok + reversed fixtures)"
+    },
+    {
+      "id": "appendChat",
+      "method": "POST",
+      "path": "/api/chat",
+      "status": "wired",
+      "pages": [
+        "job_upload",
+        "check_findings",
+        "pending_review",
+        "project_home",
+        "template_annotate",
+        "rule_editor",
+        "standard_lib",
+        "volume_preview"
+      ],
+      "note": "Wired via shared StepChat.vue POST /api/chat; audit is read-only and does not send. HITL does not write Receipt / submit / publish / save boxes."
+    },
+    {
+      "id": "confirmNext",
+      "method": "POST",
+      "path": "/api/jobs/:id/confirm-next",
+      "status": "wired",
+      "pages": ["job_upload", "check_findings"],
+      "note": "Wired: job_upload advances HITL machine; check_findings checking → pending"
+    },
+    {
+      "id": "listProposals",
+      "method": "GET",
+      "path": "/api/proposals",
+      "status": "wired",
+      "pages": ["pending_review"],
+      "note": "Wired from pending_review"
+    },
+    {
+      "id": "editWording",
+      "method": "PATCH",
+      "path": "/api/proposals/:id",
+      "status": "wired",
+      "pages": ["pending_review"],
+      "note": "Wired from pending_review wording editor"
+    },
+    {
+      "id": "confirmProposal",
+      "method": "POST",
+      "path": "/api/proposals/:id/confirm",
+      "status": "wired",
+      "pages": ["pending_review"],
+      "note": "Wired from pending_review; shows receipt_id; chat cannot confirm"
+    },
+    {
+      "id": "getFindings",
+      "method": "GET",
+      "path": "/api/jobs/:id/findings",
+      "status": "wired",
+      "pages": ["check_findings"],
+      "note": "Wired from check_findings; blocking + clause_id when present"
+    },
+    {
+      "id": "getExtraction",
+      "method": "GET",
+      "path": "/api/jobs/:id/extraction",
+      "status": "wired",
+      "pages": ["check_findings"],
+      "note": "Wired from check_findings extraction JSON panel"
+    },
+    {
+      "id": "previewVolume",
+      "method": "POST",
+      "path": "/api/jobs/:id/volume",
+      "status": "wired",
+      "pages": ["volume_preview"],
+      "note": "Wired from volume_preview; tree.submitted forced false; submit disabled"
+    },
+    {
+      "id": "getVolumePreview",
+      "method": "GET",
+      "path": "/api/jobs/:id/volume",
+      "status": "wired",
+      "pages": ["volume_preview"],
+      "note": "Wired from volume_preview; POST if GET 404"
+    },
+    {
+      "id": "getTrace",
+      "method": "GET",
+      "path": "/api/audit/:traceId",
+      "status": "wired",
+      "pages": ["audit_trace"],
+      "note": "Wired from audit_trace; only event_type=receipt shown as persisted"
+    },
+    {
+      "id": "listStepChats",
+      "method": "GET",
+      "path": "/api/audit/:traceId/chats",
+      "status": "wired",
+      "pages": ["audit_trace"],
+      "note": "Wired from audit_trace read-only; no sending utterances"
+    },
+    {
+      "id": "pendingMount",
+      "method": "POST",
+      "path": "/adapter/pending-mount",
+      "status": "wired",
+      "pages": ["pending_review"],
+      "note": "Wired from pending_review adapter probe; distinct from proposal Receipt"
+    }
+  ]
+}

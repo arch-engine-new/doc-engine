@@ -1,6 +1,6 @@
 ---
 ---
-<!-- apt-template-version: 10.6.10 -->
+<!-- apt-template-version: 10.9.0 -->
 # $apt-app-connect — App 原生开发全流程
 
 复制原型到原生目标仓 → 消费**像素级规格载体** + native-bindings → 迁移清单 + Connect Ledger（含 **`platform.json`**）→ **connect-gate 强契约** → **先按 feature 补后端** → 再 mock→API / 原生对接 → 验收闭环。

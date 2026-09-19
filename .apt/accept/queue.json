@@ -1,0 +1,18 @@
+{
+  "createdAt": "2026-09-19T10:00:00.000Z",
+  "mode": "page",
+  "batchSize": 5,
+  "baseUrl": "http://localhost:5173",
+  "scenario": "网上公开《建设工程质量管理条例》（国务院令第279号，2019年第二次修订）入库 Qdrant 向量库并按 standard_lib page.logic 验收",
+  "pages": ["standard_lib"],
+  "deferred": [
+    "job_upload",
+    "check_findings",
+    "pending_review",
+    "rule_editor",
+    "project_home",
+    "template_annotate",
+    "volume_preview",
+    "audit_trace"
+  ]
+}

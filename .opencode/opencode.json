@@ -9,6 +9,7 @@
         "C:\\Users\\weilt\\.apt\\mcp-server\\dist\\index.js"
       ],
       "enabled": true,
+      "timeout": 120000,
       "environment": {
         "APT_PROJECT_ROOT": "D:\\software\\doc-engine"
       }

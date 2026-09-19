@@ -1,0 +1,8 @@
+{
+  "pageId": "agent-runtime-control",
+  "title": "Agent Runtime 控制面",
+  "capabilities": [],
+  "signals": [],
+  "sourcePath": "designs/v0/agent-runtime-control/page.logic.md",
+  "contentHash": "329020dea80d9468352bacd5837c66d9f5aeef354fd901d3046f0cc33e139e9d"
+}

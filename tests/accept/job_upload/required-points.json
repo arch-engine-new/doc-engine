@@ -1,0 +1,18 @@
+{
+  "pageId": "job_upload",
+  "source": "designs/v0/job_upload/page.logic.md",
+  "points": [
+    { "id": "RP-01", "kind": "view_load", "logicAnchor": "§元信息/主视图 /jobs 任务列表", "caseId": "C-01" },
+    { "id": "RP-02", "kind": "dropdown", "logicAnchor": "§操作明细/listDocTypes 文档类型下拉", "caseId": "C-02" },
+    { "id": "RP-03", "kind": "dropdown", "logicAnchor": "§操作明细/listTemplates 关联模板提示", "caseId": "C-03" },
+    { "id": "RP-04", "kind": "validation", "logicAnchor": "§主流程 未选类型禁止上传", "caseId": "C-04" },
+    { "id": "RP-05", "kind": "upload", "logicAnchor": "§操作明细/upload examples PDF → Job", "caseId": "C-05" },
+    { "id": "RP-06", "kind": "upload", "logicAnchor": "用户场景：rules/ 法规全书走上传（体积闸门）", "caseId": "C-06" },
+    { "id": "RP-07", "kind": "action", "logicAnchor": "§操作明细/listJobs 列表含 file_name/status/trace_id", "caseId": "C-07" },
+    { "id": "RP-08", "kind": "action", "logicAnchor": "§操作明细/openFindings 行点击 → /jobs/:id/findings", "caseId": "C-08" },
+    { "id": "RP-09", "kind": "action", "logicAnchor": "§操作明细/openStepChat 每条 Job 可对话", "caseId": "C-09" },
+    { "id": "RP-10", "kind": "action", "logicAnchor": "§操作明细/confirmNext 同意下一步", "caseId": "C-10" },
+    { "id": "RP-11", "kind": "dropdown", "logicAnchor": "状态筛选 job_status 字典", "caseId": "C-11" },
+    { "id": "RP-12", "kind": "state", "logicAnchor": "§状态与 Job.status 一致（checking/pending/failed 可见）", "caseId": "C-12" }
+  ]
+}

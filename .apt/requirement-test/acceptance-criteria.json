@@ -1,0 +1,31 @@
+{
+  "source": "docs/apt/plans/2026-09-19-f3-zhipu-prequery-plan.md",
+  "extractedAt": "2026-09-19T10:58:00.000Z",
+  "slice": "F-3",
+  "criteria": [
+    {
+      "id": "AC-1",
+      "description": "liveRetrievePorts().prequery 为 ZhipuPrequery",
+      "verifyMethod": "npx vitest run test/live-zhipu-prequery.test.ts（assembles ZhipuPrequery when LLM config is present）；读 live-ports.ts 装配行",
+      "relatedFiles": ["packages/core-engine/src/retrieve/live-ports.ts"],
+      "passed": true,
+      "attempts": 0
+    },
+    {
+      "id": "AC-2",
+      "description": "缺 LLM 配置显式失败，不静默 FakePrequery",
+      "verifyMethod": "同测试 throws when LLM is unconfigured；源码 requireConfiguredLlm 对 Unconfigured/Fake throw",
+      "relatedFiles": ["packages/core-engine/src/retrieve/live-ports.ts"],
+      "passed": true,
+      "attempts": 0
+    },
+    {
+      "id": "AC-3",
+      "description": "单测仍可注入 FakePrequery",
+      "verifyMethod": "live-zhipu-prequery.test.ts still allows FakePrequery；standard-rag.test.ts 仍注入 FakePrequery 且绿",
+      "relatedFiles": ["packages/core-engine/src/retrieve/prequery.ts"],
+      "passed": true,
+      "attempts": 0
+    }
+  ]
+}

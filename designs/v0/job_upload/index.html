@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>上传与任务</title>
+  <link rel="stylesheet" href="../styles/tokens.css" />
+  <link rel="stylesheet" href="../styles/global.css" />
+</head>
+<body data-step="inspecting" data-trace="trc_bad_002">
+<nav class="app-nav">
+  <span class="brand">工程资料核心引擎</span>
+  <a href="../project_home/index.html">项目</a>
+  <a href="../template_annotate/index.html">模板</a>
+  <a href="../rule_editor/index.html">规则</a>
+  <a href="../standard_lib/index.html">标准库</a>
+  <a class="active" href="../job_upload/index.html">任务</a>
+  <a href="../pending_review/index.html">待审</a>
+  <a href="../check_findings/index.html">检查</a>
+  <a href="../volume_preview/index.html">组卷</a>
+  <a href="../audit_trace/index.html">审计</a>
+</nav>
+<div class="wrap">
+  <h1>上传与任务</h1>
+  <p class="sub">Walking Skeleton 主入口。状态：uploaded → inspecting → extracting → checking → pending / previewed / failed。</p>
+  <p><button class="btn">上传 PDF</button> <span class="tag">允许文本层 PDF 夹具</span></p>
+  <div class="card">
+    <table>
+      <thead><tr><th>Job</th><th>状态</th><th>trace_id</th><th></th></tr></thead>
+      <tbody>
+        <tr>
+          <td>收货单-合规.pdf</td>
+          <td><span class="tag ok">checking</span></td>
+          <td><a href="../audit_trace/index.html">trc_ok_001</a></td>
+          <td><a href="../check_findings/index.html">检查结果</a></td>
+        </tr>
+        <tr>
+          <td>收货单-日期颠倒.pdf</td>
+          <td><span class="tag bad">pending</span></td>
+          <td><a href="../audit_trace/index.html">trc_bad_002</a></td>
+          <td><a href="../check_findings/index.html">检查结果</a></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+<script src="../mock/step-chat.js"></script>
+</body>
+</html>

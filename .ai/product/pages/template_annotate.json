@@ -1,0 +1,44 @@
+{
+  "pageId": "template_annotate",
+  "title": "模板标注",
+  "capabilities": [
+    "dict_options",
+    "iot",
+    "list"
+  ],
+  "signals": [
+    {
+      "kind": "list",
+      "excerpt": "| loadEffectiveBoxes | 进入页 | 加载 EffectiveFieldBox[]（继承基字段，左侧只读表格） | 无 | 全部登录用户 |",
+      "path": "designs/v0/template_annotate/page.logic.md"
+    },
+    {
+      "kind": "iot",
+      "excerpt": "| 无 | 本页无筛选/分页参数（route 为 /templates/:id/annotate） | — |",
+      "path": "designs/v0/template_annotate/page.logic.md"
+    },
+    {
+      "kind": "dict_options",
+      "excerpt": "| field_key（excel 映射） | Select | MOCK→API | listEffectiveFields | field_key | field_key (value_type) | 无 | mount |",
+      "path": "designs/v0/template_annotate/page.logic.md"
+    }
+  ],
+  "sourcePath": "designs/v0/template_annotate/page.logic.md",
+  "contentHash": "38ab26e798139fdacd30d5db60ab055ea900f61496a7ebf1429aaec17e3a8a17",
+  "optionSources": [
+    {
+      "field": "field_key（excel 映射）",
+      "control": "Select",
+      "source": "MOCK→API",
+      "intentApiOrDictType": "listEffectiveFields"
+    }
+  ],
+  "archObligations": [
+    {
+      "kind": "list_api",
+      "ref": "listEffectiveFields",
+      "storage": "db_required",
+      "pageId": "template_annotate"
+    }
+  ]
+}

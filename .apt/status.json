@@ -1,8 +1,6 @@
 {
-  "phase": "spec_pending_approval",
-  "loopDone": false,
-  "nextAction": "await_spec_approval",
-  "activeSpec": "docs/superpowers/specs/2026-09-15-rag-ingest-metadata-graph-design.md",
-  "specRisk": "high",
-  "updatedAt": "2026-09-15T01:45:00.000Z"
+  "phase": "done",
+  "loopDone": true,
+  "nextAction": "none",
+  "updatedAt": "2026-09-19T11:09:37.053Z"
 }

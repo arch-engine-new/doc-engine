@@ -2,7 +2,7 @@
 description: 从 brainstorming spec 生成 APT 实现方案（MCP 寻址 + 可执行任务），不写代码
 model: sonnet
 ---
-<!-- apt-template-version: 10.6.10 -->
+<!-- apt-template-version: 10.9.0 -->
 
 你是 APT 规划代理。用户已完成 brainstorming 并产出 **design spec**。你的任务是：基于 spec 做 **MCP 硬寻址**，写出 **双 Part 实现方案**，保存到 `docs/apt/plans/`，**禁止在本命令中写生产代码**。
 
@@ -49,7 +49,7 @@ Preflight **PASS** 后、§0 Phase A / §0.1 读 spec **之前**：
 ## 0.1 读取 spec + 迁移清单（允许）
 
 1. 读取用户给出的 **spec 文件**（仅此文件与后续要写入的 plan 文件可直接读；**禁止**未经 MCP 打开 `.ai/` 下其它文件）。
-2. 提取：**Goal**、范围、非目标、依赖清单、是否含前端 UI、验收标准。
+2. 提取：**Goal**、范围、非目标、依赖清单、是否含前端 UI、验收标准、**需求锁定表（如有）**：Rn / 来源 / 可判定验收 / 优先级。
 3. 从 spec 推导本功能所需的每一个技术依赖（接口、组件、类、工具、枚举、API、语义 UI 组件等），列出名称。
 4. **若 spec 引用了 `designs/v0/<page-id>/migration.md`（来自 `/apt-frontend-connect`），必须逐个打开读取每份迁移清单**。迁移清单是 Part 2 Task 的核心实现依据：
    - **API 接入表**：每个 API 意向名的寻址结果（已有/新建）→ 对应 Part 2 的 B1 Task
@@ -57,6 +57,8 @@ Preflight **PASS** 后、§0 Phase A / §0.1 读 spec **之前**：
    - **Mock 清理表**：要去的 mock 项 → 对应 Part 2 的 B2 Task
    - **路由配置**：route → router 配置 → 对应 Part 2 的 B2 Task
    - **增量迁移清单**（🔄 updated 页面）：只实现变更部分，不全量重做
+5. **红队字段校验（v10.8 新增）**：spec `risk: high` ∧ `Status: approved` 而 frontmatter 无 `redteam` 字段，或 `unresolved > 0` 且正文无「呈递用户」节 → 提示先补红队（运行 `node scripts/check-spec-redteam.cjs <spec路径>` 复核），不中断规划流程（提示级，非门禁级——门禁由 brainstorm 步骤 5.5/7 与脚本承担）。
+   <!-- 注：条文全副本同步（含 templates SSOT md，matrix rootZ=EQ 不变量）；机器复核唯一口径 = scripts/check-spec-redteam.cjs（FAIL 原因码 missing-field / no-section）。 -->
 
 ## 0.5 设计寻址（spec 含前端 UI 时必须）
 
@@ -130,6 +132,12 @@ Preflight **PASS** 后、§0 Phase A / §0.1 读 spec **之前**：
 |-----------|----------|------|
 
 ### 1.5 风险与未决项
+
+### 1.6 需求锁定对照（spec 含锁定表时必填，无则写 N/A）
+（Rn→Task **多对多映射**：一个 Rn 可由多个 Task 协作完成，一个 Task 可覆盖多个 Rn；spec 无锁定表 → 写 N/A，行为与现状一致）
+
+| Rn | 优先级 | 覆盖 Task | 备注 |
+|----|--------|-----------|------|
 
 ---
 
@@ -220,6 +228,7 @@ Preflight **PASS** 后、§0 Phase A / §0.1 读 spec **之前**：
 - 是否需要 TDD 按 spec 约定，默认关键逻辑有测试步骤
 - **不要**写「提交 git」步骤（子 Agent 每 Task 自动 commit）
 - **rollup spec：** 每个 `page-id` 须含 B1/B1.5/B2/B3 能力（可合并为 fewer Task，但不得省略 B1.5 测试用例规划）；多页按依赖顺序串列 Task
+- 涉及 spec 需求锁定表 Rn 的 Task，其 **Verify 行必须引用对应 Rn 的验收标准**（照抄或具体化为可判定命令 / 检查，禁止空写「测试通过」）
 
 ## 3. 交付与门禁
 
@@ -227,6 +236,7 @@ Preflight **PASS** 后、§0 Phase A / §0.1 读 spec **之前**：
 2. 在聊天中用 5–10 行摘要 **Part 1**（寻址结论 + 主要改动文件 + 风险）。
 3. 写明：**请审阅 plan 文件并说「确认」后，使用 `/implement-plan <plan路径>` 开始编码；实现完成后使用 `/verify <plan路径>` 验收。**
 4. **Status** 保持 `draft`，直到用户确认；用户确认后在 plan 内把 `Status` 改为 `approved`（仅改该行，仍不写代码）。
+5. **must 覆盖检查**：对照 spec 需求锁定表，must 项必须被 ≥1 个 Task 覆盖；无法覆盖的列出并给理由（建议回改 spec），**禁止静默丢弃**。无锁定表 → 跳过。
 
 若 spec 与寻址冲突，以 MCP 实证为准，在 Part 1.5 列出需回填 spec 的项。
 

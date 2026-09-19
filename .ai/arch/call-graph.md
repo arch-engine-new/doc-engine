@@ -1,9 +1,99 @@
 # Call Graph
 
-## Nodes (25)
+## Nodes (118)
 
-### Frontend Components (25)
+### Frontend Components (118)
 
+- `component:RouterLink`
+- `component:RouterView`
+- `component:global`
+- `component:DraftBox`
+- `component:EffectiveFieldBoxView`
+- `component:RouterLink`
+- `component:RouterView`
+- `component:global`
+- `component:DraftBox`
+- `component:EffectiveFieldBoxView`
+- `component:RouterLink`
+- `component:RouterView`
+- `component:global`
+- `component:DraftBox`
+- `component:EffectiveFieldBoxView`
+- `component:RouterLink`
+- `component:RouterView`
+- `component:global`
+- `component:DraftBox`
+- `component:EffectiveFieldBoxView`
+- `component:RouterLink`
+- `component:RouterView`
+- `component:global`
+- `component:DraftBox`
+- `component:EffectiveFieldBoxView`
+- `component:RouterLink`
+- `component:RouterView`
+- `component:global`
+- `component:DraftBox`
+- `component:EffectiveFieldBoxView`
+- `component:RouterLink`
+- `component:RouterView`
+- `component:global`
+- `component:DraftBox`
+- `component:EffectiveFieldBoxView`
+- `component:RouterLink`
+- `component:RouterView`
+- `component:global`
+- `component:DraftBox`
+- `component:EffectiveFieldBoxView`
+- `component:RouterLink`
+- `component:RouterView`
+- `component:global`
+- `component:DraftBox`
+- `component:EffectiveFieldBoxView`
+- `component:RouterLink`
+- `component:RouterView`
+- `component:global`
+- `component:DraftBox`
+- `component:EffectiveFieldBoxView`
+- `component:RouterLink`
+- `component:RouterView`
+- `component:global`
+- `component:DraftBox`
+- `component:EffectiveFieldBoxView`
+- `component:RouterLink`
+- `component:RouterView`
+- `component:global`
+- `component:DraftBox`
+- `component:EffectiveFieldBoxView`
+- `component:RouterLink`
+- `component:RouterView`
+- `component:global`
+- `component:DraftBox`
+- `component:EffectiveFieldBoxView`
+- `component:RouterLink`
+- `component:RouterView`
+- `component:global`
+- `component:DraftBox`
+- `component:EffectiveFieldBoxView`
+- `component:RouterLink`
+- `component:RouterView`
+- `component:global`
+- `component:DraftBox`
+- `component:EffectiveFieldBoxView`
+- `component:RouterLink`
+- `component:RouterView`
+- `component:global`
+- `component:DraftBox`
+- `component:EffectiveFieldBoxView`
+- `component:RouterLink`
+- `component:RouterView`
+- `component:global`
+- `component:DraftBox`
+- `component:EffectiveFieldBoxView`
+- `component:RouterLink`
+- `component:RouterView`
+- `component:global`
+- `component:DraftBox`
+- `component:EffectiveFieldBoxView`
 - `component:App`
   - apps/web/src/App.vue | module: web
 - `component:demo-session`
@@ -27,6 +117,12 @@
   - apps/web/src/views/volume_preview/index.vue | module: web
 - `component:UploadToolbar`
   - apps/web/src/views/job_upload/UploadToolbar.vue | module: web
+- `component:SignatureConfirmDialog`
+  - apps/web/src/views/pending_review/SignatureConfirmDialog.vue | module: web
+- `component:SignatureReviewPanel`
+  - apps/web/src/views/pending_review/SignatureReviewPanel.vue | module: web
+- `component:WordingReviewPanel`
+  - apps/web/src/views/pending_review/WordingReviewPanel.vue | module: web
 - `component:DocumentGapsPanel`
   - apps/web/src/views/project_home/DocumentGapsPanel.vue | module: web
 - `component:ProjectHomeDialogs`
@@ -35,12 +131,12 @@
   - apps/web/src/views/project_home/ProjectPackTable.vue | module: web
 - `component:useProjectHome`
   - apps/web/src/views/project_home/useProjectHome.ts | module: web
-- `component:SignatureConfirmDialog`
-  - apps/web/src/views/pending_review/SignatureConfirmDialog.vue | module: web
-- `component:SignatureReviewPanel`
-  - apps/web/src/views/pending_review/SignatureReviewPanel.vue | module: web
-- `component:WordingReviewPanel`
-  - apps/web/src/views/pending_review/WordingReviewPanel.vue | module: web
+- `component:HitDetailPanel`
+  - apps/web/src/views/standard_lib/HitDetailPanel.vue | module: web
+- `component:PdfTickPanel`
+  - apps/web/src/views/standard_lib/PdfTickPanel.vue | module: web
+- `component:RetrieveHitsTable`
+  - apps/web/src/views/standard_lib/RetrieveHitsTable.vue | module: web
 - `component:ExcelCellMappingPanel`
   - apps/web/src/views/template_annotate/ExcelCellMappingPanel.vue | module: web
 - `component:InheritedFieldsPanel`
@@ -50,9 +146,9 @@
 - `component:DraftBox`
 - `component:EffectiveFieldBoxView`
 
-## Edges (57)
+## Edges (67)
 
-### Imports (41)
+### Imports (48)
 
 - `component:App` -> `component:demo-session` (confidence: high)
 - `component:main` -> `component:App` (confidence: high)
@@ -70,6 +166,13 @@
 - `component:index` -> `component:types` (confidence: high)
 - `component:index` -> `component:UploadToolbar` (confidence: high)
 - `component:UploadToolbar` -> `component:types` (confidence: high)
+- `component:index` -> `component:SignatureConfirmDialog` (confidence: high)
+- `component:index` -> `component:SignatureReviewPanel` (confidence: high)
+- `component:index` -> `component:WordingReviewPanel` (confidence: high)
+- `component:SignatureConfirmDialog` -> `component:types` (confidence: high)
+- `component:SignatureReviewPanel` -> `component:types` (confidence: high)
+- `component:WordingReviewPanel` -> `component:http` (confidence: high)
+- `component:WordingReviewPanel` -> `component:types` (confidence: high)
 - `component:DocumentGapsPanel` -> `component:types` (confidence: high)
 - `component:index` -> `component:DocumentGapsPanel` (confidence: high)
 - `component:index` -> `component:ProjectHomeDialogs` (confidence: high)
@@ -81,13 +184,13 @@
 - `component:useProjectHome` -> `component:demo-session` (confidence: high)
 - `component:useProjectHome` -> `component:http` (confidence: high)
 - `component:useProjectHome` -> `component:types` (confidence: high)
-- `component:index` -> `component:SignatureConfirmDialog` (confidence: high)
-- `component:index` -> `component:SignatureReviewPanel` (confidence: high)
-- `component:index` -> `component:WordingReviewPanel` (confidence: high)
-- `component:SignatureConfirmDialog` -> `component:types` (confidence: high)
-- `component:SignatureReviewPanel` -> `component:types` (confidence: high)
-- `component:WordingReviewPanel` -> `component:http` (confidence: high)
-- `component:WordingReviewPanel` -> `component:types` (confidence: high)
+- `component:HitDetailPanel` -> `component:types` (confidence: high)
+- `component:index` -> `component:HitDetailPanel` (confidence: high)
+- `component:index` -> `component:PdfTickPanel` (confidence: high)
+- `component:index` -> `component:RetrieveHitsTable` (confidence: high)
+- `component:PdfTickPanel` -> `component:types` (confidence: high)
+- `component:RetrieveHitsTable` -> `component:http` (confidence: high)
+- `component:RetrieveHitsTable` -> `component:types` (confidence: high)
 - `component:ExcelCellMappingPanel` -> `component:http` (confidence: high)
 - `component:ExcelCellMappingPanel` -> `component:types` (confidence: high)
 - `component:index` -> `component:InheritedFieldsPanel` (confidence: high)
@@ -96,21 +199,24 @@
 - `component:InheritedFieldsPanel` -> `component:types` (confidence: high)
 - `component:useAnnotateCanvas` -> `component:types` (confidence: high)
 
-### Template (16)
+### Template (19)
 
 - `component:App` -> `component:RouterLink` (confidence: high)
 - `component:App` -> `component:RouterView` (confidence: high)
 - `component:index` -> `component:StepChat` (confidence: high)
 - `component:index` -> `component:RouterLink` (confidence: high)
 - `component:index` -> `component:UploadToolbar` (confidence: high)
-- `component:index` -> `component:DocumentGapsPanel` (confidence: high)
-- `component:index` -> `component:ProjectHomeDialogs` (confidence: high)
-- `component:index` -> `component:ProjectPackTable` (confidence: high)
-- `component:ProjectPackTable` -> `component:RouterLink` (confidence: high)
 - `component:index` -> `component:SignatureConfirmDialog` (confidence: high)
 - `component:index` -> `component:SignatureReviewPanel` (confidence: high)
 - `component:index` -> `component:WordingReviewPanel` (confidence: high)
 - `component:SignatureReviewPanel` -> `component:RouterLink` (confidence: high)
 - `component:WordingReviewPanel` -> `component:RouterLink` (confidence: high)
+- `component:index` -> `component:DocumentGapsPanel` (confidence: high)
+- `component:index` -> `component:ProjectHomeDialogs` (confidence: high)
+- `component:index` -> `component:ProjectPackTable` (confidence: high)
+- `component:ProjectPackTable` -> `component:RouterLink` (confidence: high)
+- `component:index` -> `component:HitDetailPanel` (confidence: high)
+- `component:index` -> `component:PdfTickPanel` (confidence: high)
+- `component:index` -> `component:RetrieveHitsTable` (confidence: high)
 - `component:index` -> `component:DraftBox` (confidence: high)
 - `component:index` -> `component:EffectiveFieldBoxView` (confidence: high)

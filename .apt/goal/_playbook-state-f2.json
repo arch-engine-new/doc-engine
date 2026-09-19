@@ -1,0 +1,73 @@
+{
+  "goalSha": "c3fd9792406ec12e59276598ba55d5f51f971cd4291c9a111ba66ddb94b56507",
+  "source": {
+    "path": ".apt/batch/queue.md",
+    "sha": "0ad784d2854d628ee6ee16d864b5e91aed018e99e38832968487a003ccad58ed"
+  },
+  "createdAt": "2026-09-19T07:25:00.000Z",
+  "programMode": true,
+  "cursor": 0,
+  "slices": [
+    {
+      "id": "F-2",
+      "description": "替换 the live 条款 embedding 为百炼 text-embedding-v3 for 配置人员",
+      "status": "running",
+      "steps": [
+        {
+          "id": "PB-1",
+          "action": "auto_brainstorm",
+          "done-when": "docs/superpowers/specs/ 下落盘 F-2 spec（DashScope text-embedding-v3、async Embeddings、重建 Qdrant 维度、密钥走 DASHSCOPE_API_KEY）；风险分级完成",
+          "status": "done",
+          "attempts": 1,
+          "notes": "spec=docs/superpowers/specs/2026-09-19-dashscope-text-embedding-v3-design.md risk=low auto_approved"
+        },
+        {
+          "id": "PB-2",
+          "action": "plan_from_spec",
+          "done-when": "docs/apt/plans/ 下落盘 F-2 方案，含测试案例规划；Tasks 可执行",
+          "status": "done",
+          "attempts": 1,
+          "notes": "plan=docs/apt/plans/2026-09-19-dashscope-text-embedding-v3-plan.md Status=approved"
+        },
+        {
+          "id": "PB-3",
+          "action": "implement_plan",
+          "done-when": "liveRetrievePorts.embed 为 v3；Qdrant clauses 维度非 48；现有条款重嵌入；缺 key 不回退 Hash；源码无 apiKey；CI 仍可用 HashEmbeddings",
+          "status": "running",
+          "attempts": 1
+        },
+        {
+          "id": "PB-4",
+          "action": "verify",
+          "done-when": ".apt/verify/latest.md 对照本片 plan Overall PASS",
+          "status": "pending"
+        },
+        {
+          "id": "PB-5",
+          "action": "finish_feature",
+          "done-when": "契约 Embeddings 已登记；audit/refresh 完成；logic-sync 不因本片漂移 FAIL",
+          "status": "pending"
+        }
+      ]
+    }
+  ],
+  "steps": [
+    {
+      "id": "F-2:PB-1",
+      "action": "auto_brainstorm",
+      "done-when": "docs/superpowers/specs/ 下落盘 F-2 spec（DashScope text-embedding-v3、async Embeddings、重建 Qdrant 维度、密钥走 DASHSCOPE_API_KEY）；风险分级完成",
+      "status": "done",
+      "attempts": 1,
+      "notes": "spec=docs/superpowers/specs/2026-09-19-dashscope-text-embedding-v3-design.md risk=low auto_approved"
+    },
+    {
+      "id": "F-2:PB-2",
+      "action": "plan_from_spec",
+      "done-when": "docs/apt/plans/ 下落盘 F-2 方案，含测试案例规划；Tasks 可执行",
+      "status": "done",
+      "attempts": 1,
+      "notes": "plan=docs/apt/plans/2026-09-19-dashscope-text-embedding-v3-plan.md Status=approved"
+    }
+  ],
+  "note": "F-2 全链；accept-batch 缺省 defer，无 ACCEPT-BATCH 哨兵"
+}

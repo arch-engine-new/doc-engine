@@ -74,133 +74,133 @@
       "name": "GraphCompileError",
       "description": "",
       "tsFilePath": "packages/agent-runtime/src/graph/compiler.ts",
-      "registeredAt": "2026-08-30T06:56:05.959Z",
+      "registeredAt": "2026-09-10T06:52:30.929Z",
       "source": "auto-scan"
     },
     {
       "name": "GraphNode",
       "description": "",
       "tsFilePath": "packages/agent-runtime/src/graph/types.ts",
-      "registeredAt": "2026-08-30T06:56:05.959Z",
+      "registeredAt": "2026-09-10T06:52:30.929Z",
       "source": "auto-scan"
     },
     {
       "name": "HitlGateway",
       "description": "",
       "tsFilePath": "packages/agent-runtime/src/hitl/gateway.ts",
-      "registeredAt": "2026-08-30T06:56:05.959Z",
+      "registeredAt": "2026-09-10T06:52:30.929Z",
       "source": "auto-scan"
     },
     {
       "name": "EventType",
       "description": "",
       "tsFilePath": "packages/agent-runtime/src/obs/event-log.ts",
-      "registeredAt": "2026-08-30T06:56:05.959Z",
+      "registeredAt": "2026-09-10T06:52:30.929Z",
       "source": "auto-scan"
     },
     {
       "name": "EventLog",
       "description": "",
       "tsFilePath": "packages/agent-runtime/src/obs/event-log.ts",
-      "registeredAt": "2026-08-30T06:56:05.959Z",
+      "registeredAt": "2026-09-10T06:52:30.929Z",
       "source": "auto-scan"
     },
     {
       "name": "SQLiteStateStore",
       "description": "",
       "tsFilePath": "packages/agent-runtime/src/persistence/sqlite-store.ts",
-      "registeredAt": "2026-08-30T06:56:05.959Z",
+      "registeredAt": "2026-09-10T06:52:30.929Z",
       "source": "auto-scan"
     },
     {
       "name": "StoredCheckpoint",
       "description": "",
       "tsFilePath": "packages/agent-runtime/src/persistence/types.ts",
-      "registeredAt": "2026-08-30T06:56:05.959Z",
+      "registeredAt": "2026-09-10T06:52:30.929Z",
       "source": "auto-scan"
     },
     {
       "name": "StoredToolCall",
       "description": "",
       "tsFilePath": "packages/agent-runtime/src/persistence/types.ts",
-      "registeredAt": "2026-08-30T06:56:05.959Z",
+      "registeredAt": "2026-09-10T06:52:30.929Z",
       "source": "auto-scan"
     },
     {
       "name": "StoredRunEvent",
       "description": "",
       "tsFilePath": "packages/agent-runtime/src/persistence/types.ts",
-      "registeredAt": "2026-08-30T06:56:05.959Z",
+      "registeredAt": "2026-09-10T06:52:30.929Z",
       "source": "auto-scan"
     },
     {
       "name": "StoredHitlInterrupt",
       "description": "",
       "tsFilePath": "packages/agent-runtime/src/persistence/types.ts",
-      "registeredAt": "2026-08-30T06:56:05.959Z",
+      "registeredAt": "2026-09-10T06:52:30.929Z",
       "source": "auto-scan"
     },
     {
       "name": "CheckpointService",
       "description": "",
       "tsFilePath": "packages/agent-runtime/src/runtime/checkpoint-service.ts",
-      "registeredAt": "2026-08-30T06:56:05.959Z",
+      "registeredAt": "2026-09-10T06:52:30.929Z",
       "source": "auto-scan"
     },
     {
       "name": "NodeResult",
       "description": "",
       "tsFilePath": "packages/agent-runtime/src/runtime/node-executors.ts",
-      "registeredAt": "2026-08-30T06:56:05.959Z",
+      "registeredAt": "2026-09-10T06:52:30.929Z",
       "source": "auto-scan"
     },
     {
       "name": "NodeExecutor",
       "description": "",
       "tsFilePath": "packages/agent-runtime/src/runtime/node-executors.ts",
-      "registeredAt": "2026-08-30T06:56:05.959Z",
+      "registeredAt": "2026-09-10T06:52:30.929Z",
       "source": "auto-scan"
     },
     {
       "name": "SchedulerOptions",
       "description": "",
       "tsFilePath": "packages/agent-runtime/src/runtime/scheduler.ts",
-      "registeredAt": "2026-08-30T06:56:05.959Z",
+      "registeredAt": "2026-09-10T06:52:30.929Z",
       "source": "auto-scan"
     },
     {
       "name": "ExecutionContext",
       "description": "",
       "tsFilePath": "packages/agent-runtime/src/runtime/state.ts",
-      "registeredAt": "2026-08-30T06:56:05.959Z",
+      "registeredAt": "2026-09-10T06:52:30.929Z",
       "source": "auto-scan"
     },
     {
       "name": "RunMetadata",
       "description": "",
       "tsFilePath": "packages/agent-runtime/src/runtime/state.ts",
-      "registeredAt": "2026-08-30T06:56:05.959Z",
+      "registeredAt": "2026-09-10T06:52:30.929Z",
       "source": "auto-scan"
     },
     {
       "name": "NodeExecutionRecord",
       "description": "",
       "tsFilePath": "packages/agent-runtime/src/runtime/state.ts",
-      "registeredAt": "2026-08-30T06:56:05.959Z",
+      "registeredAt": "2026-09-10T06:52:30.929Z",
       "source": "auto-scan"
     },
     {
       "name": "ChannelMap",
       "description": "",
       "tsFilePath": "packages/agent-runtime/src/runtime/state.ts",
-      "registeredAt": "2026-08-30T06:56:05.959Z",
+      "registeredAt": "2026-09-10T06:52:30.929Z",
       "source": "auto-scan"
     },
     {
       "name": "ToolRuntime",
       "description": "",
       "tsFilePath": "packages/agent-runtime/src/tools/runtime.ts",
-      "registeredAt": "2026-08-30T06:56:05.959Z",
+      "registeredAt": "2026-09-10T06:52:30.929Z",
       "source": "auto-scan"
     },
     {
@@ -221,7 +221,7 @@
       "name": "LlmProvider",
       "description": "",
       "tsFilePath": "packages/agent-runtime/src/llm/provider.ts",
-      "registeredAt": "2026-08-30T06:56:05.959Z",
+      "registeredAt": "2026-09-10T06:52:30.929Z",
       "source": "auto-scan"
     },
     {
@@ -233,9 +233,9 @@
     },
     {
       "name": "FindingRow",
-      "description": "Rule hit row; blocking and optional clause_id for standard fit",
+      "description": "Rule hit row; one clause_id per row. Table fit expands to FindingRow[] so each SUPPORTS clause is its own grounded finding.",
       "tsFilePath": "docs/schema/generated/core-engine-rows.ts",
-      "registeredAt": "2026-08-26T11:20:06.278Z",
+      "registeredAt": "2026-09-15T08:10:31.270Z",
       "source": "manual"
     },
     {
@@ -541,9 +541,9 @@
     },
     {
       "name": "StandardLibrary",
-      "description": "Standard library orchestrator: ingest by heading, search via Qdrant/Neo4j ports + IndependentReranker (not chat complete), attach Finding.clause_id only from retrieve hits. No industry presets.",
+      "description": "Ingest by layout units; searchSemantic keeps tableHits. reindexVectorsFromLedger walks ledger LayoutUnits and upserts with unit_id/file_name/chunk_kind payload; embed() is always awaited; table payload must not carry a non-empty clause_id. attachHit rejects table/annex unit ids. Never invent clause_id.",
       "tsFilePath": "packages/core-engine/src/retrieve/library.ts",
-      "registeredAt": "2026-08-27T04:34:17.672Z",
+      "registeredAt": "2026-09-19T08:37:32.612Z",
       "source": "manual"
     },
     {
@@ -555,9 +555,9 @@
     },
     {
       "name": "RetrieveHit",
-      "description": "Retrieve hit alias of SearchHit: clause_id + standard_version_id + span + retrieve_path and optional graph path",
+      "description": "Provenance retrieve hit with optional ledger heading/body for detail and chat; table/annex clause_id stays null; hits table must not render body.",
       "tsFilePath": "packages/core-engine/src/retrieve/ports.ts",
-      "registeredAt": "2026-08-27T04:34:19.940Z",
+      "registeredAt": "2026-09-19T06:36:10.739Z",
       "source": "manual"
     },
     {
@@ -571,92 +571,92 @@
       "name": "StandardDocRow",
       "description": "",
       "tsFilePath": "docs/schema/generated/core-engine-rows.ts",
-      "registeredAt": "2026-08-30T06:56:05.959Z",
+      "registeredAt": "2026-09-10T06:52:30.929Z",
       "source": "auto-scan"
     },
     {
       "name": "StandardVersionRow",
       "description": "",
       "tsFilePath": "docs/schema/generated/core-engine-rows.ts",
-      "registeredAt": "2026-08-30T06:56:05.959Z",
+      "registeredAt": "2026-09-10T06:52:30.929Z",
       "source": "auto-scan"
     },
     {
       "name": "GraphEdge",
       "description": "",
       "tsFilePath": "packages/agent-runtime/src/graph/types.ts",
-      "registeredAt": "2026-08-30T06:56:05.959Z",
+      "registeredAt": "2026-09-10T06:52:30.929Z",
       "source": "auto-scan"
     },
     {
       "name": "HashEmbeddings",
       "description": "",
       "tsFilePath": "packages/core-engine/src/retrieve/embeddings.ts",
-      "registeredAt": "2026-08-30T06:56:05.959Z",
+      "registeredAt": "2026-09-10T06:52:30.929Z",
       "source": "auto-scan"
     },
     {
       "name": "VectorPoint",
-      "description": "",
+      "description": "Vector store point: id + embedding + provenance payload. Upsert must run assertVectorPayload; stores hash/return unit_id and must not backfill clause_id from point.id.",
       "tsFilePath": "packages/core-engine/src/retrieve/ports.ts",
-      "registeredAt": "2026-08-30T06:56:05.959Z",
-      "source": "auto-scan"
+      "registeredAt": "2026-09-15T06:01:23.358Z",
+      "source": "manual"
     },
     {
       "name": "VectorHit",
       "description": "",
       "tsFilePath": "packages/core-engine/src/retrieve/ports.ts",
-      "registeredAt": "2026-08-30T06:56:05.959Z",
+      "registeredAt": "2026-09-10T06:52:30.929Z",
       "source": "auto-scan"
     },
     {
       "name": "VectorStore",
       "description": "",
       "tsFilePath": "packages/core-engine/src/retrieve/ports.ts",
-      "registeredAt": "2026-08-30T06:56:05.959Z",
+      "registeredAt": "2026-09-10T06:52:30.929Z",
       "source": "auto-scan"
     },
     {
       "name": "GraphStore",
-      "description": "",
+      "description": "Graph port with upsertNode(label, id, props) so LayoutUnit is not MERGEd into :Clause. upsertEdge MERGEs by endpoint label; queryPath(kind) keeps SUPERSEDES paths free of PARENT_OF.",
       "tsFilePath": "packages/core-engine/src/retrieve/ports.ts",
-      "registeredAt": "2026-08-30T06:56:05.959Z",
-      "source": "auto-scan"
+      "registeredAt": "2026-09-15T06:16:40.308Z",
+      "source": "manual"
     },
     {
       "name": "Embeddings",
-      "description": "",
+      "description": "Retrieve embedding port. embed(text) returns number[] | Promise<number[]> so live HTTP embedding can be async; HashEmbeddings/FixtureEmbeddings may still return a sync 48-dim vector for CI.",
       "tsFilePath": "packages/core-engine/src/retrieve/ports.ts",
-      "registeredAt": "2026-08-30T06:56:05.959Z",
-      "source": "auto-scan"
+      "registeredAt": "2026-09-19T07:46:18.495Z",
+      "source": "manual"
     },
     {
       "name": "RetrievePorts",
       "description": "",
       "tsFilePath": "packages/core-engine/src/retrieve/ports.ts",
-      "registeredAt": "2026-08-30T06:56:05.959Z",
+      "registeredAt": "2026-09-10T06:52:30.929Z",
       "source": "auto-scan"
     },
     {
       "name": "ClauseSpan",
       "description": "",
       "tsFilePath": "packages/core-engine/src/retrieve/ports.ts",
-      "registeredAt": "2026-08-30T06:56:05.959Z",
+      "registeredAt": "2026-09-10T06:52:30.929Z",
       "source": "auto-scan"
     },
     {
       "name": "ChatComplete",
       "description": "",
       "tsFilePath": "packages/core-engine/src/retrieve/ports.ts",
-      "registeredAt": "2026-08-30T06:56:05.959Z",
+      "registeredAt": "2026-09-10T06:52:30.929Z",
       "source": "auto-scan"
     },
     {
       "name": "EdgeKind",
-      "description": "",
+      "description": "Graph edge kinds including PARENT_OF, BELONGS_TO, SUPPORTS so LayoutUnit can sit beside Clause without MERGE-as-Clause.",
       "tsFilePath": "packages/core-engine/src/retrieve/ports.ts",
-      "registeredAt": "2026-08-30T06:56:05.959Z",
-      "source": "auto-scan"
+      "registeredAt": "2026-09-15T06:16:41.321Z",
+      "source": "manual"
     },
     {
       "name": "DemoHttpAdapter",
@@ -669,14 +669,14 @@
       "name": "IngestStandardResult",
       "description": "",
       "tsFilePath": "packages/core-engine/src/retrieve/library.ts",
-      "registeredAt": "2026-08-30T06:56:05.959Z",
+      "registeredAt": "2026-09-10T06:52:30.929Z",
       "source": "auto-scan"
     },
     {
       "name": "LedgerStore",
-      "description": "Async ledger interface wrapping SQLite tests and Postgres live",
+      "description": "Async ledger wrapping SQLite tests and Postgres live; layout units and ingest pages keep provenance and index_error separate from OCR failures",
       "tsFilePath": "packages/core-engine/src/persistence/ledger.ts",
-      "registeredAt": "2026-08-28T06:12:44.499Z",
+      "registeredAt": "2026-09-15T05:40:47.345Z",
       "source": "manual"
     },
     {
@@ -702,16 +702,16 @@
     },
     {
       "name": "runPgMigration",
-      "description": "Idempotent apply of docs/schema/generated/core-engine-migration.sql against Postgres via pg",
+      "description": "Idempotent apply of generated Postgres DDL plus ensureRagLayoutColumns for t_clause file_name/page_* on legacy ledgers",
       "tsFilePath": "packages/core-engine/src/persistence/pg-migrate.ts",
-      "registeredAt": "2026-08-28T07:09:38.632Z",
+      "registeredAt": "2026-09-15T05:40:51.312Z",
       "source": "manual"
     },
     {
       "name": "liveRetrievePorts",
-      "description": "Live RetrievePorts: QdrantVectorStore plus Neo4jGraphStore plus HashEmbeddings IndependentReranker FakePrequery; missing env throws at construct",
+      "description": "Live RetrievePorts: Qdrant + Neo4j + DashScope text-embedding-v3; prequery is ZhipuPrequery; rerank is HttpReranker (dedicated HTTP /reranks, not IndependentReranker, does not share embed or llm); missing DASHSCOPE_API_KEY or Unconfigured/Fake LLM throws; never HashEmbeddings or FakePrequery fallback.",
       "tsFilePath": "packages/core-engine/src/retrieve/live-ports.ts",
-      "registeredAt": "2026-08-28T07:09:40.061Z",
+      "registeredAt": "2026-09-19T13:22:19.549Z",
       "source": "manual"
     },
     {
@@ -725,21 +725,21 @@
       "name": "StandardEdgeRow",
       "description": "",
       "tsFilePath": "docs/schema/generated/core-engine-rows.ts",
-      "registeredAt": "2026-08-30T06:56:05.959Z",
+      "registeredAt": "2026-09-10T06:52:30.929Z",
       "source": "auto-scan"
     },
     {
       "name": "FakePrequery",
-      "description": "",
+      "description": "Deterministic prequery: table captions (\\表/\\见\\表/\\附\\表) rewrite to semantic so EXACT_RE cannot steal 8.5.1 from \\表 8.5.1-1.",
       "tsFilePath": "packages/core-engine/src/retrieve/prequery.ts",
-      "registeredAt": "2026-08-30T06:56:05.959Z",
-      "source": "auto-scan"
+      "registeredAt": "2026-09-15T07:47:14.744Z",
+      "source": "manual"
     },
     {
       "name": "IndependentReranker",
       "description": "",
       "tsFilePath": "packages/core-engine/src/retrieve/rerank.ts",
-      "registeredAt": "2026-08-30T06:56:05.959Z",
+      "registeredAt": "2026-09-10T06:52:30.929Z",
       "source": "auto-scan"
     },
     {
@@ -751,58 +751,58 @@
     },
     {
       "name": "OcrPort",
-      "description": "OCR vendor port: recognize(bytes) returns full-page text; field parsing is parseOcrFields + extractByTemplate.",
+      "description": "OCR vendor port: recognize still returns flattened Job text; recognizeLayout returns unflattened VL markdown (pipes intact) for standard ingest.",
       "tsFilePath": "packages/core-engine/src/ocr/port.ts",
-      "registeredAt": "2026-08-28T21:55:45.621Z",
+      "registeredAt": "2026-09-15T03:42:06.371Z",
       "source": "manual"
     },
     {
       "name": "JobView",
       "description": "",
       "tsFilePath": "apps/web/src/services/types.ts",
-      "registeredAt": "2026-08-30T06:56:05.959Z",
+      "registeredAt": "2026-09-10T06:52:30.929Z",
       "source": "auto-scan"
     },
     {
       "name": "BlobPutInput",
       "description": "",
       "tsFilePath": "packages/core-engine/src/blob/port.ts",
-      "registeredAt": "2026-08-30T06:56:05.959Z",
+      "registeredAt": "2026-09-10T06:52:30.929Z",
       "source": "auto-scan"
     },
     {
       "name": "OcrRecognizeInput",
       "description": "",
       "tsFilePath": "packages/core-engine/src/ocr/port.ts",
-      "registeredAt": "2026-08-30T06:56:05.959Z",
+      "registeredAt": "2026-09-10T06:52:30.929Z",
       "source": "auto-scan"
     },
     {
       "name": "OcrRecognizeResult",
       "description": "",
       "tsFilePath": "packages/core-engine/src/ocr/port.ts",
-      "registeredAt": "2026-08-30T06:56:05.959Z",
+      "registeredAt": "2026-09-10T06:52:30.929Z",
       "source": "auto-scan"
     },
     {
       "name": "StepChatBridge",
-      "description": "Embeds agent-runtime ControlPlane for per-message step chat; returns LLM reply and optional proposal_id from check_wording Tool.",
+      "description": "Per-message step-chat graph: prepare, optional search_clause, llm, optional check_wording, assemble reply without writing Receipt.",
       "tsFilePath": "packages/core-engine/src/agent/step-chat-bridge.ts",
-      "registeredAt": "2026-08-29T01:36:39.188Z",
+      "registeredAt": "2026-09-09T10:15:54.514Z",
       "source": "manual"
     },
     {
       "name": "ControlPlane",
       "description": "",
       "tsFilePath": "packages/agent-runtime/src/api/control.ts",
-      "registeredAt": "2026-08-30T06:56:05.959Z",
+      "registeredAt": "2026-09-10T06:52:30.929Z",
       "source": "auto-scan"
     },
     {
       "name": "ToolRegistry",
       "description": "",
       "tsFilePath": "packages/agent-runtime/src/tools/registry.ts",
-      "registeredAt": "2026-08-30T06:56:05.959Z",
+      "registeredAt": "2026-09-10T06:52:30.929Z",
       "source": "auto-scan"
     },
     {
@@ -914,57 +914,253 @@
       "name": "DocumentArtifactView",
       "description": "",
       "tsFilePath": "apps/web/src/services/types.ts",
-      "registeredAt": "2026-08-30T06:56:05.959Z",
+      "registeredAt": "2026-09-10T06:52:30.929Z",
       "source": "auto-scan"
     },
     {
       "name": "DocumentGapView",
       "description": "",
       "tsFilePath": "apps/web/src/services/types.ts",
-      "registeredAt": "2026-08-30T06:56:05.959Z",
+      "registeredAt": "2026-09-10T06:52:30.929Z",
       "source": "auto-scan"
     },
     {
       "name": "TemplateView",
       "description": "",
       "tsFilePath": "apps/web/src/services/types.ts",
-      "registeredAt": "2026-08-30T06:56:05.959Z",
+      "registeredAt": "2026-09-10T06:52:30.929Z",
       "source": "auto-scan"
     },
     {
       "name": "ExcelCellMappingWrite",
       "description": "",
       "tsFilePath": "apps/web/src/services/types.ts",
-      "registeredAt": "2026-08-30T06:56:05.959Z",
+      "registeredAt": "2026-09-10T06:52:30.929Z",
       "source": "auto-scan"
     },
     {
       "name": "SpecPackView",
       "description": "",
       "tsFilePath": "apps/web/src/services/types.ts",
-      "registeredAt": "2026-08-30T06:56:05.959Z",
+      "registeredAt": "2026-09-10T06:52:30.929Z",
       "source": "auto-scan"
     },
     {
       "name": "FieldFillRuleWrite",
       "description": "",
       "tsFilePath": "packages/core-engine/src/persistence/store.ts",
-      "registeredAt": "2026-08-30T06:56:05.959Z",
+      "registeredAt": "2026-09-10T06:52:30.929Z",
       "source": "auto-scan"
     },
     {
       "name": "CompletenessRuleWrite",
       "description": "",
       "tsFilePath": "packages/core-engine/src/persistence/store.ts",
-      "registeredAt": "2026-08-30T06:56:05.959Z",
+      "registeredAt": "2026-09-10T06:52:30.929Z",
       "source": "auto-scan"
     },
     {
       "name": "LedgerConflictError",
       "description": "",
       "tsFilePath": "packages/core-engine/src/pipeline/job-pipeline.ts",
-      "registeredAt": "2026-08-30T06:56:05.959Z",
+      "registeredAt": "2026-09-10T06:52:30.929Z",
       "source": "auto-scan"
+    },
+    {
+      "name": "shouldSearchClause",
+      "description": "Decide whether step-chat should call read-only search_clause: false without pack; true on clause keywords or checking/check_findings/standard_lib steps.",
+      "tsFilePath": "packages/core-engine/src/agent/prompts.ts",
+      "registeredAt": "2026-09-09T10:15:25.039Z",
+      "source": "manual"
+    },
+    {
+      "name": "SearchStandardInput",
+      "description": "",
+      "tsFilePath": "packages/core-engine/src/retrieve/library.ts",
+      "registeredAt": "2026-09-10T06:52:30.929Z",
+      "source": "auto-scan"
+    },
+    {
+      "name": "MaybeAsync",
+      "description": "Sync or Promise wrapper so sqlite CoreEngineStore and async LedgerStore both satisfy seed store method returns",
+      "tsFilePath": "packages/core-engine/src/pipeline/seed.ts",
+      "registeredAt": "2026-09-10T01:22:24.857Z",
+      "source": "manual"
+    },
+    {
+      "name": "PaddleOcrEnvConfig",
+      "description": "Live PaddleOCR AI Studio env: access token plus model, jobUrl, pollTimeoutMs. Empty token returns null so assembly can 503 or skip health instead of FakeOcr; token must never appear in logs or Error text.",
+      "tsFilePath": "packages/core-engine/src/ocr/env.ts",
+      "registeredAt": "2026-09-14T11:29:44.185Z",
+      "source": "manual"
+    },
+    {
+      "name": "PaddleOcr",
+      "description": "Live OcrPort for PaddleOCR AI Studio. recognize still flattens VL markdown for Job parseOcrFields; recognizeLayout returns unflattened markdown so table pipes survive standard ingest. Same submit/poll/jsonl; no DELETE.",
+      "tsFilePath": "packages/core-engine/src/ocr/paddleocr.ts",
+      "registeredAt": "2026-09-15T08:36:05.328Z",
+      "source": "manual"
+    },
+    {
+      "name": "flattenOcrMarkdown",
+      "description": "Strip Paddle VL markdown (# headings, */_ emphasis, table pipes) so the frozen parseOcrFields regex can still extract 编号/日期A/日期B labels without changing that parser.",
+      "tsFilePath": "packages/core-engine/src/ocr/pdf-text.ts",
+      "registeredAt": "2026-09-14T13:02:48.064Z",
+      "source": "manual"
+    },
+    {
+      "name": "extractPdfUnicodeText",
+      "description": "Decode PDF Unicode text layer via unpdf (PDF.js CMaps). Returns empty string when undecodable so the usable-layer gate can fall through to OCR. Must not use latin1 parenthesis regex.",
+      "tsFilePath": "packages/core-engine/src/ocr/pdf-text.ts",
+      "registeredAt": "2026-09-14T13:22:03.420Z",
+      "source": "manual"
+    },
+    {
+      "name": "hasUsablePdfTextLayer",
+      "description": "True when decoded PDF text is readable copy: Han ≥ 8, or Unicode letters ≥ 40 with at least one Han. Zero-Han parenthesis/latin1 soup stays false so scanned PDFs go to OcrPort.",
+      "tsFilePath": "packages/core-engine/src/ocr/pdf-text.ts",
+      "registeredAt": "2026-09-14T13:22:40.198Z",
+      "source": "manual"
+    },
+    {
+      "name": "readPaddleOcrEnv",
+      "description": "Read live PaddleOCR env: token required else null; optional model/jobUrl/pollTimeoutMs with defaults. Never interpolate token into logs.",
+      "tsFilePath": "packages/core-engine/src/ocr/env.ts",
+      "registeredAt": "2026-09-14T17:16:17.483Z",
+      "source": "manual"
+    },
+    {
+      "name": "PaddleOcrRuntimeDeps",
+      "description": "Injectable fetch/now/sleep/pollIntervalMs for PaddleOcr so CI never hits aistudio or sleeps 5s.",
+      "tsFilePath": "packages/core-engine/src/ocr/paddleocr.ts",
+      "registeredAt": "2026-09-14T17:16:18.560Z",
+      "source": "manual"
+    },
+    {
+      "name": "ChunkKind",
+      "description": "Layout unit kind for vector payload and hits: clause, table, or annex. Tables must not reuse clause_id as identity.",
+      "tsFilePath": "packages/core-engine/src/retrieve/ports.ts",
+      "registeredAt": "2026-09-15T03:42:04.834Z",
+      "source": "manual"
+    },
+    {
+      "name": "LayoutUnitRow",
+      "description": "Layout unit row contract for RAG provenance tables",
+      "tsFilePath": "docs/schema/generated/core-engine-rows.ts",
+      "registeredAt": "2026-09-15T10:05:37.972Z",
+      "source": "manual"
+    },
+    {
+      "name": "IngestPageRow",
+      "description": "Per-page ingest tick status; index_error is vector upsert fail and must not be stored as ocr_error",
+      "tsFilePath": "docs/schema/generated/core-engine-rows.ts",
+      "registeredAt": "2026-09-15T05:40:50.868Z",
+      "source": "manual"
+    },
+    {
+      "name": "LayoutEdgeRow",
+      "description": "Auto PARENT_OF/BELONGS_TO/SUPPORTS edges; t_standard_edge stays human CITES/SUPERSEDES",
+      "tsFilePath": "docs/schema/generated/core-engine-rows.ts",
+      "registeredAt": "2026-09-15T05:41:16.964Z",
+      "source": "manual"
+    },
+    {
+      "name": "IngestRunRow",
+      "description": "PDF ingest batch; insertIngestRun also creates N pending pages so ticks can record index_error",
+      "tsFilePath": "docs/schema/generated/core-engine-rows.ts",
+      "registeredAt": "2026-09-15T05:41:16.979Z",
+      "source": "manual"
+    },
+    {
+      "name": "assertVectorPayload",
+      "description": "Vector payload gate: unit_id provenance, no table clause_id backfill",
+      "tsFilePath": "packages/core-engine/src/retrieve/payload.ts",
+      "registeredAt": "2026-09-15T10:05:39.160Z",
+      "source": "manual"
+    },
+    {
+      "name": "splitLayoutUnits",
+      "description": "Split standard markdown into clause and GFM/VL table layout units. Reuses splitClauses for headings; table blocks keep pipe grids. Must not flatten OCR markdown.",
+      "tsFilePath": "packages/core-engine/src/retrieve/layout-split.ts",
+      "registeredAt": "2026-09-15T06:53:48.405Z",
+      "source": "manual"
+    },
+    {
+      "name": "extractPdfUnicodePages",
+      "description": "Per-page Unicode PDF text via unpdf mergePages:false. Standard ingest must keep page boundaries; Job extractPdfUnicodeText still uses mergePages:true.",
+      "tsFilePath": "packages/core-engine/src/ocr/pdf-text.ts",
+      "registeredAt": "2026-09-15T08:36:06.166Z",
+      "source": "manual"
+    },
+    {
+      "name": "StandardIngestWorker",
+      "description": "PDF page-tick ingest worker; OCR vs index_error split",
+      "tsFilePath": "packages/core-engine/src/retrieve/ingest-worker.ts",
+      "registeredAt": "2026-09-15T10:05:39.142Z",
+      "source": "manual"
+    },
+    {
+      "name": "renderPdfPagePng",
+      "description": "Rasterize one 1-based PDF page to PNG for standard ingest OCR. Tests inject a stub via setPdfPageRaster so CI does not need @napi-rs/canvas. Live path uses unpdf renderPageAsImage. Failures throw; callers must not fall back to passing original PDF bytes to Paddle.",
+      "tsFilePath": "packages/core-engine/src/ocr/pdf-raster.ts",
+      "registeredAt": "2026-09-15T09:03:45.962Z",
+      "source": "manual"
+    },
+    {
+      "name": "UnconfiguredLlmProvider",
+      "description": "User-facing LLM fallback when .apt/agent-runtime.llm.json is missing or invalid. complete() returns Chinese 未配置 copy and never echoes the prompt, so HITL system text cannot leak into chat. Distinct from FakeLlmProvider, which remains the test echo double.",
+      "tsFilePath": "packages/agent-runtime/src/llm/provider.ts",
+      "registeredAt": "2026-09-17T02:58:42.883Z",
+      "source": "manual"
+    },
+    {
+      "name": "JobContextSnapshot",
+      "description": "Read-only LLM prompt snapshot. retrieve/standard_lib omits Job file/findings and uses retrieve_hits_summary (this-turn hits or 未命中).",
+      "tsFilePath": "packages/core-engine/src/agent/context.ts",
+      "registeredAt": "2026-09-17T03:31:21.117Z",
+      "source": "manual"
+    },
+    {
+      "name": "BuildJobContextOptions",
+      "description": "Optional packId and RetrieveHit[] so buildJobContext can assemble pack retrieve chat without a Job.",
+      "tsFilePath": "packages/core-engine/src/agent/context.ts",
+      "registeredAt": "2026-09-17T03:31:21.259Z",
+      "source": "manual"
+    },
+    {
+      "name": "StepChatInput",
+      "description": "Step-chat input: Job steps use traceId; retrieve/standard_lib may send packId and current-page hits instead of listJobs()[0].",
+      "tsFilePath": "packages/core-engine/src/agent/step-chat-bridge.ts",
+      "registeredAt": "2026-09-17T03:31:21.473Z",
+      "source": "manual"
+    },
+    {
+      "name": "RetrieveHitView",
+      "description": "Provenance search hit view with optional heading and body for detail panel; table/annex keep clause_id null.",
+      "tsFilePath": "apps/web/src/services/types.ts",
+      "registeredAt": "2026-09-19T06:23:36.606Z",
+      "source": "manual"
+    },
+    {
+      "name": "DashScopeEmbeddings",
+      "description": "Live Embeddings via DashScope compatible-mode text-embedding-v3 (dim 1024). Reads DASHSCOPE_API_KEY at construct; missing/blank key throws. Never falls back to HashEmbeddings. liveRetrievePorts injects the same instance into IndependentReranker.",
+      "tsFilePath": "packages/core-engine/src/retrieve/embeddings.ts",
+      "registeredAt": "2026-09-19T08:02:54.087Z",
+      "source": "manual"
+    },
+    {
+      "name": "QdrantVectorStore",
+      "description": "Qdrant VectorStore for collection `clauses`. Constructor accepts optional injected `client` for tests. ensureCollection reads getCollection().config.params.vectors.size; if the collection exists and size !== dim it deleteCollection('clauses') then createCollection with Cosine size=dim. Matching size skips delete. Vectors are never truncated or padded. upsert/search call ensureCollection with the incoming vector length.",
+      "tsFilePath": "packages/core-engine/src/retrieve/qdrant.ts",
+      "registeredAt": "2026-09-19T08:21:46.633Z",
+      "source": "manual"
+    },
+    {
+      "name": "ZhipuPrequery",
+      "description": "Production glm prequery: rewrite + intent via ChatComplete. Tests keep FakePrequery. Must not be used as rerank.",
+      "tsFilePath": "packages/core-engine/src/retrieve/prequery.ts",
+      "registeredAt": "2026-09-19T10:53:26.137Z",
+      "source": "manual"
     }
   ],
   "missingRequests": []

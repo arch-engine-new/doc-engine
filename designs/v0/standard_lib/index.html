@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>标准库</title>
+  <link rel="stylesheet" href="../styles/tokens.css" />
+  <link rel="stylesheet" href="../styles/global.css" />
+</head>
+<body data-step="retrieve" data-trace="trc_local">
+<nav class="app-nav">
+  <span class="brand">工程资料核心引擎</span>
+  <a href="../project_home/index.html">项目</a>
+  <a href="../template_annotate/index.html">模板</a>
+  <a href="../rule_editor/index.html">规则</a>
+  <a class="active" href="../standard_lib/index.html">标准库</a>
+  <a href="../job_upload/index.html">任务</a>
+  <a href="../pending_review/index.html">待审</a>
+  <a href="../check_findings/index.html">检查</a>
+  <a href="../volume_preview/index.html">组卷</a>
+  <a href="../audit_trace/index.html">审计</a>
+</nav>
+<div class="wrap">
+  <h1>标准库</h1>
+  <p class="sub">生产级检索：PostgreSQL 条款账本 · Qdrant 向量 · Neo4j 关系图。命中行点开详情读 heading 与 body；出处列仍只显示来源。PDF 按页 tick；「处理全部页」只是循环「处理一页」。</p>
+
+  <section class="card">
+    <p class="row-actions">
+      <label class="btn ghost">选择规范 PDF
+        <input id="pdf-input" type="file" accept="application/pdf" hidden />
+      </label>
+      <span id="selected-name" class="tag">未选择文件</span>
+      <span id="run-tag" class="tag">未登记</span>
+    </p>
+    <p class="row-actions">
+      <button id="btn-tick" class="btn ghost" type="button" disabled>处理一页</button>
+      <button id="btn-tick-all" class="btn" type="button" disabled>处理全部页</button>
+    </p>
+    <table>
+      <thead>
+        <tr><th>页</th><th>状态</th><th>说明</th></tr>
+      </thead>
+      <tbody id="page-rows">
+        <tr><td colspan="3" class="sub">登记 PDF 后出现 pending 页</td></tr>
+      </tbody>
+    </table>
+    <p id="tick-note" class="sub">tickAll 不另发全书 OCR。某一页失败时其余 pending 继续，已 ok 页不回滚。</p>
+  </section>
+
+  <section class="card">
+    <p><strong>已入库</strong> · 夹具标准 v2024 · 条款 1.1 / 表 1 · 图边 CITES 1.2→1.1</p>
+    <p>
+      <label><input type="radio" name="mode" checked /> 语义检索</label>
+      <label style="margin-left:12px;"><input type="radio" name="mode" /> 图查询（引用/替代）</label>
+    </p>
+    <p class="row-actions">
+      <input id="q" placeholder="问句或条款号，如：事假 / 1.1 / 被哪版替代" class="grow" />
+      <button id="btn-search" class="btn" type="button">检索</button>
+    </p>
+    <table>
+      <thead>
+        <tr>
+          <th>file_name</th>
+          <th>页</th>
+          <th>unit_id</th>
+          <th>clause_id</th>
+          <th>路径</th>
+        </tr>
+      </thead>
+      <tbody id="hit-rows">
+        <tr><td colspan="5" class="sub">检索后列出出处；点击行打开详情读正文</td></tr>
+      </tbody>
+    </table>
+    <aside id="hit-detail" class="hit-detail" hidden>
+      <p class="muted" id="hit-kind">条款</p>
+      <h2 id="hit-heading"></h2>
+      <p class="body-text" id="hit-body"></p>
+    </aside>
+    <p id="hit-empty" class="sub">表/附件的 clause_id 显示 —。聊天模型不得手写条款号。全文不塞进表格行。</p>
+    <p>
+      <label class="sub">JSON 夹具入库（保留）</label>
+      <textarea class="grow" rows="3" placeholder='{"title":"夹具","text":"1.1 …"}'></textarea>
+    </p>
+  </section>
+</div>
+<script src="../mock/api.js"></script>
+<script>
+  const pages = [];
+  let runId = "";
+  let tickCount = 0;
+  const tagClass = { pending: "warn", ok: "ok", ocr_error: "bad", index_error: "bad" };
+  const hits = window.__APT_MOCK_HITS || [];
+  let selectedIdx = -1;
+
+  function renderPages() {
+    const body = document.getElementById("page-rows");
+    if (pages.length === 0) {
+      body.innerHTML = '<tr><td colspan="3" class="sub">登记 PDF 后出现 pending 页</td></tr>';
+      return;
+    }
+    body.innerHTML = pages.map(function (p) {
+      return "<tr><td>" + p.no + "</td><td><span class=\"tag " + tagClass[p.status] + "\">" + p.status + "</span></td><td>" + (p.note || "") + "</td></tr>";
+    }).join("");
+  }
+
+  function hasPending() {
+    return pages.some(function (p) { return p.status === "pending"; });
+  }
+
+  function tickOnce() {
+    const next = pages.find(function (p) { return p.status === "pending"; });
+    if (!next) return false;
+    tickCount += 1;
+    if (next.no === 2) {
+      next.status = "ocr_error";
+      next.note = "本页识别失败；第 1 页仍在库";
+    } else {
+      next.status = "ok";
+      next.note = "已按条款/表切片入库";
+    }
+    return true;
+  }
+
+  function pageLabel(hit) {
+    return hit.page_start === hit.page_end ? String(hit.page_start) : hit.page_start + "–" + hit.page_end;
+  }
+
+  function renderHits() {
+    const body = document.getElementById("hit-rows");
+    if (!hits.length) {
+      body.innerHTML = '<tr><td colspan="5" class="sub">无命中</td></tr>';
+      return;
+    }
+    body.innerHTML = hits.map(function (h, i) {
+      const clause = h.clause_id || "—";
+      const sel = i === selectedIdx ? " is-selected" : "";
+      return '<tr class="clickable' + sel + '" data-idx="' + i + '">' +
+        "<td>" + h.file_name + "</td>" +
+        "<td>" + pageLabel(h) + "</td>" +
+        "<td>" + h.unit_id + "</td>" +
+        "<td>" + clause + "</td>" +
+        "<td>" + h.retrieve_path + "</td>" +
+        "</tr>";
+    }).join("");
+  }
+
+  function openDetail(idx) {
+    selectedIdx = idx;
+    const hit = hits[idx];
+    window.__aptSelectedHit = hit;
+    document.getElementById("hit-detail").hidden = false;
+    document.getElementById("hit-kind").textContent =
+      hit.chunk_kind === "table" ? "表 / 附件可读文本" : "条款 heading + body";
+    document.getElementById("hit-heading").textContent = hit.heading;
+    document.getElementById("hit-body").textContent = hit.body;
+    renderHits();
+  }
+
+  document.getElementById("pdf-input").addEventListener("change", function (ev) {
+    const file = ev.target.files && ev.target.files[0];
+    if (!file) return;
+    document.getElementById("selected-name").textContent = "已选 " + file.name;
+    runId = "ing_demo_01";
+    tickCount = 0;
+    pages.splice(0, pages.length,
+      { no: 1, status: "pending", note: "" },
+      { no: 2, status: "pending", note: "" },
+      { no: 3, status: "pending", note: "" }
+    );
+    document.getElementById("run-tag").textContent = "202 · " + runId + " · 3 页 pending";
+    document.getElementById("btn-tick").disabled = false;
+    document.getElementById("btn-tick-all").disabled = false;
+    document.getElementById("tick-note").textContent = "已登记。处理全部页会循环 POST /api/standards/ingest-runs/" + runId + "/tick";
+    renderPages();
+  });
+
+  document.getElementById("btn-tick").addEventListener("click", function () {
+    tickOnce();
+    document.getElementById("tick-note").textContent = "已 tick " + tickCount + " 次（每次 ≤1 页）";
+    if (!hasPending()) {
+      document.getElementById("btn-tick").disabled = true;
+      document.getElementById("btn-tick-all").disabled = true;
+      document.getElementById("run-tag").textContent = "全部页处理完 · tick " + tickCount;
+    }
+    renderPages();
+  });
+
+  document.getElementById("btn-tick-all").addEventListener("click", function () {
+    while (hasPending()) tickOnce();
+    document.getElementById("btn-tick").disabled = true;
+    document.getElementById("btn-tick-all").disabled = true;
+    document.getElementById("run-tag").textContent = "全部页处理完 · tick " + tickCount;
+    document.getElementById("tick-note").textContent = "tickAll 共 " + tickCount + " 次请求（≥3 页）；第 2 页 ocr_error，第 1/3 页仍 ok。";
+    renderPages();
+  });
+
+  document.getElementById("btn-search").addEventListener("click", function () {
+    selectedIdx = -1;
+    window.__aptSelectedHit = null;
+    document.getElementById("hit-detail").hidden = true;
+    renderHits();
+  });
+
+  document.getElementById("hit-rows").addEventListener("click", function (ev) {
+    const tr = ev.target.closest("tr[data-idx]");
+    if (!tr) return;
+    openDetail(Number(tr.getAttribute("data-idx")));
+  });
+</script>
+<script src="../mock/step-chat.js"></script>
+</body>
+</html>

@@ -1,0 +1,27 @@
+{
+  "updatedAt": "2026-09-19",
+  "items": [
+    {
+      "id": "live-empty-jobs-auto-reset-wipes-stores",
+      "pageId": "standard_lib",
+      "severity": "high",
+      "source": "apt-accept",
+      "status": "queued-feature",
+      "summary": "任务列表为空时 App.vue ensureDemoSession 会 POST /api/demo/reset；live+MinIO skip 时 reset 503，但已清空 Postgres/Qdrant/Neo4j，导致标准库刚入库的条款检索变为 0 命中。",
+      "repro": "live 无 job 时打开任意页或点重置演示，再打开标准库检索「事假」。",
+      "logicAnchor": "非 page.logic 操作；阻塞 ingestClauses/searchSemantic 的运行时数据。"
+    },
+    {
+      "id": "standard-lib-tickall-button-missing",
+      "pageId": "standard_lib",
+      "rpId": "RP-13",
+      "caseId": "C-13",
+      "severity": "low",
+      "source": "apt-accept",
+      "status": "queued-feature",
+      "summary": "page.logic 要求「处理全部页」PrimaryButton 前端循环已有 tick；PdfTickPanel 只有「处理一页」。单页 API tick 可用，全书仍需人工连点。",
+      "repro": "打开标准库，选择 PDF 后查看摄入区按钮，无「处理全部页」。",
+      "logicAnchor": "designs/v0/standard_lib/page.logic.md §操作明细/tickAll"
+    }
+  ]
+}

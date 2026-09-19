@@ -9,14 +9,24 @@ import {
 } from "agent-runtime";
 import type { JobPipeline } from "../pipeline/job-pipeline.js";
 import { AgentRuntimeFactory, type AgentRuntimeFactoryOptions } from "./agent-runtime-factory.js";
-import { buildJobContext, formatJobContextForPrompt } from "./context.js";
+import {
+  buildJobContext,
+  formatJobContextForPrompt,
+  formatRetrieveHitsForPrompt,
+  packChatTraceId,
+} from "./context.js";
 import { shouldDraftWording, shouldSearchClause, stepSystemPrompt } from "./prompts.js";
 import { resolveRepoRoot } from "./repo-root.js";
+import type { RetrieveHit } from "../retrieve/ports.js";
 
 export interface StepChatInput {
-  traceId: string;
+  traceId?: string;
   step: string;
   userMessage: string;
+  /** Required for retrieve/standard_lib when there is no Job trace. */
+  packId?: string;
+  /** Current-page RetrieveHits; search_clause may still run from the user question. */
+  hits?: RetrieveHit[];
 }
 
 export interface StepChatReply {
@@ -79,16 +89,7 @@ function formatHitsForPrompt(hits: unknown): string {
   if (!Array.isArray(hits) || hits.length === 0) {
     return EMPTY_HITS_TEXT;
   }
-  const lines: string[] = [];
-  for (const hit of hits) {
-    if (hit && typeof hit === "object" && "clause_id" in hit) {
-      const clauseId = (hit as { clause_id: unknown }).clause_id;
-      if (typeof clauseId === "string" && clauseId.length > 0) {
-        lines.push(`- clause_id=${clauseId}`);
-      }
-    }
-  }
-  return lines.length > 0 ? lines.join("\n") : EMPTY_HITS_TEXT;
+  return formatRetrieveHitsForPrompt(hits as RetrieveHit[]);
 }
 
 function replyAlreadyMentionsMiss(text: string): boolean {
@@ -122,20 +123,37 @@ function asPrep(value: unknown): StepChatPrep {
   return value as StepChatPrep;
 }
 
-async function prepareStepChat(
+function resolveStepChatInput(payload: StepChatInput): StepChatInput & { traceId: string } {
+  const packId = payload.packId;
+  const traceId = payload.traceId || (packId ? packChatTraceId(packId) : "");
+  return { ...payload, traceId };
+}
+
+/**
+ * Load HITL context. retrieve/standard_lib uses pack hits, not Job findings.
+ */
+export async function prepareStepChat(
   pipeline: JobPipeline,
   inputs: { input?: StepChatInput },
 ): Promise<StepChatPrep> {
-  const payload = inputs.input;
-  if (!payload?.traceId || !payload.step || !payload.userMessage) {
+  const raw = inputs.input;
+  if (!raw?.step || !raw.userMessage) {
+    throw new Error("step-chat-v1 requires step, userMessage");
+  }
+  const payload = resolveStepChatInput(raw);
+  if (!payload.traceId) {
     throw new Error("step-chat-v1 requires traceId, step, userMessage");
   }
 
-  const ctx = await buildJobContext(pipeline, payload.traceId, payload.step);
+  const ctx = await buildJobContext(pipeline, payload.traceId, payload.step, {
+    packId: payload.packId,
+    hits: payload.hits,
+  });
+  const packId = payload.packId ?? ctx.pack_id;
   const should_search: StepChatPrep["should_search"] = shouldSearchClause(
     payload.step,
     payload.userMessage,
-    ctx.pack_id,
+    packId,
   )
     ? "search"
     : "skip";
@@ -148,7 +166,7 @@ async function prepareStepChat(
 
   return {
     jobId: ctx.job_id,
-    packId: ctx.pack_id,
+    packId,
     step: payload.step,
     userMessage: payload.userMessage,
     contextText: formatJobContextForPrompt(ctx),
@@ -156,7 +174,7 @@ async function prepareStepChat(
     should_search,
     should_draft,
     search_args: {
-      packId: ctx.pack_id ?? "",
+      packId: packId ?? "",
       query: payload.userMessage,
       jobId: ctx.job_id,
     },
@@ -381,10 +399,11 @@ export class StepChatBridge {
   }
 
   async reply(input: StepChatInput): Promise<StepChatReply> {
+    const payload = resolveStepChatInput(input);
     const started = await this.plane.startRun({
       graphId: "step-chat-v1",
-      input: input,
-      threadId: `${input.traceId}:${input.step}`,
+      input: payload,
+      threadId: `${payload.traceId}:${payload.step}`,
     });
 
     const result = await this.plane.waitForRun(started.runId);

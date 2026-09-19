@@ -1,37 +1,22 @@
 ## Task 3 Report
-
-**Status:** DONE
-
+**Status:** DONE_WITH_CONCERNS
 ### Tests
-- Command: `npx vitest run packages/core-engine/test/standard-rag.test.ts packages/core-engine/test/upload-ocr.test.ts packages/core-engine/test/ingest-pdf.test.ts packages/core-engine/test/paddleocr.test.ts packages/core-engine/test/graph-store.test.ts packages/core-engine/test/vector-payload.test.ts packages/core-engine/test/live-rag-ingest.test.ts`
-- Cwd: `D:\software\doc-engine`
-- Result: exit 0。`Test Files  6 passed | 1 skipped (7)`；`Tests  44 passed | 1 skipped (45)`。Duration 9.37s。
-- Per file:
-  - `graph-store.test.ts` 4 passed (20ms)
-  - `vector-payload.test.ts` 5 passed (25ms)
-  - `paddleocr.test.ts` 9 passed (113ms)
-  - `upload-ocr.test.ts` 7 passed (1221ms)
-  - `standard-rag.test.ts` 15 passed (823ms)
-  - `ingest-pdf.test.ts` 4 passed (969ms)
-  - `live-rag-ingest.test.ts` 1 skipped（无 `DATABASE_URL` / `QDRANT_URL` / `NEO4J_URI`，`describe.skipIf(!hasLiveEnv)`，brief 允许）
-- stderr: `upload-ocr.test.ts` 有 PDF 字体告警 `Warning: TT: undefined function: 32`（既有，非失败）。
-- TDD RED/GREEN: N/A（无业务代码；design-sync 后 RAG 未回退）
-
-未跑 `/verify`（brief：全量 verify 由主 Agent 在全部 Task Gate 后执行）。
-
+- Command: `npx vitest run test/http-adapter.test.ts test/standard-lib-stepchat.test.ts test/agent-connect.test.ts test/agent-native-graph.test.ts test/job-step-orchestrator.test.ts`（cwd: `packages/core-engine`）。另跑 `npx tsc --noEmit`（exit 0）。
+- Result: 5 files / 42 tests passed；tsc 无错误。
+- TDD RED/GREEN: RED 时 `new DemoHttpSession({ projectRoot: 空临时根 })` + POST `/api/chat` 的 `assistant_reply` 为 `[fake-llm:fake] 你是工程资料核心引擎的本步对话助手…`（含 HITL 系统提示）。GREEN：同一路径匹配 `/未配置/` 且不含 `[fake-llm`。`StepChatBridge.create({ forceFakeLlm: true })` 仍含 `[fake-llm`。http-adapter 既有 `/api/chat` 非空断言仍过。
 ### APT Micro-closeout
-- ContractsRegistered: 无（本 Task 无新对外 TS 类型）
-- AssetsRefreshed: 无。本 Task 无架构资产变更；禁止 `audit_arch_changes`
-- AssetsRemoved: 无
-
+- ContractsRegistered: 无（无新对外 TS 类型）
+- AssetsRefreshed: `packages/core-engine/src/http/session.ts`（DemoHttpSession，updated）；`packages/core-engine/src/agent/agent-runtime-factory.ts`（AgentRuntimeFactory，created）。禁止 `audit_arch_changes`。
+- AssetsRemoved: none
 ### FilesChanged
+- `packages/core-engine/src/http/session.ts`
+- `packages/core-engine/src/agent/agent-runtime-factory.ts`
+- `packages/core-engine/test/http-adapter.test.ts`
+- `packages/core-engine/test/standard-lib-stepchat.test.ts`
 - `.apt/orchestration/task-3-report.md`
-
-未改 `packages/**` / `apps/**` / `designs/**` / `.ai/**`。
-
 ### Commits
-- `f0f37a7` test(core-engine): record RAG regression after design-sync
-
+- none (brief forbids commit)
 ### Blockers / Concerns
-- 无。live smoke 因缺 live env 跳过，符合 brief。
-- Plan Task 3 第二项「重新 `/verify`」不在本 implementer 范围，留给主 Agent。
+- 本机 checkout 可能已有有效 `.apt/agent-runtime.llm.json`。http-adapter `beforeEach` 与 stepchat 新测用空临时 `projectRoot` + 清除 `AGENT_RUNTIME_LLM_CONFIG`，避免单测打到 live 模型；Vite 用户路径仍走 `initDefaultLlmProvider(resolveRepoRoot())`，缺配置即 Unconfigured。
+- `refresh_asset` 将 AgentRuntimeFactory 记为 created；禁止 `audit_arch_changes`，未手工改 `.ai/`。
+- 未改 Task 1/2 的 UnconfiguredLlmProvider / pack 级 retrieve 上下文。

@@ -1,6 +1,6 @@
 ---
 ---
-<!-- apt-template-version: 10.6.10 -->
+<!-- apt-template-version: 10.9.0 -->
 # $apt-schema-apply — 评审后落 DO + migration
 
 用户确认「表设计完成」或「评审通过，执行 apply」后，将 schema MD 转为 **DO + migration/DDL**，经扫描入 **EntityGraph**，账本标 `applied`。

@@ -1,0 +1,12 @@
+{
+  "id": "job_upload",
+  "pageType": "list",
+  "feature": "core-engine",
+  "title": "上传与任务",
+  "route": "/jobs",
+  "description": "Walking Skeleton 入口：上传 PDF、Job 状态机、写入 trace_id。",
+  "status": "approved",
+  "source": "generated",
+  "generatedAt": "2026-08-26T07:10:42.781Z",
+  "generator": "pm-agent-v10"
+}

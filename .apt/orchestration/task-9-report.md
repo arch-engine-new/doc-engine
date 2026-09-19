@@ -4,7 +4,7 @@
 DONE
 
 ## Commits
-（填入本 feat commit SHA）
+`7d9effaef6dea0817569e1ad3bba3e8486d644cf` feat(retrieve): page-tick PDF ingest with layout OCR and index_error
 
 BASE_SHA: `5f5d8c07d1c333a371dd4f364c2d3a2f8c09a3c3`
 

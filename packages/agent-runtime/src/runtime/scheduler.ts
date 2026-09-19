@@ -2,8 +2,8 @@
  * In-memory serial scheduler for compiled graphs.
  *
  * Why: Uses Kahn's algorithm to compute ready set from precomputed adjacency.
- * Executes one node at a time (serial), merging channel updates after each.
- * Fan-out/fan-in barrier is prepared for future parallel execution but runs serial now.
+ * Default: serial (one ready node per step). Optional parallelExecution runs
+ * the entire ready set as a batch (fan-out); fan-in uses in-degree barriers.
  * Supports HITL (Human-in-the-Loop) nodes that pause execution awaiting human input.
  */
 
@@ -12,7 +12,9 @@ import type { ExecutionContext, NodeExecutionRecord, RunStatus } from "./state.j
 import { getExecutor, type NodeExecutor, type NodeResult, BUILTIN_EXECUTORS } from "./node-executors.js";
 import { createInitialChannels, mergeChannels, getChannel, serializeChannels } from "./state.js";
 import type { CheckpointService, WriteCheckpointOptions } from "./checkpoint-service.js";
-import type { HitlGateway, HitlDecision } from "../hitl/gateway.js";
+import type { HitlGateway } from "../hitl/gateway.js";
+import type { LlmProvider } from "../llm/provider.js";
+import type { CompiledGraph as CompiledGraphType } from "../graph/types.js";
 
 /** Scheduler options. */
 export interface SchedulerOptions {
@@ -38,6 +40,16 @@ export interface SchedulerOptions {
   onHitlInterrupt?: (interrupt: { token: string; nodeId: string; payload: unknown }) => Promise<void> | void;
   /** Called when the run completes (completed/failed/cancelled). */
   onRunComplete?: (result: SchedulerResult) => Promise<void> | void;
+  /**
+   * When true, all nodes in the current ready set run concurrently (fan-out batch).
+   * Fan-in join nodes still wait until all predecessors complete (in-degree barrier).
+   * HITL nodes always run alone (never batched).
+   */
+  parallelExecution?: boolean;
+  /** Resolve nested graphs for subgraph nodes. */
+  getCompiledGraph?: (graphId: string) => CompiledGraphType | undefined;
+  /** LLM provider for llm nodes (defaults to FakeLlmProvider). */
+  llmProvider?: LlmProvider;
 }
 
 /** Result of a scheduler run. */
@@ -83,6 +95,9 @@ export async function runGraph(
     runId,
     hitlGateway,
     onHitlInterrupt,
+    parallelExecution = false,
+    getCompiledGraph,
+    llmProvider,
   } = options;
 
   // Merge custom executors with built-ins (custom wins)
@@ -95,9 +110,9 @@ export async function runGraph(
   const channels = createInitialChannels(input);
   const history: NodeExecutionRecord[] = [];
   let steps = 0;
-  let seq = 0;
+  const seqRef = { value: 0 };
 
-  // Build in-degree map for Kahn's algorithm (only normal edges)
+  // Build in-degree map
   const inDegree = new Map<string, number>();
   const adjacency = compiledGraph.adjacency;
 
@@ -135,16 +150,17 @@ export async function runGraph(
     threadId: undefined,
     nodeExecutionId: undefined,
     attempt: 1,
+    getCompiledGraph,
+    llmProvider,
   };
 
-  // Track completed nodes for fan-in (future: wait for all predecessors)
   const completed = new Set<string>();
 
   // Write initial checkpoint (before any node executes)
   if (checkpointService && runId) {
     await checkpointService.write({
       runId,
-      seq: seq++,
+      seq: seqRef.value++,
       nodeId: null,
       channels,
       metadata: { phase: "initial" },
@@ -153,7 +169,7 @@ export async function runGraph(
     if (onCheckpoint) {
       await onCheckpoint({
         runId,
-        seq: seq - 1,
+        seq: seqRef.value - 1,
         nodeId: null,
         phase: "initial",
       });
@@ -170,190 +186,82 @@ export async function runGraph(
       };
     }
 
-    // Pick a ready node (deterministic: first by id)
-    const nodeId = [...ready].sort()[0]!;
-    ready.delete(nodeId);
+    const sortedReady = [...ready].sort();
+    let batch: string[];
+    if (parallelExecution && sortedReady.length > 1) {
+      const hasHitl = sortedReady.some((id) => compiledGraph.nodes.get(id)?.type === "hitl");
+      batch = hasHitl ? [sortedReady[0]!] : sortedReady;
+    } else {
+      batch = [sortedReady[0]!];
+    }
+    for (const id of batch) ready.delete(id);
 
-    const node = compiledGraph.nodes.get(nodeId)!;
-
-    // Handle HITL node: pause execution and create interrupt
-    if (node.type === "hitl") {
-      if (!hitlGateway || !runId) {
-        const error = new Error(`HITL node "${nodeId}" requires hitlGateway and runId in options`);
-        return failRun(error, "HITL_CONFIG_MISSING");
-      }
-      const config = node.config ?? {};
-      const payload = config.payload ?? { nodeId, message: "Human input required" };
-
-      const { token, interrupt } = await hitlGateway.createInterrupt(runId, nodeId, payload);
-
-      // Record the HITL node as waiting (not completed)
-      const record: NodeExecutionRecord = {
-        nodeId,
-        nodeType: "hitl",
-        startedAt: new Date().toISOString(),
-        status: "running",
-        input: getNodeInput(node, channels),
-        attempt: 1,
-      };
-      history.push(record);
-
-      // Write checkpoint for HITL pause (so we can resume from here)
-      if (checkpointService) {
-        await checkpointService.write({
-          runId,
-          seq: seq++,
-          nodeId,
-          channels,
-          metadata: { phase: "hitl_waiting", hitlToken: token, hitlNodeId: nodeId, completedNodes: [...completed, nodeId] },
-        });
-
-        if (onCheckpoint) {
-          await onCheckpoint({
+    if (parallelExecution && batch.length > 1) {
+      const batchResults = await Promise.all(
+        batch.map((nodeId) =>
+          executeReadyNode(nodeId, {
+            compiledGraph,
+            channels,
+            history,
+            context,
+            executorMap,
+            adjacency,
+            inDegree,
+            ready,
+            completed,
+            checkpointService,
             runId,
-            seq: seq - 1,
-            nodeId,
-            phase: "hitl_waiting",
-            metadata: { hitlToken: token, hitlNodeId: nodeId, completedNodes: [...completed, nodeId] },
-          });
-        }
-      }
-
-      // Notify about interrupt creation
-      onHitlInterrupt?.({ token, nodeId, payload: interrupt.payload });
-
-      // Return waiting_hitl status with interrupt info
-      return {
-        status: "waiting_hitl",
-        channels,
-        history,
-        hitlInterrupt: {
-          token,
-          nodeId,
-          payload: interrupt.payload,
-          expiresAt: interrupt.expiresAt,
-        },
-      };
-    }
-
-    const executor = executorMap.get(node.type);
-    if (!executor) {
-      const error = new Error(`No executor for node type "${node.type}"`);
-      return failRun(error, "NO_EXECUTOR");
-    }
-
-    // Record execution start
-    const record: NodeExecutionRecord = {
-      nodeId,
-      nodeType: node.type,
-      startedAt: new Date().toISOString(),
-      status: "running",
-      input: getNodeInput(node, channels),
-      attempt: 1,
-    };
-    history.push(record);
-
-    // Call onNodeStart callback
-    if (onNodeStart) {
-      await onNodeStart(record);
-    }
-
-    try {
-      // Execute with retry policy
-      const result = await executeWithRetry(node, executor, context, node.retry);
-
-      // Update record
-      record.finishedAt = new Date().toISOString();
-      record.status = "completed";
-      record.output = result.updates;
-
-      // Merge channel updates
-      mergeChannels(channels, result.updates);
-
-      // Write checkpoint after successful node execution
-      if (checkpointService && runId) {
-        await checkpointService.write({
-          runId,
-          seq: seq++,
-          nodeId,
-          channels,
-          metadata: { phase: "node_complete", completedNodes: [...completed, nodeId] },
-        });
-
-        // Call onCheckpoint callback
-        if (onCheckpoint) {
-          await onCheckpoint({
-            runId,
-            seq: seq - 1,
-            nodeId,
-            phase: "node_complete",
-            metadata: { completedNodes: [...completed, nodeId] },
-          });
-        }
-      }
-
-      // Handle explicit nextNodeIds (branch) or normal adjacency
-      let nextNodes: readonly string[];
-      if (result.nextNodeIds && result.nextNodeIds.length > 0) {
-        nextNodes = result.nextNodeIds;
-      } else {
-        nextNodes = adjacency.get(nodeId) ?? [];
-      }
-
-      // Decrement in-degree for successors
-      for (const nextId of nextNodes) {
-        const newDegree = (inDegree.get(nextId) ?? 1) - 1;
-        inDegree.set(nextId, newDegree);
-        if (newDegree === 0) {
-          ready.add(nextId);
-        }
-      }
-
-      completed.add(nodeId);
-
-      // Halt signal (end node or explicit halt)
-      if (result.halt || node.type === "end") {
-        break;
-      }
-
-      if (onNodeComplete) {
-        await onNodeComplete(record);
-      }
-      steps++;
-    } catch (error) {
-      record.finishedAt = new Date().toISOString();
-      record.status = "failed";
-      record.error = { message: (error as Error).message, code: (error as Error & { code?: string }).code };
-
-      if (onNodeError) {
-        await onNodeError(record, error as Error);
-      }
-
-      // Check for onError edges
-      const errorEdges = compiledGraph.edges.filter(
-        (e) => e.from === nodeId && e.onError,
+            hitlGateway,
+            onNodeStart,
+            onNodeComplete,
+            onNodeError,
+            onCheckpoint,
+            onHitlInterrupt,
+            seqRef,
+          }),
+        ),
       );
-      if (errorEdges.length > 0) {
-        // Route to first error handler
-        const errorTarget = errorEdges[0]!.to;
-        ready.add(errorTarget);
-        continue;
+      for (const br of batchResults) {
+        if (br.kind === "return") return br.result;
+        if (br.kind === "halt") break;
       }
-
-      return failRun(error as Error, "NODE_ERROR");
+      steps += batch.length;
+      continue;
     }
+
+    const nodeId = batch[0]!;
+    const single = await executeReadyNode(nodeId, {
+      compiledGraph,
+      channels,
+      history,
+      context,
+      executorMap,
+      adjacency,
+      inDegree,
+      ready,
+      completed,
+      checkpointService,
+      runId,
+      hitlGateway,
+      onNodeStart,
+      onNodeComplete,
+      onNodeError,
+      onCheckpoint,
+      onHitlInterrupt,
+      seqRef,
+    });
+    if (single.kind === "return") return single.result;
+    if (single.kind === "halt") break;
+    steps++;
+    continue;
   }
 
   if (steps >= maxSteps) {
     return failRun(new Error(`Max steps (${maxSteps}) exceeded`), "MAX_STEPS");
   }
 
-  // Determine final status
   const status: RunStatus = abortSignal.aborted ? "cancelled" : "completed";
-
-  // Get output from "output" channel or last terminal node's output channel
   const output = getChannel(channels, "output") ?? getLastTerminalOutput(compiledGraph, channels);
-
   return { status, channels, history, output };
 
   function failRun(error: Error, code: string): SchedulerResult {
@@ -363,6 +271,219 @@ export async function runGraph(
       history,
       error: { message: error.message, code, cause: error },
     };
+  }
+}
+
+type NodeStepOutcome =
+  | { kind: "continue"; seq: number }
+  | { kind: "halt"; seq: number }
+  | { kind: "return"; result: SchedulerResult };
+
+interface ExecuteReadyNodeParams {
+  compiledGraph: CompiledGraph;
+  channels: Map<string, { value: unknown; version: number }>;
+  history: NodeExecutionRecord[];
+  context: ExecutionContext;
+  executorMap: Map<string, NodeExecutor>;
+  adjacency: ReadonlyMap<string, readonly string[]>;
+  inDegree: Map<string, number>;
+  ready: Set<string>;
+  completed: Set<string>;
+  checkpointService?: CheckpointService;
+  runId?: string;
+  hitlGateway?: HitlGateway;
+  onNodeStart?: SchedulerOptions["onNodeStart"];
+  onNodeComplete?: SchedulerOptions["onNodeComplete"];
+  onNodeError?: SchedulerOptions["onNodeError"];
+  onCheckpoint?: SchedulerOptions["onCheckpoint"];
+  onHitlInterrupt?: SchedulerOptions["onHitlInterrupt"];
+  seqRef: { value: number };
+}
+
+async function executeReadyNode(
+  nodeId: string,
+  params: ExecuteReadyNodeParams,
+): Promise<NodeStepOutcome> {
+  const {
+    compiledGraph,
+    channels,
+    history,
+    context,
+    executorMap,
+    adjacency,
+    inDegree,
+    ready,
+    completed,
+    checkpointService,
+    runId,
+    hitlGateway,
+    onNodeStart,
+    onNodeComplete,
+    onNodeError,
+    onCheckpoint,
+    onHitlInterrupt,
+    seqRef,
+  } = params;
+
+  let seq = seqRef.value;
+  const node = compiledGraph.nodes.get(nodeId)!;
+
+  const failStep = (error: Error, code: string): NodeStepOutcome => ({
+    kind: "return",
+    result: {
+      status: "failed",
+      channels,
+      history,
+      error: { message: error.message, code, cause: error },
+    },
+  });
+
+  if (node.type === "hitl") {
+    if (!hitlGateway || !runId) {
+      return failStep(
+        new Error(`HITL node "${nodeId}" requires hitlGateway and runId in options`),
+        "HITL_CONFIG_MISSING",
+      );
+    }
+    const config = node.config ?? {};
+    const payload = config.payload ?? { nodeId, message: "Human input required" };
+    const { token, interrupt } = await hitlGateway.createInterrupt(runId, nodeId, payload);
+
+    const record: NodeExecutionRecord = {
+      nodeId,
+      nodeType: "hitl",
+      startedAt: new Date().toISOString(),
+      status: "running",
+      input: getNodeInput(node, channels),
+      attempt: 1,
+    };
+    history.push(record);
+
+    if (checkpointService) {
+      await checkpointService.write({
+        runId,
+        seq: seq++,
+        nodeId,
+        channels,
+        metadata: { phase: "hitl_waiting", hitlToken: token, hitlNodeId: nodeId, completedNodes: [...completed, nodeId] },
+      });
+      if (onCheckpoint) {
+        await onCheckpoint({
+          runId,
+          seq: seq - 1,
+          nodeId,
+          phase: "hitl_waiting",
+          metadata: { hitlToken: token, hitlNodeId: nodeId, completedNodes: [...completed, nodeId] },
+        });
+      }
+    }
+
+    onHitlInterrupt?.({ token, nodeId, payload: interrupt.payload });
+    seqRef.value = seq;
+
+    return {
+      kind: "return",
+      result: {
+        status: "waiting_hitl",
+        channels,
+        history,
+        hitlInterrupt: {
+          token,
+          nodeId,
+          payload: interrupt.payload,
+          expiresAt: interrupt.expiresAt,
+        },
+      },
+    };
+  }
+
+  const executor = executorMap.get(node.type);
+  if (!executor) {
+    return failStep(new Error(`No executor for node type "${node.type}"`), "NO_EXECUTOR");
+  }
+
+  const record: NodeExecutionRecord = {
+    nodeId,
+    nodeType: node.type,
+    startedAt: new Date().toISOString(),
+    status: "running",
+    input: getNodeInput(node, channels),
+    attempt: 1,
+  };
+  history.push(record);
+
+  if (onNodeStart) {
+    await onNodeStart(record);
+  }
+
+  try {
+    const result = await executeWithRetry(node, executor, context, node.retry);
+
+    record.finishedAt = new Date().toISOString();
+    record.status = "completed";
+    record.output = result.updates;
+    mergeChannels(channels, result.updates);
+
+    if (checkpointService && runId) {
+      await checkpointService.write({
+        runId,
+        seq: seq++,
+        nodeId,
+        channels,
+        metadata: { phase: "node_complete", completedNodes: [...completed, nodeId] },
+      });
+      if (onCheckpoint) {
+        await onCheckpoint({
+          runId,
+          seq: seq - 1,
+          nodeId,
+          phase: "node_complete",
+          metadata: { completedNodes: [...completed, nodeId] },
+        });
+      }
+    }
+
+    const nextNodes =
+      result.nextNodeIds && result.nextNodeIds.length > 0 ? result.nextNodeIds : (adjacency.get(nodeId) ?? []);
+
+    for (const nextId of nextNodes) {
+      const newDegree = (inDegree.get(nextId) ?? 1) - 1;
+      inDegree.set(nextId, newDegree);
+      if (newDegree === 0) {
+        ready.add(nextId);
+      }
+    }
+
+    completed.add(nodeId);
+
+    if (onNodeComplete) {
+      await onNodeComplete(record);
+    }
+
+    seqRef.value = seq;
+
+    if (result.halt || node.type === "end") {
+      return { kind: "halt", seq };
+    }
+
+    return { kind: "continue", seq };
+  } catch (error) {
+    record.finishedAt = new Date().toISOString();
+    record.status = "failed";
+    record.error = { message: (error as Error).message, code: (error as Error & { code?: string }).code };
+
+    if (onNodeError) {
+      await onNodeError(record, error as Error);
+    }
+
+    const errorEdges = compiledGraph.edges.filter((e) => e.from === nodeId && e.onError);
+    if (errorEdges.length > 0) {
+      ready.add(errorEdges[0]!.to);
+      seqRef.value = seq;
+      return { kind: "continue", seq };
+    }
+
+    return failStep(error as Error, "NODE_ERROR");
   }
 }
 

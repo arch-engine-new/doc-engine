@@ -1,52 +1,50 @@
-# Task 10 Report — Knowledge closure (audit + register + contracts)
+# Task 10 Report — A11–A16 与 Job 回归
 
 ## Status
-DONE — work commit `7e6fa9f`
+DONE
 
-## Audit (read-only)
-- `audit_arch_changes` ran against the baseline anchor (`nogit`/fileHashes, scannedAt 2026-08-25T03:22:10Z): reported `new: []`, `modified: []`, `deleted: []`, `unregistered: []`.
-- Root cause: the baseline scan has empty `modules`/`packages` (scanners: java + frontend only; path-rules empty), so `packages/agent-runtime/src/**` TS sources were never covered by the indexer. Audit therefore has no signal; we treated all 18 source files under `packages/agent-runtime/src/**` as NEW to the knowledge base (none existed as assets) and registered them explicitly.
+## Commits
+none
 
-## Assets registered (18, module `agent-runtime`)
-All via MCP `register_asset`; knowledge files written by the index tools (`.ai/INDEX.md`, `.ai/arch/INDEX.md`, `arch-index.json`, `*.md`, `vectors.db`) — no manual editing of `.ai/`.
+BASE_SHA: `7d9effaef6dea0817569e1ad3bba3e8486d644cf`  
+HEAD: `7d9effaef6dea0817569e1ad3bba3e8486d644cf`（与 BASE 相同，无本 Task 提交）
 
-| Source | Asset id | Kind |
-|--------|----------|------|
-| src/index.ts | backend/agent-runtime/util/agent-runtime index | util |
-| src/graph/types.ts | backend/agent-runtime/pojo/Graph types | pojo |
-| src/graph/compiler.ts | backend/agent-runtime/util/GraphCompiler | util |
-| src/runtime/state.ts | backend/agent-runtime/pojo/Channel/RunStatus/RunMetadata types | pojo |
-| src/runtime/node-executors.ts | backend/agent-runtime/util/NodeExecutors | util |
-| src/runtime/scheduler.ts | backend/agent-runtime/util/Scheduler | util |
-| src/runtime/run-manager.ts | backend/agent-runtime/util/RunManager | util |
-| src/runtime/checkpoint-service.ts | backend/agent-runtime/util/CheckpointService | util |
-| src/tools/registry.ts | backend/agent-runtime/util/ToolRegistry | util |
-| src/tools/runtime.ts | backend/agent-runtime/util/ToolRuntime | util |
-| src/persistence/types.ts | backend/agent-runtime/pojo/StateStore and Stored types | pojo |
-| src/persistence/sqlite-store.ts | backend/agent-runtime/util/SQLiteStateStore | util |
-| src/persistence/migrate.ts | backend/agent-runtime/util/SQLite migration runner | util |
-| src/hitl/gateway.ts | backend/agent-runtime/util/HitlGateway | util |
-| src/obs/event-log.ts | backend/agent-runtime/util/EventLog | util |
-| src/obs/otel-hooks.ts | backend/agent-runtime/util/OtelHooks | util |
-| src/api/control.ts | backend/agent-runtime/api/ControlPlane | api |
-| src/api/http.ts | backend/agent-runtime/api/HttpControlServer | api |
+未读 `.ai/`。未调用 `audit_arch_changes`。未改 library/pipeline 生产代码。未改测试夹具。未写公路 seed。未 push。Job `MAX_UPLOAD_BYTES` 仍为 4MB。
 
-Note: backend paths support kinds `api|rpc|util|enum|pojo` only (no `component`); TS runtime classes were mapped to `util`, HTTP/control entries to `api`, type-only files to `pojo`.
+## Changes
+无代码改动。回归全绿，RetrieveHit 新字段夹具无需修补。
 
-## Contracts
-- Task 9 had already registered 8 contracts in `.ai/db.json` (`.apt/contracts/ts/` convention does not exist in this project; project convention per AGENTS.md is `register_contract`): RunStatus, SchedulerResult, CompiledGraph, GraphDefinition, HitlDecision, RunView, EventRow, StateStore.
-- Task 10 added 1 missing from the task contract list: **ToolExecutionResult** (`packages/agent-runtime/src/index.ts`).
-- Snapshot: 9 contracts total. No other public TS types needed contracts beyond the requested list (remaining public exports are granular payload/option interfaces referenced by the 9 registered contracts).
+MCP 只读：
+- `query_project_status` → `projectType=component`，无 blockers。
+- `query_contract` name=`JobPipeline` → `packages/core-engine/src/pipeline/job-pipeline.ts`（`MAX_UPLOAD_BYTES = 4 * 1024 * 1024`；`validateUploadInput` 超限抛 `UploadValidationError`；`tryAttachStandardFit` 无命中 skip、不发明 `clause_id`）。
+- `query_contract` name=`StandardLibrary` → `packages/core-engine/src/retrieve/library.ts`（`attachHit` 要求 `t_clause` 行；table/annex 不可写入 `Finding.clause_id`；`createSearchClauseToolHandler` 只 search）。
 
-## Gaps
-- Auto-scan never indexes `packages/**` TS (scanners config is java+frontend only); if continuous arch coverage for this package is wanted, enable a TS/frontend scanner or keep relying on manual register/refresh in knowledge closure steps.
-- `audit_arch_changes` remains anchored to the empty baseline; it will not detect future drift in `packages/agent-runtime` until a re-scan that includes these paths is configured.
+核对（测试断言，非生产改动）：
+- A11：ingest 后 `getClause(finding.clause_id)` 命中；伪造 `invented-999` / 「第999条」拒绝。
+- A12：两释义同一 `clause_id`（vector）。
+- A13：`queryPath` 返回 SUPERSEDES，命中已入库条款。
+- A14：revoked/superseded 拒绝 search/attach。
+- A15：`appendChat` 在 `standard_lib` / `check_findings` / `audit_trace` 落库。
+- A16：对话不消 blocking、不 publish、不发明 `clause_id`、不开 Receipt。
+- Job >4MB：`UploadValidationError` 且不 `insertJob`。
+- `search_clause`：ingest 后引用真实 `clause_id`；未 ingest 不发明、不 attach Finding。
 
-## Verification
+## Tests / Verify
 ```
-npm test -w agent-runtime   PASS: 122 passed, 8 skipped (HTTP suite skipped by design)
+npx vitest run packages/core-engine/test/standard-rag.test.ts packages/core-engine/test/upload-ocr.test.ts packages/core-engine/test/agent-native-graph.test.ts
+→ exit 0; Test Files 3 passed (3); Tests 24 passed (24) (vitest 3.2.7)
+  standard-rag.test.ts 15 passed
+  upload-ocr.test.ts 7 passed（>4MB 仍拒；无 retrieve hit 不发明 clause_id）
+  agent-native-graph.test.ts 2 passed（search_clause 不发明条款号）
 ```
 
-## Note
-- No changes to `packages/**` or `docs/**` source files (brief's `index.ts` whitelist: no change was needed — public exports were already complete per task 9; brief said "Minimal change OK if already complete").
-- `.apt/orchestration/progress.md` row 10 marked DONE (was pending; leftover task-9 progress edit committed together).
+Rn: R6、R10 回归（plan Task 10）。A11–A16 仍绿。
+
+## APT Micro-closeout
+- ContractsRegistered: none（无新 TS 类型 / 无生产改动）
+- AssetsRefreshed: none
+- `audit_arch_changes`: not called（brief 禁止）
+
+## Concerns
+- 工作区 `packages/core-engine/src` 另有与本 Task 无关的脏文件（如 `review.ts` modified、若干 untracked agent/extract 文件）。本 Task 未触碰、未纳入提交。
+- `.ai/` 未读、未提交。

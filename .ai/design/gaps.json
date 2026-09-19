@@ -10,5 +10,11 @@
     "reason": "No design profile; Vue connect for standard_lib / audit_trace / check_findings is blocked. Backend RAG + mock adapter continue without SPA.",
     "page": "standard_lib",
     "reportedAt": "2026-08-27T04:11:39.069Z"
+  },
+  {
+    "need": "standard_lib.tickAll",
+    "reason": "frozen page.logic only has tick (≤1 page) and uploadDoc; new op 「处理全部页」/tickAll is missing. gaps also include no-implementation-ref. Armed project: must $apt-create --refine before UI src changes.",
+    "page": "standard_lib",
+    "reportedAt": "2026-09-16T16:13:26.117Z"
   }
 ]

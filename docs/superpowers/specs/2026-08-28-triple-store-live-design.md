@@ -1,12 +1,14 @@
 ---
 title: 对接 PostgreSQL / Qdrant / Neo4j 实库
 date: 2026-08-28
-status: draft
+status: approved
 risk: high
-phase: spec_pending_approval
+phase: approved
 topic: triple-store-live
 mode: apt-auto-brainstorm
 goalSha: 6900c96c0679cba37337f51c3356d096355eb577939de41b76d1d115a7818c37
+approvedAt: 2026-08-28T03:44:00.000Z
+approvedBy: user
 ---
 
 # Design Spec: 对接三库（PostgreSQL + Qdrant + Neo4j）
@@ -215,4 +217,4 @@ docker exec neo4j cypher-shell -u neo4j -p 12345678 "MATCH (c:Clause) RETURN cou
 
 依据：拟改动 **> 8 个文件**。HTTP 以新增只读 health 为主，现有 9 页请求/响应字段保持。
 
-因此 `status: draft`，`phase: spec_pending_approval`。**未收到「批准 spec」前不进入 `/plan-from-spec`，不把 status 改为 approved。**
+因此本 spec 已由用户回复「批准」标为 `status: approved`。实现须先经 plan 确认后再 `/implement-plan`。

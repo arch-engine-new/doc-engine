@@ -1,31 +1,7 @@
-# Task 5 Brief
+# Task 5 Brief — 版式切分 + 文本 ingest + 自动边
 
-## Title
-Checkpoint crash recovery
+plan: `docs/apt/plans/2026-09-15-rag-ingest-metadata-graph-plan.md`
+projectType: component
+BASE_SHA: `7da6130b6ff12434aca94fb0483918f020bb0352`
 
-## Description
-Write checkpoint at node boundaries; resume from latest seq; test simulates crash by stopping mid-run and resuming. AC-2.
-
-## Files whitelist ONLY
-- packages/agent-runtime/src/runtime/checkpoint-service.ts
-- packages/agent-runtime/src/runtime/run-manager.ts
-- packages/agent-runtime/src/runtime/scheduler.ts
-- packages/agent-runtime/test/checkpoint-recovery.test.ts
-- packages/agent-runtime/src/index.ts
-
-## Verify
-cd D:\software\doc-engine
-npm test -w agent-runtime -- checkpoint-recovery
-npx tsc -p packages/agent-runtime --noEmit
-
-## Commit message
-feat(agent-runtime): checkpoint crash recovery (task 5)
-
-## Report
-Write D:\software\doc-engine\.apt\orchestration\task-5-report.md
-Status DONE|BLOCKED, commit sha, test summary
-
-## Rules
-- Public exports need JSDoc (why)
-- Do not implement other tasks beyond this scope
-- May edit listed runtime files to integrate
+（本 brief 补记：实现已在 `f594629`。原 paddleocr Task 5 账本被覆盖。）

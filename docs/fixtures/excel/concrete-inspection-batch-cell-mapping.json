@@ -1,0 +1,200 @@
+{
+  "docTypeId": "concrete_inspection_batch",
+  "title": "混凝土施工检验批质量验收记录",
+  "standard": "GB 50204-2015",
+  "sheet": "检验批记录",
+  "placeholdersUseDoubleBraces": true,
+  "fields": [
+    {
+      "fieldKey": "batch_no",
+      "cell": "B3",
+      "valueType": "string",
+      "required": true
+    },
+    {
+      "fieldKey": "project_name",
+      "cell": "B4",
+      "valueType": "string",
+      "required": true
+    },
+    {
+      "fieldKey": "division_name",
+      "cell": "E4",
+      "valueType": "string",
+      "required": true
+    },
+    {
+      "fieldKey": "sub_item_name",
+      "cell": "B5",
+      "valueType": "string",
+      "required": true
+    },
+    {
+      "fieldKey": "batch_capacity",
+      "cell": "E5",
+      "valueType": "string",
+      "required": true
+    },
+    {
+      "fieldKey": "constructor_org",
+      "cell": "B6",
+      "valueType": "string",
+      "required": true
+    },
+    {
+      "fieldKey": "project_manager",
+      "cell": "E6",
+      "valueType": "string",
+      "required": true
+    },
+    {
+      "fieldKey": "subcontractor",
+      "cell": "B7",
+      "valueType": "string",
+      "required": false
+    },
+    {
+      "fieldKey": "subcontractor_manager",
+      "cell": "E7",
+      "valueType": "string",
+      "required": false
+    },
+    {
+      "fieldKey": "construction_basis",
+      "cell": "B8",
+      "valueType": "text",
+      "required": true
+    },
+    {
+      "fieldKey": "acceptance_basis",
+      "cell": "B9",
+      "valueType": "text",
+      "required": true
+    },
+    {
+      "fieldKey": "batch_location",
+      "cell": "B10",
+      "valueType": "string",
+      "required": true
+    },
+    {
+      "fieldKey": "strength_sampling_record",
+      "cell": "E13",
+      "valueType": "text",
+      "required": true
+    },
+    {
+      "fieldKey": "impermeability_record",
+      "cell": "E14",
+      "valueType": "text",
+      "required": false
+    },
+    {
+      "fieldKey": "weighing_deviation_record",
+      "cell": "E15",
+      "valueType": "text",
+      "required": true
+    },
+    {
+      "fieldKey": "initial_set_record",
+      "cell": "E16",
+      "valueType": "text",
+      "required": true
+    },
+    {
+      "fieldKey": "construction_joint_record",
+      "cell": "E20",
+      "valueType": "text",
+      "required": true
+    },
+    {
+      "fieldKey": "post_pour_strip_record",
+      "cell": "E21",
+      "valueType": "text",
+      "required": false
+    },
+    {
+      "fieldKey": "curing_record",
+      "cell": "E22",
+      "valueType": "text",
+      "required": true
+    },
+    {
+      "fieldKey": "constructor_check_result",
+      "cell": "D23",
+      "valueType": "text",
+      "required": true
+    },
+    {
+      "fieldKey": "foreman_sign",
+      "cell": "C24",
+      "valueType": "signature",
+      "role": "foreman"
+    },
+    {
+      "fieldKey": "foreman_sign_date",
+      "cell": "G24",
+      "valueType": "date"
+    },
+    {
+      "fieldKey": "quality_inspector_sign",
+      "cell": "C25",
+      "valueType": "signature",
+      "role": "quality_inspector"
+    },
+    {
+      "fieldKey": "quality_inspector_sign_date",
+      "cell": "G25",
+      "valueType": "date"
+    },
+    {
+      "fieldKey": "supervisor_conclusion",
+      "cell": "D26",
+      "valueType": "text",
+      "required": true
+    },
+    {
+      "fieldKey": "supervisor_engineer_sign",
+      "cell": "C27",
+      "valueType": "signature",
+      "role": "supervisor_engineer"
+    },
+    {
+      "fieldKey": "supervisor_sign_date",
+      "cell": "G27",
+      "valueType": "date"
+    }
+  ],
+  "complianceRules": {
+    "strength_grade": {
+      "pattern": "C\\d{2}",
+      "example": "C30"
+    },
+    "strength_mpa_min": {
+      "gte": 30,
+      "note": "示例：C30 试块 28d 强度 ≥30MPa"
+    },
+    "sampling_groups_min": {
+      "gte": 1,
+      "per": "floor"
+    }
+  },
+  "signatureRoles": [
+    {
+      "role": "foreman",
+      "label": "专业工长"
+    },
+    {
+      "role": "quality_inspector",
+      "label": "项目专业质量检查员"
+    },
+    {
+      "role": "supervisor_engineer",
+      "label": "专业监理工程师"
+    }
+  ],
+  "sources": [
+    "GB 50204-2015 附录 A 质量验收记录（公开标准）",
+    "公开填写范例（百度文库/品茗 GD-C5-71165 同类字段，仅作字段对齐参考）"
+  ]
+}

@@ -1,6 +1,6 @@
 ---
 ---
-<!-- apt-template-version: 10.6.10 -->
+<!-- apt-template-version: 10.9.0 -->
 # $apt-app-ingest — 摄入已有原型（强制规格载体）
 
 PM 已有前端原型工程，一条命令产出页面逻辑 + **像素级规格载体**（`page.spec.*`）。

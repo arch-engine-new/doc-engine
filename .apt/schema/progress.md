@@ -1,12 +1,12 @@
 # Schema Progress
 
-- feature: agent-runtime
+- feature: core-engine
 - status: applied
-- schemaPath: docs/schema/agent-runtime-schema.md
+- schemaPath: docs/schema/core-engine-schema.md
 - reviewed: yes
 - applied: yes
-- appliedAt: 2026-08-25T03:38:38.791Z
+- appliedAt: 2026-08-26T11:15:00.000Z
 - stack: sql-fallback
-- migration: docs/schema/generated/agent-runtime-migration.sql
-- companionTypes: docs/schema/generated/agent-runtime-rows.ts
-- sourcePageLogic: designs/v0/agent-runtime-control/page.logic.md
+- migration: docs/schema/generated/core-engine-migration.sql
+- rows: docs/schema/generated/core-engine-rows.ts
+- notes: PM 批准表设计 2026-08-26；无模块 dal 目录，DDL 落 generated/；未覆盖 agent-runtime-migration.sql

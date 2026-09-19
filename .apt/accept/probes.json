@@ -1,0 +1,26 @@
+{
+  "ranAt": "2026-09-19T10:06:00.000Z",
+  "baseUrl": "http://localhost:5173",
+  "items": [
+    {
+      "name": "facade",
+      "result": "pass",
+      "note": "page.logic 未声明 FixtureAPI；产品门面为 /api。GET /packs/:id/standards 200 且含 #app"
+    },
+    {
+      "name": "asciiHeader",
+      "result": "pass",
+      "note": "page.logic 未声明非 ISO-8859-1 自定义头"
+    },
+    {
+      "name": "backendHealth",
+      "result": "pass",
+      "note": "GET /api/health 200 mode=live；postgres=ok qdrant=ok neo4j=ok minio=ok ocr=ok llm=ok"
+    },
+    {
+      "name": "reset",
+      "result": "warn",
+      "note": "POST /api/demo/reset 存在但会清空三库。本批跳过 reset，在已有 pack_88632d0869d7468c 上入库公开行政法规。"
+    }
+  ]
+}

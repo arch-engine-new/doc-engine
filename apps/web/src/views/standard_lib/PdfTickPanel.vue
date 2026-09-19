@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { ref } from "vue";
 import type { IngestTickPageView } from "../../services/types";
 
 defineProps<{
@@ -13,11 +14,15 @@ const emit = defineEmits<{
   tick: [];
 }>();
 
+const selectedName = ref("");
+
 function onFileChange(ev: Event): void {
   const input = ev.target as HTMLInputElement;
   const file = input.files?.[0];
   input.value = "";
-  if (file) emit("fileChange", file);
+  if (!file) return;
+  selectedName.value = file.name;
+  emit("fileChange", file);
 }
 
 /** pending=warn, ok=ok, OCR/index failures=bad — matches global .tag tokens. */
@@ -33,14 +38,15 @@ function tagClass(status: string): string {
   <div>
     <div class="row-actions">
       <label class="filter-label">
-        PDF
+        选择规范 PDF
         <input type="file" accept="application/pdf" :disabled="busy" @change="onFileChange" />
       </label>
+      <span v-if="selectedName" class="tag">已选 {{ selectedName }}</span>
       <button class="btn ghost" type="button" :disabled="busy || !ingestRunId || tickDone" @click="emit('tick')">
         处理一页
       </button>
-      <span v-if="ingestRunId" class="tag">run {{ ingestRunId }}</span>
-      <span v-if="tickDone" class="tag ok">tick 完成</span>
+      <span v-if="ingestRunId" class="tag">已登记，请逐页处理</span>
+      <span v-if="tickDone" class="tag ok">全部页处理完</span>
     </div>
     <div v-if="pages.length > 0" class="row-actions">
       <span v-for="page in pages" :key="`p-${page.page_no}`" class="tag" :class="tagClass(page.status)">

@@ -1,43 +1,75 @@
-# Task 2 Brief — design-sync 刷新设计知识（F1）
+# Task 2 Brief — retrieve 对齐 + 标准库不绑无关 Job
 
-plan: `docs/apt/plans/2026-09-15-verify-fix-design-audit-logic-sync-plan.md`
-projectType: component
-BASE_SHA: `eca0561`（Task 1 HEAD）
-上一 Task handoff: C2 三页已对齐（commit eca0561）；check-logic-sync failures=[]。必须先有 Task 1 再 sync，避免把简陋 html 写进 `.ai/design/`。
+review-tier: full
+BASE_SHA: c01b4e2717a906c8e98f17245ec79d03fd871ca5
+plan: docs/apt/plans/2026-09-17-b1-standard-lib-stepchat-fix-plan.md
+report: .apt/orchestration/task-2-report.md
+handoff-from-task-1: UnconfiguredLlmProvider 已落地；createLlmProvider(null) 中文未配置、不 echo。FakeLlmProvider 仍给 forceFakeLlm。未 commit。
 
-## Part 1 摘要
+## Goal
 
-- F1：`audit_design_changes` stale，`syncedAt=2026-08-30`。磁盘 `standard_lib/page.logic.md` 已有 tick / file_name / unit_id；`query_design` 仍返回旧稿。
-- 跑 `design-sync --adapter v0`。禁止手写 `.ai/design/`。
-- 不要求清掉 `no-implementation-ref`。
-- 不改 RAG / vue / core-engine。
+1. Vue 目前 `step=retrieve`，提示词/检索分支认 `standard_lib`，必须对齐。
+2. 标准库对话不得绑定 `/api/jobs` 第一条无关 Job（fixture-reversed.json / findings）。
+3. 问条款时只依据本次检索命中或明确未命中。
 
-## 步骤
+禁止改 `designs/v0/**`（F-1 / logic）。禁止 commit。禁止实现命中详情 UI。
 
-1. 只读 MCP：`query_design` page=`standard_lib`（记录旧 logic 无 tick，作对照）。
-2. 在项目根执行（PowerShell）：
-   ```
-   node C:\Users\weilt\.apt\arch-engine\dist\cli-design-sync.js D:\software\doc-engine --adapter v0
-   ```
-   允许加 `--incremental`。若 CLI 参数不同，先 `-h` 再跑。**禁止**手写 `.ai/design/` JSON/md。
-3. Verify MCP：
-   - `audit_design_changes`：`stale` 为空，或 `syncedAt` ≥ 本轮 designs/v0 mtime。
-   - `query_design(page=standard_lib)`：`logicMarkdown` 含 `tick`、`file_name`、`unit_id`。
-4. 微闭环：无新 TS 契约。design 知识不是 arch asset；report 写「本 Task 无架构资产变更」。禁止 `audit_arch_changes`。
-5. `git add` 仅白名单（`.ai/design/` 下由 CLI 改动的文件 + report）。不要 `git add .`。不要把 `.ai/arch/vectors.db` 等无关脏文件塞进 commit。
-6. 写 `.apt/orchestration/task-2-report.md` 并 commit。
+## 步骤（TDD 先红后绿）
+
+- [ ] 测试：`shouldSearchClause("retrieve", "你好", packId)` 与 `standard_lib` 同为 true；`stepSystemPrompt("retrieve")` 含标准库步文案（命中条款 / 未命中须说明）
+- [ ] 测试：retrieve/standard_lib 对话准备的 contextText **不得**含 `fixture-reversed.json` 或无关 Job findings；**应**含本次 RetrieveHit（clause_id/unit_id/file_name）或明确未命中
+- [ ] 测试：标准库路径不再依赖 listJobs()[0].trace_id
+- [ ] Vue `loadPack` 删除对 `/api/jobs` 第一条的绑定；StepChat 仍可发送（可用当前 pack 的 packId + 可选 pack 级 trace；若需扩展 `/api/chat` 收 pack_id / hits 则在白名单内做）
+- [ ] `buildJobContext` / `prepareStepChat`：retrieve|standard_lib 走 pack/检索上下文，无 Job 不 throw、不拼无关 findings
+- [ ] 既有 agent-connect `forceFakeLlm` checking 用例保持绿（可仍 `[fake-llm`，那是显式 fake）
+
+## MCP
+
+- query_contract `shouldSearchClause`
+- query_contract `RetrieveHit`
+- search_arch `buildJobContext` → query_arch path
+- search_arch `StandardLib` / `stepSystemPrompt`
+
+禁止未经 MCP 读 `.ai/`。
 
 ## Files 白名单
 
-- `.ai/design/**`（仅 design-sync 产出）
-- `.apt/orchestration/task-2-report.md`
+- `packages/core-engine/src/agent/prompts.ts`
+- `packages/core-engine/src/agent/context.ts`
+- `packages/core-engine/src/agent/step-chat-bridge.ts`
+- `packages/core-engine/src/http/handle-request.ts`
+- `packages/core-engine/src/pipeline/job-pipeline.ts`
+- `packages/core-engine/test/agent-connect.test.ts`
+- `packages/core-engine/test/standard-lib-stepchat.test.ts`
+- `apps/web/src/views/standard_lib/index.vue`
+- `apps/web/src/components/StepChat.vue`
 
-禁止：`packages/**`、`apps/web/**`、`designs/v0/**`（Task 1 已完成）、手改 `.ai/design/`。
+## Verify
 
-## Commit subject
+```
+npx vitest run packages/core-engine/test/agent-connect.test.ts packages/core-engine/test/standard-lib-stepchat.test.ts packages/core-engine/test/agent-native-graph.test.ts
+```
 
-`chore(design): sync v0 recipes after C2 logic align`
+（在仓库根或 core-engine 包内按现有 vitest 配置执行，确保能找到文件。）
+
+另跑 `npx tsc -p packages/core-engine/tsconfig.json --noEmit`（若项目惯用）。
+
+## Contracts
+
+shouldSearchClause, RetrieveHit。JobContextSnapshot 若新增对外字段 → register_contract。
 
 ## 编码规范
 
-`.apt/code-standards.md`。本 Task 无业务代码。
+`.apt/code-standards.md`。新增 export 注释说为什么。Vue 不硬编码新 hex；不新增视觉组件。
+
+## 微闭环
+
+refresh_asset 白名单已索引路径；新类型 register_contract。禁止 audit_arch_changes。
+
+## 禁止
+
+git commit；改 page.logic；改 Task 1 已完成的 provider.ts（除非测试被迫，不要碰）。
+
+## Status
+
+写满 `.apt/orchestration/task-2-report.md`。

@@ -1,0 +1,8 @@
+{
+  "pageId": "audit_trace",
+  "title": "审计追踪",
+  "capabilities": [],
+  "signals": [],
+  "sourcePath": "designs/v0/audit_trace/page.logic.md",
+  "contentHash": "6e80095fc644ef8bf28f2cd0f623e47918deac7b56f38a923495b7271f2eb20d"
+}

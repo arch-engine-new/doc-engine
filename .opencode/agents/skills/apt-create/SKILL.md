@@ -168,12 +168,15 @@ $apt-create 智慧社区APP，包含首页、在线缴费、报修、公告、�
 
 **报告前再跑 H8：**再执行一次 `check-create-prd`（同 §6.1 路径解析）。FAIL → Overall **FAIL**（即使原型已生成），不得宣称 create 成功。
 
+**报告前写 armed 标识：**create 或 refine 成功产报告前，写入/刷新 `.apt/create/armed.json`：`{ "armed": true, "lastMode": "<create|refine>", "updatedAt": "<ISO 时间>" }`（`.apt/create/` 内其它账本不动，见 gates §8）。
+
 展示：
 - `mode`（create / refine）与是否 `--fast`
 - **正式 PRD 路径**（绝对或相对；缺合格正式 PRD → **FAIL**）
 - 产出/变更了多少页、每页路径
 - 原型预览入口（`designs/v0/index.html`）
 - 非 fast：附 `.apt/create/brief.md` / `style-choice.md` 路径
+- **armed 标识路径与状态**：`armed: true（.apt/create/armed.json，lastMode=<mode>）`；refine 时另附 `changePages` 清单行
 - `--fast` 时须含**醒目警告**（gates §6）：已跳过需求澄清与风格选择，产物易走偏
 - 提示 PM：浏览器打开确认 → 标 approved=yes → 运行 `/apt-share` 推送
 
@@ -182,6 +185,7 @@ $apt-create 智慧社区APP，包含首页、在线缴费、报修、公告、�
 ```
 .apt/create/brief.md              ← 需求账本（非 --fast）
 .apt/create/style-choice.md       ← 风格账本（非 --fast）
+.apt/create/armed.json            ← armed 标识（成功产报告前写入）
 docs/prd/<产品名>.md              ← PRD（含页面清单 + 数据模型）
 designs/v0/
 ├── index.html                    ← 原型入口

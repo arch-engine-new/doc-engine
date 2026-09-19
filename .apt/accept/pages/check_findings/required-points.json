@@ -1,0 +1,14 @@
+{
+  "pageId": "check_findings",
+  "source": "designs/v0/check_findings/page.logic.md",
+  "points": [
+    { "id": "RP-01", "kind": "view_load", "logicAnchor": "§元信息/主视图 /jobs/:id/findings", "caseId": "C-01" },
+    { "id": "RP-02", "kind": "action", "logicAnchor": "§操作明细/getFindings Finding[] + 抽取 JSON", "caseId": "C-02" },
+    { "id": "RP-03", "kind": "action", "logicAnchor": "§操作明细/export 导出文件", "caseId": "C-03" },
+    { "id": "RP-04", "kind": "action", "logicAnchor": "§操作明细/openStepChat 就抽取/Finding 提问", "caseId": "C-04" },
+    { "id": "RP-05", "kind": "action", "logicAnchor": "§操作明细/confirmNext 同意进入待审", "caseId": "C-05" },
+    { "id": "RP-06", "kind": "state", "logicAnchor": "§状态 pass / blocked 标签", "caseId": "C-06" },
+    { "id": "RP-07", "kind": "other", "logicAnchor": "§主流程 blocking=true 不得自动通过", "caseId": "C-07" },
+    { "id": "RP-08", "kind": "other", "logicAnchor": "§主流程 标准符合度须展示 clause_id；无条款号不得写成不合某条", "caseId": "C-08" }
+  ]
+}

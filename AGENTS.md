@@ -30,9 +30,18 @@
 | 设计同步 | `/design-system` | `design（baoyu，可选）` |
 | 单页设计 | `/design-page` | `design（baoyu，可选）` |
 | 自主闭环 | `/apt-goal` | `apt-goal`（ZCode / OpenCode 亦可用 `$apt-goal`） |
+| 批量摄入（收敛即入队 → 队列驱动连续执行） | `$apt-intake`（Skill 形态无斜杠） | `apt-intake`（ZCode / OpenCode 亦可用 `$apt-intake`） |
+| 产品逻辑健康度自检（快检+深检） | `$apt-health` | `apt-health`（ZCode / OpenCode 亦可用 `$apt-health`） |
 | Brainstorming | `/auto-brainstorm` | `apt-auto-brainstorm` |
 | PM / UI / 架构审查 | `/apt-create` / `/apt-ingest` / `/apt-arch-review`（PRD 用 MCP `generate_prd`，非斜杠） | 同左 Skill 名 |
 | 进度 | `/current-status` | `apt-current-status` |
+
+### 迭代摄入（armed 项目）
+
+- 判定：`.apt/create/armed.json`（armed:true）或 `designs/v0/_pages.md` 存在 → 本项目 armed。
+- 规则：armed 项目对 `designs/v0` 原型 / PRD / 页面源码的 PM 需求变更，**必须先经 `$apt-create`（自动 refine）**产出标准增量输出（变更页 `page.logic.md` + manifest 重生、PRD 段落级修改、`_pages.md` 变更页 approved=no），再进开发链（单页 `/feature`；批量 rollup spec + `/plan-from-spec`）。
+- 兜底：直改源码 / 原型而不更新标准产物 → `/verify`「logic 同步」维度 FAIL（`scripts/check-logic-sync.cjs`）。
+- 批量场景（需求 / bug 列表持续投喂）用 `$apt-intake`：收敛即入队，队列驱动连续执行——无运行锁 ∧ 有就绪新任务 ∧ 预授权在位 → 自动派发后台执行体跑 `/apt-goal --continue`；执行体存活则 inbox 排队片间自取（`--start` 为手动触发入口）。
 
 ### 依赖寻址
 

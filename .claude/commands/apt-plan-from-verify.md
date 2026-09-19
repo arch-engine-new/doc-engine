@@ -1,4 +1,4 @@
-<!-- apt-template-version: 10.6.10 -->
+<!-- apt-template-version: 10.9.0 -->
 # $apt-plan-from-verify — 按 Verify Failures 出修复 plan
 
 默认读 `.apt/verify/latest.md`，用 `classify-verify-failures` 机械分流：仅当 `recommended=plan-from-verify` 时写修复 plan；否则**降级**（指向 `/finish-feature` / unblock / re-verify），**禁止**写生产代码。

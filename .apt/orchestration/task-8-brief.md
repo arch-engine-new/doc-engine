@@ -1,32 +1,36 @@
-# Task 8 Brief
+# Task 8 Brief — recognizeLayout 与按页文字层（R8/R17）
 
-## Title
-EventLog + control plane API
+plan: `docs/apt/plans/2026-09-15-rag-ingest-metadata-graph-plan.md`
+projectType: component
+BASE_SHA: `824e49ec0ab09a7d2601a74db23c2a626206e6bc`
 
-## Description
-Event append/getTrace; compileGraph/startRun/getRun/cancelRun/resumeHitl/getTrace. Optional minimal HTTP adapter. AC-5/AC-7.
+## 步骤
 
-## Files whitelist ONLY
-- packages/agent-runtime/src/obs/event-log.ts
-- packages/agent-runtime/src/obs/otel-hooks.ts
-- packages/agent-runtime/src/api/control.ts
-- packages/agent-runtime/src/api/http.ts
-- packages/agent-runtime/src/index.ts
-- packages/agent-runtime/test/control-api.test.ts
+- [ ] MCP：`query_contract` name=`PaddleOcr`；`query_contract` name=`flattenOcrMarkdown`。禁止读 `.ai/`。
+- [ ] `PaddleOcr.recognizeLayout`：复用 submit/poll/jsonl，**跳过** `flattenOcrMarkdown`；`text` 可含 `\|`。`recognize` 行为不变（仍 flatten）。可抽私有 `runJob` 避免两方法复制粘贴超 80 行。
+- [ ] `extractPdfUnicodePages(bytes): Promise<string[]>`：`mergePages: false`（或逐页 API）。标准入库路径禁止 `mergePages:true`。保留现有 `extractPdfUnicodeText`（Job 仍可 mergePages:true）。
+- [ ] 单测：recognizeLayout 文本含 `|`；recognize 不含表竖线（同一 VL markdown 夹具）。Job/paddleocr 既有 8 测仍绿。
+
+## Files 白名单
+
+- `packages/core-engine/src/ocr/paddleocr.ts`
+- `packages/core-engine/src/ocr/pdf-text.ts`
+- `packages/core-engine/test/paddleocr.test.ts`
+- `packages/core-engine/test/pdf-text.test.ts`（pages 断言）
+
+不要改 ingest-worker（Task 9）。不要改 Job 4MB。不要发明 Paddle DELETE。
 
 ## Verify
-cd D:\software\doc-engine
-npm test -w agent-runtime -- control-api
-npx tsc -p packages/agent-runtime --noEmit
 
-## Commit message
-feat(agent-runtime): event log and control API (task 8)
+```
+npx vitest run packages/core-engine/test/paddleocr.test.ts packages/core-engine/test/pdf-text.test.ts
+```
 
-## Report
-Write D:\software\doc-engine\.apt\orchestration\task-8-report.md
-Status DONE|BLOCKED, commit sha, test summary
+## 约束
 
-## Rules
-- Public exports need JSDoc (why)
-- Do not implement other tasks beyond this scope
-- May edit listed runtime files to integrate
+公开方法注释写为什么。register_contract PaddleOcr / extractPdfUnicodePages；refresh_asset。禁止 audit_arch_changes。
+
+## Report + commit
+
+`.apt/orchestration/task-8-report.md`
+`git commit -m "feat(ocr): add recognizeLayout and per-page PDF Unicode extraction"`

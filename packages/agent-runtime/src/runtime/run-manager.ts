@@ -18,6 +18,7 @@ import { mergeChannels, getChannel, serializeChannels, createInitialChannels } f
 import { ToolRuntime, getDefaultRegistry } from "../tools/runtime.js";
 import { getLastTerminalOutput } from "./scheduler.js";
 import type { HitlGateway, HitlDecision } from "../hitl/gateway.js";
+import { getDefaultLlmProvider } from "../llm/provider.js";
 
 /** In-memory run store entry. */
 interface RunEntry {
@@ -175,6 +176,8 @@ export class RunManager {
       checkpointService,
       runId: metadata.runId,
       hitlGateway: options.hitlGateway,
+      getCompiledGraph: (graphId) => this.graphCache.get(graphId),
+      llmProvider: options.schedulerOptions?.llmProvider ?? getDefaultLlmProvider(),
     };
 
     // If we have a resume result, we need to run a modified scheduler that skips completed nodes

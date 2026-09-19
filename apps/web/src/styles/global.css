@@ -1,0 +1,221 @@
+@import "./tokens.css";
+
+[hidden] { display: none !important; }
+
+*,
+*::before,
+*::after { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  font-family: var(--apt-font-body), sans-serif;
+  font-size: 14px;
+  color: var(--apt-text);
+  background: var(--apt-bg);
+}
+
+#app { min-height: 100vh; }
+
+a { color: var(--apt-primary); text-decoration: none; }
+a:hover { color: var(--apt-primary-hover); }
+button { font-family: inherit; cursor: pointer; }
+
+.app-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  align-items: center;
+  padding: 12px 24px;
+  background: var(--apt-bg-elevated);
+  border-bottom: 1px solid var(--apt-border);
+  box-shadow: var(--apt-shadow);
+}
+.app-nav .brand { font-weight: 700; color: var(--apt-text); margin-right: 12px; }
+.app-nav a { color: var(--apt-text-muted); font-size: 13px; }
+.app-nav a.active { color: var(--apt-primary); font-weight: 600; }
+
+.wrap { max-width: 1080px; margin: 0 auto; padding: 24px; }
+h1 { font-family: var(--apt-font-display), sans-serif; font-size: 22px; margin: 0 0 8px; }
+.sub { color: var(--apt-text-muted); margin-bottom: 20px; }
+.error-text { color: var(--apt-danger); }
+.dialog-panel { border-color: var(--apt-primary); }
+
+.card {
+  background: var(--apt-bg-elevated);
+  border: 1px solid var(--apt-border);
+  border-radius: var(--apt-radius-md);
+  padding: 16px 20px;
+  margin-bottom: 16px;
+  box-shadow: var(--apt-shadow);
+}
+
+.btn {
+  background: var(--apt-primary);
+  color: #fff;
+  border: 0;
+  border-radius: var(--apt-radius-sm);
+  padding: 8px 14px;
+  font-size: 13px;
+}
+.btn.ghost {
+  background: transparent;
+  color: var(--apt-primary);
+  border: 1px solid var(--apt-border);
+}
+.btn.danger { background: var(--apt-danger); }
+.btn:disabled { opacity: 0.45; cursor: not-allowed; }
+
+table { width: 100%; border-collapse: collapse; font-size: 13px; }
+th, td { text-align: left; padding: 8px 6px; border-bottom: 1px solid var(--apt-border); }
+th { color: var(--apt-text-muted); font-weight: 600; }
+td input[type="text"] { width: 100%; min-width: 72px; }
+
+.tag { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 12px; background: var(--apt-surface); }
+.tag.ok { color: var(--apt-success); }
+.tag.warn { color: var(--apt-warning); }
+.tag.bad { color: var(--apt-danger); }
+
+.row-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; align-items: center; }
+
+.filter-label { display: inline-flex; align-items: center; gap: 8px; color: var(--apt-text-muted); font-size: 13px; }
+select {
+  font-family: inherit;
+  color: var(--apt-text);
+  background: var(--apt-bg-elevated);
+  border: 1px solid var(--apt-border);
+  border-radius: var(--apt-radius-sm);
+  padding: 6px 10px;
+}
+input[type="text"],
+.grow {
+  font-family: inherit;
+  color: var(--apt-text);
+  background: var(--apt-bg-elevated);
+  border: 1px solid var(--apt-border);
+  border-radius: var(--apt-radius-sm);
+  padding: 6px 10px;
+}
+.grow { flex: 1; min-width: 220px; }
+.field-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+@media (max-width: 720px) {
+  .field-grid { grid-template-columns: 1fr; }
+}
+
+.canvas {
+  position: relative;
+  height: 360px;
+  background: repeating-conic-gradient(var(--apt-surface) 0% 25%, #fff 0% 50%) 0 0 / 24px 24px;
+  border: 1px dashed var(--apt-border);
+  border-radius: var(--apt-radius-md);
+  margin-bottom: 12px;
+  user-select: none;
+}
+.box {
+  position: absolute;
+  border: 2px solid var(--apt-primary);
+  background: rgba(31, 94, 255, 0.12);
+  color: var(--apt-primary);
+  font-size: 12px;
+  padding: 2px 4px;
+  overflow: hidden;
+}
+.tree { font-family: var(--apt-font-mono), monospace; font-size: 13px; line-height: 1.8; }
+.timeline { border-left: 2px solid var(--apt-border); padding-left: 16px; }
+.timeline .ev { margin-bottom: 12px; }
+.timeline .ev time { color: var(--apt-text-muted); font-size: 12px; margin-right: 8px; }
+.card-title { font-size: 15px; margin: 0 0 12px; font-family: var(--apt-font-display), sans-serif; }
+.muted { color: var(--apt-text-muted); font-size: 12px; }
+.banner {
+  padding: 10px 12px;
+  border-radius: var(--apt-radius-sm);
+  margin-bottom: 12px;
+  background: var(--apt-surface);
+}
+.banner.bad { color: var(--apt-danger); border: 1px solid var(--apt-border); }
+pre.extract {
+  font-family: var(--apt-font-mono), monospace;
+  font-size: 12px;
+  background: var(--apt-surface);
+  padding: 12px;
+  border-radius: var(--apt-radius-sm);
+  overflow: auto;
+  max-height: 280px;
+  margin: 0;
+}
+.wording-box {
+  width: 100%;
+  border: 1px solid var(--apt-border);
+  border-radius: 8px;
+  padding: 8px;
+  font-family: inherit;
+  color: var(--apt-text);
+  background: var(--apt-bg-elevated);
+  resize: vertical;
+}
+.receipt {
+  font-family: var(--apt-font-mono), monospace;
+  color: var(--apt-success);
+  margin: 0 0 12px;
+}
+table tbody tr.clickable { cursor: pointer; }
+table tbody tr.clickable:hover,
+table tbody tr.is-selected { background: var(--apt-surface); }
+
+body.has-step-chat { padding-right: 360px; }
+body.has-step-chat .wrap { max-width: 920px; }
+
+.step-chat {
+  position: fixed;
+  top: 52px;
+  right: 0;
+  bottom: 0;
+  width: 340px;
+  background: var(--apt-bg-elevated);
+  border-left: 1px solid var(--apt-border);
+  box-shadow: var(--apt-shadow);
+  display: flex;
+  flex-direction: column;
+  z-index: 20;
+}
+.step-chat-head { padding: 12px 14px 8px; border-bottom: 1px solid var(--apt-border); }
+.step-chat-head strong { margin-right: 8px; }
+.step-chat-meta { color: var(--apt-text-muted); font-size: 12px; margin-top: 4px; font-family: var(--apt-font-mono), monospace; }
+.step-chat-note { margin: 8px 14px; font-size: 12px; color: var(--apt-text-muted); }
+.step-chat-log { flex: 1; overflow: auto; padding: 8px 14px; }
+.step-chat-msg {
+  max-width: 95%;
+  margin-bottom: 8px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  font-size: 13px;
+  line-height: 1.45;
+  white-space: pre-wrap;
+}
+.step-chat-msg.assistant { background: var(--apt-surface); color: var(--apt-text); }
+.step-chat-msg.user {
+  margin-left: auto;
+  background: var(--apt-primary);
+  color: #fff;
+}
+.step-chat-form { padding: 10px 14px 14px; border-top: 1px solid var(--apt-border); }
+.step-chat-form textarea {
+  width: 100%;
+  margin-bottom: 8px;
+  border: 1px solid var(--apt-border);
+  border-radius: 8px;
+  padding: 8px;
+  font-family: inherit;
+  resize: vertical;
+  color: var(--apt-text);
+  background: var(--apt-bg-elevated);
+}
+@media (max-width: 900px) {
+  body.has-step-chat { padding-right: 0; padding-bottom: 42vh; }
+  .step-chat { top: auto; height: 40vh; width: 100%; border-left: 0; border-top: 1px solid var(--apt-border); }
+}

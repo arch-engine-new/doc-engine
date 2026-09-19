@@ -1,4 +1,4 @@
-<!-- apt-template-version: 10.6.10 -->
+<!-- apt-template-version: 10.9.0 -->
 # $apt-frontend-connect — 前端开发全流程
 
 复制原型 → 迁移清单 + **Connect Ledger** → **`connect-gate` 强契约** → **先按 feature 补后端** → 再 mock→API 对接 → 验收闭环。

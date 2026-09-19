@@ -1,0 +1,31 @@
+{
+  "mocks": [
+    {
+      "id": "designs/v0/mock/api.js",
+      "status": "cleared",
+      "replaceWith": "apps/web/src/services/http.ts + /api/*",
+      "note": "No page uses prototype mock; all 9 pages call live /api via Vite middleware → JobPipeline"
+    },
+    {
+      "id": "designs/v0/mock/step-chat.js",
+      "status": "cleared",
+      "replaceWith": "apps/web/src/components/StepChat.vue → POST /api/chat",
+      "pages": [
+        "job_upload",
+        "check_findings",
+        "pending_review",
+        "project_home",
+        "template_annotate",
+        "rule_editor",
+        "standard_lib",
+        "volume_preview"
+      ],
+      "note": "audit_trace is read-only (listStepChats) and does not POST /api/chat"
+    },
+    {
+      "id": "apps/web/src/mocks/index.ts",
+      "status": "cleared",
+      "replaceWith": "live /api via http.ts; placeholder no longer read by wired pages"
+    }
+  ]
+}

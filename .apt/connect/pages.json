@@ -1,0 +1,142 @@
+{
+  "framework": "vue",
+  "target": "apps/web",
+  "source": "designs/v0",
+  "pages": [
+    {
+      "pageId": "project_home",
+      "route": "/projects",
+      "mode": "prototype-ref",
+      "apis": [
+        "listProjects",
+        "createProject",
+        "listSpecPacks",
+        "createSpecPack",
+        "listTemplates",
+        "createTemplate",
+        "appendChat"
+      ],
+      "prototype": "designs/v0/project_home/index.html",
+      "logic": "designs/v0/project_home/page.logic.md",
+      "view": "apps/web/src/views/project_home/index.vue"
+    },
+    {
+      "pageId": "template_annotate",
+      "route": "/templates/:id/annotate",
+      "mode": "prototype-ref",
+      "apis": [
+        "getTemplate",
+        "listFieldBoxes",
+        "saveFieldBoxes",
+        "appendChat"
+      ],
+      "prototype": "designs/v0/template_annotate/index.html",
+      "logic": "designs/v0/template_annotate/page.logic.md",
+      "view": "apps/web/src/views/template_annotate/index.vue"
+    },
+    {
+      "pageId": "rule_editor",
+      "route": "/packs/:id/rules",
+      "mode": "prototype-ref",
+      "apis": [
+        "saveDraft",
+        "addFixture",
+        "runFixtures",
+        "publish",
+        "getSpecPack",
+        "appendChat"
+      ],
+      "prototype": "designs/v0/rule_editor/index.html",
+      "logic": "designs/v0/rule_editor/page.logic.md",
+      "view": "apps/web/src/views/rule_editor/index.vue"
+    },
+    {
+      "pageId": "standard_lib",
+      "route": "/packs/:id/standards",
+      "mode": "prototype-ref",
+      "apis": [
+        "ingestStandard",
+        "searchStandard",
+        "bindEffectiveVersion",
+        "addStandardEdge",
+        "getSpecPack",
+        "appendChat"
+      ],
+      "prototype": "designs/v0/standard_lib/index.html",
+      "logic": "designs/v0/standard_lib/page.logic.md",
+      "view": "apps/web/src/views/standard_lib/index.vue"
+    },
+    {
+      "pageId": "job_upload",
+      "route": "/jobs",
+      "mode": "prototype-ref",
+      "apis": [
+        "listJobs",
+        "runFixtureJob",
+        "appendChat",
+        "confirmNext"
+      ],
+      "prototype": "designs/v0/job_upload/index.html",
+      "logic": "designs/v0/job_upload/page.logic.md",
+      "view": "apps/web/src/views/job_upload/index.vue"
+    },
+    {
+      "pageId": "pending_review",
+      "route": "/pending",
+      "mode": "prototype-ref",
+      "apis": [
+        "listJobs",
+        "listProposals",
+        "editWording",
+        "confirmProposal",
+        "appendChat",
+        "pendingMount"
+      ],
+      "prototype": "designs/v0/pending_review/index.html",
+      "logic": "designs/v0/pending_review/page.logic.md",
+      "view": "apps/web/src/views/pending_review/index.vue"
+    },
+    {
+      "pageId": "check_findings",
+      "route": "/jobs/:id/findings",
+      "mode": "prototype-ref",
+      "apis": [
+        "listJobs",
+        "getFindings",
+        "getExtraction",
+        "appendChat",
+        "confirmNext"
+      ],
+      "prototype": "designs/v0/check_findings/index.html",
+      "logic": "designs/v0/check_findings/page.logic.md",
+      "view": "apps/web/src/views/check_findings/index.vue"
+    },
+    {
+      "pageId": "volume_preview",
+      "route": "/jobs/:id/volume",
+      "mode": "prototype-ref",
+      "apis": [
+        "previewVolume",
+        "getVolumePreview",
+        "getSpecPack",
+        "setGroupKeys",
+        "appendChat"
+      ],
+      "prototype": "designs/v0/volume_preview/index.html",
+      "logic": "designs/v0/volume_preview/page.logic.md",
+      "view": "apps/web/src/views/volume_preview/index.vue"
+    },
+    {
+      "pageId": "audit_trace",
+      "route": "/audit/:traceId",
+      "mode": "prototype-ref",
+      "apis": [
+        "getTrace",
+        "listStepChats"
+      ],
+      "prototype": "designs/v0/audit_trace/index.html",
+      "logic": "designs/v0/audit_trace/page.logic.md",
+      "view": "apps/web/src/views/audit_trace/index.vue"
+    }
+  ]
+}

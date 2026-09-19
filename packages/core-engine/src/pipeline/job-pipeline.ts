@@ -51,6 +51,7 @@ import type {
   VolumePreviewRow,
 } from "../types.js";
 import type { JobStepOrchestrator } from "../agent/job-step-orchestrator.js";
+import { isRetrieveChatStep } from "../agent/prompts.js";
 import {
   PACK_ID,
   fieldsForKind,
@@ -249,8 +250,9 @@ export class JobPipeline {
   static openStandardLibrary(
     ports?: Partial<RetrievePorts>,
     dbPath = ":memory:",
+    ocr?: OcrPort,
   ): JobPipeline {
-    return new JobPipeline(JobPipeline.boot(dbPath), ports);
+    return new JobPipeline(JobPipeline.boot(dbPath), ports, ocr);
   }
 
   /**
@@ -260,7 +262,7 @@ export class JobPipeline {
   static async openLiveFromEnv(): Promise<JobPipeline> {
     const mode = resolveEngineMode();
     if (mode.mode === "memory") {
-      return JobPipeline.openStandardLibrary();
+      return JobPipeline.openStandardLibrary(undefined, ":memory:", PaddleOcr.fromEnv() ?? undefined);
     }
     await runPgMigration(mode.databaseUrl);
     const store = new PostgresLedger(mode.databaseUrl);
@@ -788,7 +790,8 @@ export class JobPipeline {
    */
   async appendChat(input: AppendChatInput): Promise<AppendChatResult> {
     const job = await this.store.getJobByTrace(input.traceId);
-    if (!job) {
+    // retrieve/standard_lib threads are pack-scoped; job_id stays null without a Job.
+    if (!job && !isRetrieveChatStep(input.step)) {
       throw new Error(`job not found for trace_id=${input.traceId}`);
     }
     let thread = await this.store.getThread(input.traceId, input.step);
@@ -796,7 +799,7 @@ export class JobPipeline {
       thread = await this.store.insertThread({
         trace_id: input.traceId,
         step: input.step,
-        job_id: job.job_id,
+        job_id: job?.job_id ?? null,
       });
     }
     const message = await this.store.insertMessage({

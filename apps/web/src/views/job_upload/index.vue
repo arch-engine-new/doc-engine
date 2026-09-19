@@ -2,6 +2,7 @@
 import { computed, onMounted, ref } from "vue";
 import { RouterLink } from "vue-router";
 import StepChat from "../../components/StepChat.vue";
+import UploadToolbar from "./UploadToolbar.vue";
 import { demoNav, rememberDemoNav, resetDemo as resetDemoApi } from "../../services/demo-session";
 import { dictLabel, errorMessage, http, loadDict, uploadJob, type DictItem } from "../../services/http";
 import { CONFIRM_NEXT, type DocTypeView, type JobView, type TemplateView } from "../../services/types";
@@ -207,55 +208,39 @@ onMounted(() => {
     <p class="sub">
       Walking Skeleton 主入口。夹具运行走 live /api。状态：uploaded → inspecting → extracting → checking → pending / previewed / failed。对话不改 Job.status。
     </p>
-    <div class="row-actions">
-      <label class="filter-label">
-        文档类型
-        <select v-model="selectedDocTypeId" @change="onDocTypeChange">
-          <option value="">请选择</option>
-          <option v-for="dt in docTypes" :key="dt.doc_type_id" :value="dt.doc_type_id">
-            {{ dt.name }}
-          </option>
-        </select>
-      </label>
-      <label v-if="hasMultipleTemplates" class="filter-label">
-        模板
-        <select v-model="selectedTemplateId">
-          <option v-for="tpl in templatesForDocType" :key="tpl.template_id" :value="tpl.template_id">
-            {{ tpl.name }}
-          </option>
-        </select>
-      </label>
-      <input
-        ref="fileInputRef"
-        type="file"
-        accept="image/jpeg,image/png,application/pdf"
-        hidden
-        @change="onFileSelected"
-      />
-      <button class="btn" :disabled="!canUpload" type="button" @click="openFilePicker">上传资料</button>
-      <button class="btn ghost" :disabled="busy" type="button" @click="runFixture('ok')">运行合规夹具</button>
-      <button class="btn ghost" :disabled="busy" type="button" @click="runFixture('reversed')">运行颠倒夹具</button>
-      <button class="btn ghost" :disabled="busy" type="button" @click="resetDemo">重置演示</button>
-      <button class="btn" :disabled="busy || !nextStatus" type="button" @click="confirmNext">
-        同意下一步
-        <template v-if="nextStatus">→ {{ dictLabel(statusDict, nextStatus) }}</template>
-      </button>
-      <label class="filter-label">
-        状态
-        <select v-model="statusFilter">
-          <option value="">全部</option>
-          <option v-for="item in statusDict" :key="item.value" :value="item.value">
-            {{ item.label }}
-          </option>
-        </select>
-      </label>
-    </div>
-    <p v-if="selectedDocTypeId" class="sub template-hint">
-      <template v-if="resolvedTemplateId">
-        将使用模板：{{ templateLabel(resolvedTemplateId) }}
+    <UploadToolbar
+      :doc-types="docTypes"
+      :templates-for-doc-type="templatesForDocType"
+      :selected-doc-type-id="selectedDocTypeId"
+      :selected-template-id="selectedTemplateId"
+      :has-multiple-templates="hasMultipleTemplates"
+      :resolved-template-id="resolvedTemplateId"
+      :can-upload="canUpload"
+      :busy="busy"
+      :next-status="nextStatus"
+      :status-dict="statusDict"
+      :status-filter="statusFilter"
+      :dict-label="dictLabel"
+      :template-label="templateLabel"
+      @update:selected-doc-type-id="selectedDocTypeId = $event"
+      @update:selected-template-id="selectedTemplateId = $event"
+      @update:status-filter="statusFilter = $event"
+      @doc-type-change="onDocTypeChange"
+      @open-file-picker="openFilePicker"
+      @run-fixture="runFixture"
+      @reset-demo="resetDemo"
+      @confirm-next="confirmNext"
+    >
+      <template #file-input>
+        <input
+          ref="fileInputRef"
+          type="file"
+          accept="image/jpeg,image/png,application/pdf"
+          hidden
+          @change="onFileSelected"
+        />
       </template>
-      <template v-else>该文档类型尚无模板，上传将仅绑定 doc_type_id。</template>
-    </p>
+    </UploadToolbar>
     <p v-if="error" class="sub error-text">{{ error }}</p>
     <section class="card">
       <table>
@@ -297,9 +282,3 @@ onMounted(() => {
   </div>
   <StepChat :trace-id="selected?.trace_id" :step="selected?.status || 'inspecting'" />
 </template>
-
-<style scoped>
-.template-hint {
-  margin-top: -4px;
-}
-</style>

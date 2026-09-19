@@ -69,6 +69,9 @@ export class ToolRegistry {
     handler: ToolHandler<Input, Output>,
     description?: string,
   ): void {
+    if (name.startsWith("submit_")) {
+      throw new Error(`Tool "${name}" is forbidden`);
+    }
     if (this.tools.has(name)) {
       throw new Error(`Tool "${name}" is already registered`);
     }

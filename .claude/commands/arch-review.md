@@ -1,7 +1,7 @@
 ---
 description: 架构师 Agent — 产品知识同步 + 必问门禁 + 子阶段可恢复 + 30 维架构缺口 + 技术选型 + 逐项补齐（v10.2）
 ---
-<!-- apt-template-version: 10.6.10 -->
+<!-- apt-template-version: 10.9.0 -->
 
 > ⚠ **能力边界：** 生产级深度（路径规则 / AST 解析 / DO 落库 / 30 维关键词）**当前仅 Java**；Go / TS / Python 可跑审查流程，但蓝图、索引、落库为半支持——选型靠 blueprint 卡片 + sql-fallback + 人工校正，不承诺与 Java 同级可重复交付。
 

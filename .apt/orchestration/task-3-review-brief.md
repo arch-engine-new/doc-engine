@@ -1,18 +1,21 @@
 # Task 3 Review Brief
 
-review-tier: light
-projectType: component
+review-tier: full
+BASE_SHA: c01b4e2717a906c8e98f17245ec79d03fd871ca5
+implementer: .apt/orchestration/task-3-report.md
+brief: .apt/orchestration/task-3-brief.md
+report-out: .apt/orchestration/task-3-review.md
 
 ## Diff
-`9219afb6616873e7f1b213b41b260722e924b6b7..6cb0bd8b7756382748ee88ca3c6d9de391b85520`
+```
+git diff -- packages/core-engine/src/http/session.ts packages/core-engine/src/agent/agent-runtime-factory.ts packages/core-engine/test/http-adapter.test.ts packages/core-engine/test/standard-lib-stepchat.test.ts
+```
 
-## 核对
-- assertVectorPayload：缺 file_name/unit_id/非法 chunk_kind/非法页抛错；table/annex 非空 clause_id 抛错
-- 禁止 point.id 回填 clause_id；qdrant 删除 `?? point.id`
-- originalPointId 只认 unit_id
-- MemoryVectorStore search id=unit_id
-- 单测覆盖缺页 + table 不回填
-- 未改 library.ts
-- 公开函数有为什么注释；函数 ≤80 行
+## 主 Agent mini
+- vitest 42/42 PASS
+- tsc exit 0
 
-写入 `.apt/orchestration/task-3-review.md` Assessment PASS|FAIL。
+## 审查
+memory 用户会话不再 forceFakeLlm；无 llm.json 时 /api/chat 中文未配置、无 [fake-llm；测试 forceFakeLlm 仍 echo。白名单与注释。
+
+只读，写 `.apt/orchestration/task-3-review.md`。

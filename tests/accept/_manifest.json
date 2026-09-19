@@ -1,0 +1,5 @@
+{
+  "updatedAt": "2026-09-19",
+  "pages": ["job_upload", "check_findings", "pending_review", "rule_editor", "standard_lib"],
+  "note": "standard_lib 2026-09-19 live ingest+search gate PASS；Docker Qdrant/Neo4j 已对账"
+}

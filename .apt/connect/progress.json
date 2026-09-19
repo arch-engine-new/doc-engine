@@ -1,0 +1,21 @@
+{
+  "phase": "done",
+  "status": "done",
+  "connectLevel": "real-backend",
+  "framework": "vue",
+  "target": "apps/web",
+  "updatedAt": "2026-08-27T13:45:00.000Z",
+  "wiredPages": [
+    "project_home",
+    "template_annotate",
+    "rule_editor",
+    "standard_lib",
+    "job_upload",
+    "pending_review",
+    "check_findings",
+    "volume_preview",
+    "audit_trace"
+  ],
+  "shellPages": [],
+  "note": "connectLevel=real-backend：9 页已接进程内 JobPipeline HTTP，非资料云实挂。升级 production 需换真实 PG/Qdrant/Neo4j 与资料云适配器后重跑 done。"
+}
