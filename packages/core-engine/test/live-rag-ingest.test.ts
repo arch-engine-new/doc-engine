@@ -1,11 +1,13 @@
 /**
- * Live RAG ingest smoke. Missing DATABASE_URL / QDRANT_URL / NEO4J_URI → skip
- * so CI stays green without Docker. JSON leave fixture is the live path;
- * full-book OCR of rules/ is not a gate. Does not write 公路 into demo/reset seed.
+ * Live RAG ingest smoke. Missing DATABASE_URL / QDRANT_URL / NEO4J_URI /
+ * DASHSCOPE_API_KEY → skip so CI stays green without Docker. JSON leave fixture
+ * is the live path; full-book OCR of rules/ is not a gate. Does not write 公路
+ * into demo/reset seed. Skip is not a Hash fallback.
  */
 
 import { QdrantClient } from "@qdrant/js-client-rest";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { HASH_EMBED_DIM } from "../src/retrieve/embeddings.js";
 import { JobPipeline, liveRetrievePorts } from "../src/index.js";
 
 const LEAVE_TEXT = `1.1 事假须提前申请。
@@ -17,10 +19,21 @@ const LEAVE_TEXT = `1.1 事假须提前申请。
 `;
 
 const hasLiveEnv = Boolean(
-  process.env.DATABASE_URL && process.env.QDRANT_URL && process.env.NEO4J_URI,
+  process.env.DATABASE_URL &&
+    process.env.QDRANT_URL &&
+    process.env.NEO4J_URI &&
+    process.env.DASHSCOPE_API_KEY,
 );
 
-async function scrollNonEmptyFileName(url: string): Promise<string | undefined> {
+function numericVector(raw: unknown): number[] | undefined {
+  if (!Array.isArray(raw) || raw.length === 0) return undefined;
+  if (!raw.every((n) => typeof n === "number")) return undefined;
+  return raw as number[];
+}
+
+async function scrollLivePoint(
+  url: string,
+): Promise<{ fileName: string; vector: number[] } | undefined> {
   const client = new QdrantClient({
     url,
     apiKey: process.env.QDRANT_API_KEY,
@@ -28,11 +41,14 @@ async function scrollNonEmptyFileName(url: string): Promise<string | undefined> 
   const scrolled = await client.scroll("clauses", {
     limit: 32,
     with_payload: true,
-    with_vector: false,
+    with_vector: true,
   });
   for (const point of scrolled.points) {
     const fileName = point.payload?.file_name;
-    if (typeof fileName === "string" && fileName.length > 0) return fileName;
+    const vector = numericVector(point.vector);
+    if (typeof fileName === "string" && fileName.length > 0 && vector) {
+      return { fileName, vector };
+    }
   }
   return undefined;
 }
@@ -50,7 +66,7 @@ describe.skipIf(!hasLiveEnv)("live RAG ingest smoke", () => {
     await pipeline?.close();
   });
 
-  it("JSON ingest leave fixture writes Qdrant payload.file_name", async () => {
+  it("JSON ingest leave fixture writes Qdrant file_name and vector length !== Hash 48", async () => {
     const project = await pipeline.createProject("live-rag-ingest-smoke");
     const pack = await pipeline.createSpecPack({
       projectId: project.project_id,
@@ -65,7 +81,9 @@ describe.skipIf(!hasLiveEnv)("live RAG ingest smoke", () => {
     });
     expect(ingested.clauses.length).toBeGreaterThan(0);
 
-    const fileName = await scrollNonEmptyFileName(process.env.QDRANT_URL ?? "");
-    expect(fileName).toBeTruthy();
+    const point = await scrollLivePoint(process.env.QDRANT_URL ?? "");
+    expect(point?.fileName).toBeTruthy();
+    expect(point?.vector).toBeTruthy();
+    expect(point!.vector.length).not.toBe(HASH_EMBED_DIM);
   });
 });

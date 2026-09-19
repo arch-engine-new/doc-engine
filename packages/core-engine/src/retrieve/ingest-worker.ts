@@ -308,7 +308,7 @@ async function upsertClauseLayout(
   });
   await ports.vector.upsert({
     id: clause.clause_id,
-    vector: ports.embed.embed(`${part.heading}\n${part.body}`),
+    vector: await ports.embed.embed(`${part.heading}\n${part.body}`),
     payload: {
       unit_id: clause.clause_id,
       chunk_kind: "clause",
@@ -378,7 +378,7 @@ async function upsertTableLayout(
   });
   await ports.vector.upsert({
     id: unitId,
-    vector: ports.embed.embed(`${part.heading}\n${part.body}`),
+    vector: await ports.embed.embed(`${part.heading}\n${part.body}`),
     payload: {
       unit_id: unitId,
       chunk_kind: "table",
