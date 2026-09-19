@@ -57,9 +57,31 @@
   },
   {
     "spec": "docs/superpowers/specs/2026-09-15-rag-ingest-metadata-graph-design.md",
-    "approval": "pending",
-    "at": "2026-09-15T01:45:00.000Z",
+    "approval": "approved",
+    "at": "2026-09-15T02:15:00.000Z",
+    "by": "user",
+    "risk": "high",
+    "note": "continue with recommended defaults (R15 nice, refine before vue, no embedding this slice)"
+  },
+  {
+    "spec": "docs/superpowers/specs/2026-09-19-standard-lib-hit-detail-design.md",
+    "approval": "auto_approved",
+    "at": "2026-09-19T05:40:00.000Z",
     "by": "apt-auto-brainstorm",
-    "risk": "high"
+    "risk": "low"
+  },
+  {
+    "spec": "docs/superpowers/specs/2026-09-19-dashscope-text-embedding-v3-design.md",
+    "approval": "auto_approved",
+    "at": "2026-09-19T07:35:00.000Z",
+    "by": "apt-auto-brainstorm",
+    "risk": "low"
+  },
+  {
+    "spec": "docs/superpowers/specs/2026-09-19-live-http-rerank-design.md",
+    "approval": "auto_approved",
+    "at": "2026-09-19T11:10:00.000Z",
+    "by": "apt-auto-brainstorm",
+    "risk": "low"
   }
 ]
