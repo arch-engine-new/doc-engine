@@ -6,6 +6,11 @@ defineProps<{
   hits: RetrieveHitView[];
   pathDict: DictItem[];
   dictLabel: (items: DictItem[], value: string) => string;
+  selectedKey?: string | null;
+}>();
+
+const emit = defineEmits<{
+  select: [hit: RetrieveHitView];
 }>();
 
 /** Layout units are not clauses; the citation column must stay empty-looking. */
@@ -38,7 +43,14 @@ function hitKey(hit: RetrieveHitView): string {
       </tr>
     </thead>
     <tbody>
-      <tr v-for="hit in hits" :key="hitKey(hit)">
+      <!-- Click opens detail; provenance columns stay five — never add a body <th>. -->
+      <tr
+        v-for="hit in hits"
+        :key="hitKey(hit)"
+        class="clickable"
+        :class="{ 'is-selected': selectedKey === hitKey(hit) }"
+        @click="emit('select', hit)"
+      >
         <td>{{ hit.file_name }}</td>
         <td>{{ pageLabel(hit) }}</td>
         <td>{{ hit.unit_id }}</td>

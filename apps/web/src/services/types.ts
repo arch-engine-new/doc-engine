@@ -192,6 +192,10 @@ export interface RetrieveHitView {
   standard_version_id: string;
   span: { start: number; end: number } | null;
   retrieve_path: string;
+  /** Ledger heading or layout caption; empty/null is shown as 无标题 in detail. */
+  heading?: string | null;
+  /** Ledger body; the hits table must not render this. Empty is 无正文, never invented. */
+  body?: string | null;
 }
 
 /** One pull-tick of PDF ingest: ≤1 page, or done when no pending pages remain. */

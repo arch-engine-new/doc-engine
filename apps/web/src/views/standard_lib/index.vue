@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from "vue";
+import { computed, onMounted, ref, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import StepChat from "../../components/StepChat.vue";
-import { demoNav, ensureDemoSession, rememberDemoNav } from "../../services/demo-session";
+import { demoNav, ensureDemoSession, rememberDemoNav, resolveLivePackId } from "../../services/demo-session";
 import {
   dictLabel,
   errorMessage,
@@ -13,6 +13,7 @@ import {
   type DictItem,
 } from "../../services/http";
 import type { IngestTickPageView, RetrieveHitView, SpecPackView } from "../../services/types";
+import HitDetailPanel from "./HitDetailPanel.vue";
 import PdfTickPanel from "./PdfTickPanel.vue";
 import RetrieveHitsTable from "./RetrieveHitsTable.vue";
 
@@ -33,6 +34,7 @@ const fileUri = ref("fixture://leave");
 const ingestText = ref(LEAVE_TEXT);
 const query = ref("1.1");
 const hits = ref<RetrieveHitView[]>([]);
+const selectedHit = ref<RetrieveHitView | null>(null);
 const lastVersionId = ref("");
 const lastClauses = ref<{ clause_id: string }[]>([]);
 const tablesUnlinked = ref(0);
@@ -44,27 +46,49 @@ const edgeDict = ref<DictItem[]>([]);
 const pathDict = ref<DictItem[]>([]);
 const error = ref("");
 const busy = ref(false);
-const chatReady = ref(false);
 const traceId = ref("");
 const ingestRunId = ref("");
 const tickPages = ref<IngestTickPageView[]>([]);
 const tickDone = ref(false);
 
+function ingestError(err: unknown): string {
+  const raw = errorMessage(err);
+  if (raw.includes("multipart file field required")) {
+    return "没收到 PDF，请重新选择规范文件。";
+  }
+  if (raw.includes("pdf raster failed") || raw.includes("@napi-rs/canvas")) {
+    return "这是扫描件，需要逐页识别。本机还不能把 PDF 页画成图。请改用能选中文字的 PDF，或把条文粘贴到上方文本框点「入库条款」。";
+  }
+  return raw;
+}
+
+// Mount StepChat on packId, not hits: empty retrieve still needs the HITL sidebar.
 const packId = computed(() => String(route.params.id ?? ""));
 
 async function loadPack(): Promise<void> {
   pathDict.value = await loadDict("retrieve_path");
   edgeDict.value = await loadDict("standard_edge_kind");
   if (edgeDict.value[0] && !edgeKind.value) edgeKind.value = edgeDict.value[0].value;
-  const jobs = await http<{ jobs: { trace_id: string }[] }>("/api/jobs");
-  traceId.value = jobs.jobs[0]?.trace_id ?? demoNav.traceId;
+  // Pack-scoped thread — never listJobs()[0] (that is fixture-reversed.json).
+  traceId.value = packId.value ? `pack:${packId.value}` : "";
   try {
     const res = await http<{ pack: SpecPackView }>(`/api/packs/${packId.value}`);
     pack.value = res.pack;
-    bindVersionId.value = res.pack.effective_standard_version_id ?? bindVersionId.value;
-    lastVersionId.value = res.pack.effective_standard_version_id ?? lastVersionId.value;
+    error.value = "";
+    bindVersionId.value = res.pack.effective_standard_version_id ?? "";
+    lastVersionId.value = res.pack.effective_standard_version_id ?? "";
+    lastClauses.value = [];
     rememberDemoNav({ packId: res.pack.pack_id, traceId: traceId.value });
   } catch (err) {
+    const missingPack = errorMessage(err).includes("spec pack not found");
+    if (missingPack) {
+      const fallback = (await resolveLivePackId()) ?? "";
+      if (fallback && fallback !== packId.value) {
+        rememberDemoNav({ packId: fallback, traceId: `pack:${fallback}` });
+        await router.replace(`/packs/${fallback}/standards`);
+        return;
+      }
+    }
     await ensureDemoSession();
     if (demoNav.packId && demoNav.packId !== packId.value) {
       await router.replace(`/packs/${demoNav.packId}/standards`);
@@ -115,7 +139,7 @@ async function onPdfSelected(file: File): Promise<void> {
     const started = await ingestStandardPdf(file, { packId: packId.value, title: title.value });
     ingestRunId.value = started.ingest_run_id;
   } catch (err) {
-    error.value = errorMessage(err);
+    error.value = ingestError(err);
   } finally {
     busy.value = false;
   }
@@ -132,9 +156,9 @@ async function tickPage(): Promise<void> {
       tickPages.value = [...rest, { page_no: tick.page_no, status: tick.status }];
     }
     if (tick.done) tickDone.value = true;
-    if (tick.error) error.value = tick.error;
+    if (tick.error) error.value = ingestError(tick.error);
   } catch (err) {
-    error.value = errorMessage(err);
+    error.value = ingestError(err);
   } finally {
     busy.value = false;
   }
@@ -149,7 +173,7 @@ async function search(): Promise<void> {
       body: JSON.stringify({ packId: packId.value, query: query.value }),
     });
     hits.value = result.hits;
-    chatReady.value = result.hits.length > 0;
+    selectedHit.value = null; // new search closes detail; only a row click opens it
   } catch (err) {
     error.value = errorMessage(err);
   } finally {
@@ -189,11 +213,13 @@ async function bindEffective(): Promise<void> {
   }
 }
 
-onMounted(() => {
+function reloadPack(): void {
   void loadPack().catch((err: unknown) => {
     error.value = errorMessage(err);
   });
-});
+}
+watch(packId, reloadPack);
+onMounted(reloadPack);
 </script>
 
 <template>
@@ -258,8 +284,16 @@ onMounted(() => {
         <input v-model="query" type="text" class="grow" placeholder="问句或条款号，如：1.1 / 事假须提前申请" />
         <button class="btn" type="button" :disabled="busy" @click="search">检索</button>
       </div>
-      <RetrieveHitsTable :hits="hits" :path-dict="pathDict" :dict-label="dictLabel" />
+      <RetrieveHitsTable
+        :hits="hits"
+        :path-dict="pathDict"
+        :dict-label="dictLabel"
+        :selected-key="selectedHit && `${selectedHit.unit_id}-${selectedHit.retrieve_path}-${selectedHit.page_start}-${selectedHit.page_end}`"
+        @select="selectedHit = $event"
+      />
+      <HitDetailPanel v-if="selectedHit" :hit="selectedHit" />
     </section>
   </div>
-  <StepChat v-if="chatReady" :trace-id="traceId" step="retrieve" />
+  <!-- Route packId is enough to mount: waiting on hits hid the sidebar on first paint and unmounted it at 0 hits. Never bind the first Job. -->
+  <StepChat v-if="packId" :trace-id="traceId" :pack-id="packId" :hits="hits" step="retrieve" />
 </template>
