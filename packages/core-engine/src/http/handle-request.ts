@@ -376,7 +376,12 @@ export async function handleDemoRequest(
 
   try {
     if (method === "GET" && pathname === "/api/health") {
-      return json(200, await session.health());
+      const health = await session.health();
+      // Live MinIO is required object storage; fail is BLOCKED, not skip-as-green 200.
+      if (health.mode === "live" && health.minio === "fail") {
+        return json(503, health);
+      }
+      return json(200, health);
     }
 
     if (method === "POST" && pathname === "/api/demo/reset") {

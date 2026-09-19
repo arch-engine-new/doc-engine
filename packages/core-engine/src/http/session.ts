@@ -9,7 +9,12 @@ import neo4j from "neo4j-driver";
 import pg from "pg";
 import { resetAdapterWrites } from "../adapter/mock.js";
 import { MemoryBlobStore } from "../blob/memory.js";
-import { blobObjectUri, fromEnv as minioFromEnv, safeName } from "../blob/minio.js";
+import {
+  blobObjectUri,
+  fromEnv as minioFromEnv,
+  probeMinioHealth,
+  safeName,
+} from "../blob/minio.js";
 import { readPaddleOcrEnv } from "../ocr/env.js";
 import { FakeOcr } from "../ocr/fake.js";
 import { PaddleOcr } from "../ocr/paddleocr.js";
@@ -435,14 +440,7 @@ async function probeNeo4j(uri: string, user: string, password: string): Promise<
 }
 
 async function probeMinio(): Promise<DemoHealthProbe> {
-  const store = minioFromEnv();
-  if (!store) return "skip";
-  try {
-    await store.ensureBucket();
-    return "ok";
-  } catch {
-    return "fail";
-  }
+  return probeMinioHealth();
 }
 
 /**

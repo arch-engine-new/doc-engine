@@ -189,6 +189,26 @@ export class MinioBlobStore implements BlobStore {
   }
 }
 
+const HEALTH_PROBE_TIMEOUT_MS = 2_500;
+
+function withHealthProbeTimeout<T>(work: Promise<T>): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const timer = setTimeout(() => {
+      reject(new Error("MinIO health probe timed out"));
+    }, HEALTH_PROBE_TIMEOUT_MS);
+    work.then(
+      (value) => {
+        clearTimeout(timer);
+        resolve(value);
+      },
+      (err: unknown) => {
+        clearTimeout(timer);
+        reject(err);
+      },
+    );
+  });
+}
+
 /**
  * Skip constructing S3Client when MINIO_ENDPOINT is empty/unset so tests and
  * memory-mode assembly never talk to MinIO. Incomplete keys must throw instead
@@ -213,4 +233,35 @@ export function fromEnv(env: NodeJS.ProcessEnv = process.env): MinioBlobStore | 
     bucket: readTrimmed(env, "MINIO_BUCKET"),
     env,
   });
+}
+
+/**
+ * Live MinIO readiness probe: never returns `"skip"`.
+ *
+ * Live mode requires MinIO as the upload object store. Skip would look like an
+ * optional dependency and keep GET /api/health 200, hiding a missing endpoint
+ * or dead bucket from operators (BLOCKED 503).
+ *
+ * @param env Process env to read `MINIO_*` from; defaults to `process.env`.
+ * @returns `"ok"` after `ensureBucket` succeeds; `"fail"` when endpoint is
+ *   missing, `fromEnv` throws, or `ensureBucket` fails. Catch paths must not
+ *   include accessKey/secretKey in any message.
+ */
+export async function probeMinioHealth(
+  env: NodeJS.ProcessEnv = process.env,
+): Promise<"ok" | "fail"> {
+  const endpoint = readTrimmed(env, "MINIO_ENDPOINT");
+  if (!endpoint) {
+    return "fail";
+  }
+  try {
+    const store = fromEnv(env);
+    if (!store) {
+      return "fail";
+    }
+    await withHealthProbeTimeout(store.ensureBucket());
+    return "ok";
+  } catch {
+    return "fail";
+  }
 }
