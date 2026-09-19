@@ -13,8 +13,10 @@ import type {
   FieldFillRuleWrite,
 } from "../persistence/store.js";
 import { NoOpenHitlError } from "../agent/job-step-orchestrator.js";
+import { isRetrieveChatStep } from "../agent/prompts.js";
+import { packChatTraceId } from "../agent/context.js";
 import { LedgerConflictError, UploadValidationError, type JobPipeline } from "../pipeline/job-pipeline.js";
-import type { EdgeKind } from "../retrieve/ports.js";
+import type { EdgeKind, RetrieveHit } from "../retrieve/ports.js";
 import { createFetchHandler } from "agent-runtime";
 import { DEMO_DICTS } from "./dicts.js";
 import type { DemoHttpSession } from "./session.js";
@@ -160,6 +162,37 @@ function requireStr(body: unknown, ...keys: string[]): string {
   const value = str(body, ...keys);
   if (!value) throw new Error(`missing ${keys[0]}`);
   return value;
+}
+
+/** Pass through Vue-posted ledger text; dropping string heading/body would leave chat with only ids. */
+function optionalHitText(value: unknown): string | undefined {
+  return typeof value === "string" ? value : undefined;
+}
+
+function parseRetrieveHits(body: unknown): RetrieveHit[] | undefined {
+  const raw = pick(body, "hits", "retrieve_hits");
+  if (!Array.isArray(raw)) return undefined;
+  const hits: RetrieveHit[] = [];
+  for (const item of raw) {
+    if (!item || typeof item !== "object") continue;
+    const rec = item as Record<string, unknown>;
+    if (typeof rec.unit_id !== "string" || typeof rec.file_name !== "string") continue;
+    const path = rec.retrieve_path;
+    hits.push({
+      clause_id: typeof rec.clause_id === "string" ? rec.clause_id : null,
+      unit_id: rec.unit_id,
+      chunk_kind: rec.chunk_kind === "table" || rec.chunk_kind === "annex" ? rec.chunk_kind : "clause",
+      file_name: rec.file_name,
+      page_start: Number(rec.page_start) || 0,
+      page_end: Number(rec.page_end) || 0,
+      standard_version_id: String(rec.standard_version_id ?? ""),
+      span: null,
+      retrieve_path: path === "vector" || path === "graph" || path === "exact" ? path : "exact",
+      heading: optionalHitText(rec.heading),
+      body: optionalHitText(rec.body),
+    });
+  }
+  return hits;
 }
 
 const STANDARD_EDGE_KINDS: readonly EdgeKind[] = [
@@ -728,9 +761,18 @@ export async function handleDemoRequest(
     }
 
     if (method === "POST" && pathname === "/api/chat") {
-      const traceId = requireStr(req.body, "traceId", "trace_id");
       const step = requireStr(req.body, "step");
       const body = requireStr(req.body, "body");
+      const packId = str(req.body, "packId", "pack_id");
+      let traceId = str(req.body, "traceId", "trace_id");
+      if (!traceId) {
+        if (isRetrieveChatStep(step) && packId) {
+          traceId = packChatTraceId(packId);
+        } else {
+          throw new Error("missing trace_id");
+        }
+      }
+      const hits = parseRetrieveHits(req.body);
       const userResult = await p.appendChat({
         traceId,
         step,
@@ -738,7 +780,13 @@ export async function handleDemoRequest(
         role: str(req.body, "role") ?? "operator",
       });
       const bridge = await session.getStepChatBridge();
-      const agent = await bridge.reply({ traceId, step, userMessage: body });
+      const agent = await bridge.reply({
+        traceId,
+        step,
+        userMessage: body,
+        packId,
+        hits,
+      });
       const assistantStored = await p.appendChat({
         traceId,
         step,
