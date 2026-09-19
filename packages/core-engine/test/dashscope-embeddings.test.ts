@@ -2,6 +2,9 @@
  * DashScope text-embedding-v3: mock fetch only. Never hit dashscope.aliyuncs.com.
  */
 
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   DashScopeEmbeddings,
@@ -17,17 +20,42 @@ const envSnapshot = {
   DASHSCOPE_API_KEY: process.env.DASHSCOPE_API_KEY,
   QDRANT_URL: process.env.QDRANT_URL,
   NEO4J_URI: process.env.NEO4J_URI,
+  AGENT_RUNTIME_LLM_CONFIG: process.env.AGENT_RUNTIME_LLM_CONFIG,
 };
+
+const tempDirs: string[] = [];
 
 afterEach(() => {
   restoreEnv("DASHSCOPE_API_KEY", envSnapshot.DASHSCOPE_API_KEY);
   restoreEnv("QDRANT_URL", envSnapshot.QDRANT_URL);
   restoreEnv("NEO4J_URI", envSnapshot.NEO4J_URI);
+  restoreEnv("AGENT_RUNTIME_LLM_CONFIG", envSnapshot.AGENT_RUNTIME_LLM_CONFIG);
+  while (tempDirs.length > 0) {
+    const dir = tempDirs.pop();
+    if (dir) rmSync(dir, { recursive: true, force: true });
+  }
 });
 
 function restoreEnv(name: string, value: string | undefined): void {
   if (value === undefined) delete process.env[name];
   else process.env[name] = value;
+}
+
+function writeTempZhipuLlmJson(): string {
+  const dir = mkdtempSync(join(tmpdir(), "dashscope-live-llm-"));
+  tempDirs.push(dir);
+  const configPath = join(dir, "agent-runtime.llm.json");
+  writeFileSync(
+    configPath,
+    JSON.stringify({
+      provider: "zhipu",
+      baseUrl: "https://llm.test.invalid/v4",
+      model: "glm-4",
+      apiKey: TEST_KEY,
+    }),
+    "utf8",
+  );
+  return configPath;
 }
 
 function vectorOf(length: number): number[] {
@@ -150,6 +178,7 @@ describe("liveRetrievePorts", () => {
     process.env.DASHSCOPE_API_KEY = TEST_KEY;
     process.env.QDRANT_URL = process.env.QDRANT_URL ?? "http://127.0.0.1:6333";
     process.env.NEO4J_URI = process.env.NEO4J_URI ?? "bolt://127.0.0.1:7687";
+    process.env.AGENT_RUNTIME_LLM_CONFIG = writeTempZhipuLlmJson();
 
     const fetchMock = vi.fn(async () =>
       jsonResponse(200, { data: [{ embedding: vectorOf(1024) }] }),
