@@ -148,7 +148,7 @@ describe("PDF ingest tick", () => {
     expect(clause?.page_start).toBe(1);
     expect(clause?.page_end).toBe(1);
     const ports = pipeline.library.getPorts();
-    const page1Hits = await vector.search(ports.embed.embed("强度要求"), {
+    const page1Hits = await vector.search(await ports.embed.embed("强度要求"), {
       versionId: started.version.version_id,
       topK: 8,
     });
@@ -161,7 +161,7 @@ describe("PDF ingest tick", () => {
     expect(tick2.status).not.toBe("ocr_error");
     expect(tick2.status).not.toBe("ok");
 
-    const still = await vector.search(ports.embed.embed("强度要求"), {
+    const still = await vector.search(await ports.embed.embed("强度要求"), {
       versionId: started.version.version_id,
       topK: 8,
     });

@@ -88,7 +88,11 @@ export interface Reranker {
 }
 
 export interface Embeddings {
-  embed(text: string): number[];
+  /**
+   * Live HTTP embedding cannot return in the same tick; Hash/Fixture stay
+   * sync so CI never waits on a network. Callers must always await.
+   */
+  embed(text: string): number[] | Promise<number[]>;
 }
 
 export interface RetrievePorts {
