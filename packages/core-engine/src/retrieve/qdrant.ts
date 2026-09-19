@@ -2,7 +2,8 @@
  * Production VectorStore adapter. Collection `clauses`.
  * Qdrant only accepts UUID or unsigned integer point ids, so unit_id strings
  * are hashed to a stable UUID; the original unit_id is kept in payload.
- * Throws if QDRANT_URL (or constructor url) is missing. Tests use MemoryVectorStore.
+ * Throws if QDRANT_URL (or constructor url) is missing and no client is injected.
+ * Tests inject `client` or use MemoryVectorStore — never open a live Qdrant URL.
  */
 
 import { createHash } from "node:crypto";
@@ -28,11 +29,34 @@ function originalPointId(payload: Record<string, unknown> | undefined): string {
   return requirePayloadUnitId(payload);
 }
 
+/**
+ * Unnamed VectorParams expose size on the vectors object; named maps do not.
+ * Missing size is treated as a mismatch so we never upsert into an unknown dim.
+ */
+function collectionVectorSize(
+  info: Awaited<ReturnType<QdrantClient["getCollection"]>>,
+): number | undefined {
+  const vectors = info.config?.params?.vectors;
+  if (vectors != null && typeof vectors === "object" && "size" in vectors) {
+    const size = (vectors as { size: unknown }).size;
+    if (typeof size === "number") return size;
+  }
+  return undefined;
+}
+
 export class QdrantVectorStore implements VectorStore {
   private readonly client: QdrantClient;
   private ensuredDim: number | null = null;
 
-  constructor(options?: { url?: string; apiKey?: string }) {
+  /**
+   * Live needs QDRANT_URL. Tests pass `client` so dimension rebuild can be
+   * asserted without a real Qdrant process or URL.
+   */
+  constructor(options?: { url?: string; apiKey?: string; client?: QdrantClient }) {
+    if (options?.client) {
+      this.client = options.client;
+      return;
+    }
     const url = options?.url ?? process.env.QDRANT_URL;
     if (!url) {
       throw new Error("Qdrant URL not configured (set QDRANT_URL)");
@@ -47,11 +71,19 @@ export class QdrantVectorStore implements VectorStore {
     if (this.ensuredDim === dim) return;
     const collections = await this.client.getCollections();
     const exists = collections.collections.some((item) => item.name === COLLECTION);
-    if (!exists) {
-      await this.client.createCollection(COLLECTION, {
-        vectors: { size: dim, distance: "Cosine" },
-      });
+    if (exists) {
+      const info = await this.client.getCollection(COLLECTION);
+      const size = collectionVectorSize(info);
+      if (size === dim) {
+        this.ensuredDim = dim;
+        return;
+      }
+      // 48-dim Hash collections cannot hold v3 1024-dim points; never truncate/pad.
+      await this.client.deleteCollection(COLLECTION);
     }
+    await this.client.createCollection(COLLECTION, {
+      vectors: { size: dim, distance: "Cosine" },
+    });
     this.ensuredDim = dim;
   }
 
