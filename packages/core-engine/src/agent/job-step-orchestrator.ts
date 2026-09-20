@@ -7,7 +7,7 @@ import {
   type ToolRegistry,
 } from "agent-runtime";
 import type { JobRow } from "../types.js";
-import type { JobPipeline } from "../pipeline/job-pipeline.js";
+import { SkillTrackConfirmNextError, type JobPipeline } from "../pipeline/job-pipeline.js";
 import { buildAutoWording } from "./prompts.js";
 
 export class NoOpenHitlError extends Error {
@@ -17,7 +17,10 @@ export class NoOpenHitlError extends Error {
   }
 }
 
-/** Steps where job-step-v1 runs and confirm-next must resume HITL. */
+/**
+ * Leftover C2 steps where job-step-v1 runs and confirm-next must resume HITL.
+ * Skill-track jobs never join this set even if status happens to match.
+ */
 export const ORCHESTRATED_STEPS = new Set([
   "uploaded",
   "inspecting",
@@ -130,7 +133,12 @@ export class JobStepOrchestrator {
     this.hitlGateway = createHitlGateway(store);
   }
 
+  /**
+   * Start leftover job-step-v1 HITL. Skill-track jobs return without startRun
+   * so confirm-next cannot resume a graph that must not exist (M16).
+   */
   async onStepEntered(job: JobRow, step: string): Promise<void> {
+    if (job.track === "skill") return;
     if (!ORCHESTRATED_STEPS.has(step)) return;
 
     if (job.agent_run_id) {
@@ -190,7 +198,15 @@ export class JobStepOrchestrator {
     };
   }
 
+  /**
+   * Resume leftover HITL after confirm-next. Skill-track jobs throw
+   * SkillTrackConfirmNextError instead of no_open_hitl (M16).
+   */
   async resumeConfirm(jobId: string): Promise<JobRow> {
+    const existing = await this.pipeline.getJob(jobId);
+    if (existing?.track === "skill") {
+      throw new SkillTrackConfirmNextError();
+    }
     const pending = await this.getOpenHitl(jobId);
     if (!pending) {
       throw new NoOpenHitlError();

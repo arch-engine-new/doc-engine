@@ -68,7 +68,7 @@ describe("core-engine HTTP adapter", () => {
     expect(["ok", "skip"]).toContain((res.body as { llm: string }).llm);
   });
 
-  it("POST /api/jobs/upload with multipart file creates a checking job", async () => {
+  it("POST /api/jobs/upload defaults to skill track and stays uploaded", async () => {
     const reset = await call(session, "POST", "/api/demo/reset");
     expect(reset.status).toBe(200);
     const projectId = (reset.body as { project: { project_id: string } }).project.project_id;
@@ -84,8 +84,9 @@ describe("core-engine HTTP adapter", () => {
       },
     });
     expect(res.status).toBe(200);
-    const body = res.body as { job: { status: string; job_id: string } };
-    expect(body.job.status).toBe("checking");
+    const body = res.body as { job: { status: string; job_id: string; track: string } };
+    expect(body.job.track).toBe("skill");
+    expect(body.job.status).toBe("uploaded");
 
     const listed = await call(session, "GET", "/api/jobs");
     const jobs = (listed.body as { jobs: { job_id: string }[] }).jobs;
@@ -397,6 +398,7 @@ describe("core-engine HTTP adapter", () => {
           project_id: projectId,
           pack_id: packId,
           doc_type_id: child!.doc_type_id,
+          track: "legacy",
         },
       },
     });

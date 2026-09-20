@@ -214,7 +214,10 @@ export interface OpenUploadJobResult {
   findings: FindingRow[];
 }
 
-/** Human HITL only. Never used as a chat side effect. Submit is not a valid next status. */
+/**
+ * Leftover C2 HITL machine only. Skill-track jobs must not consult this map
+ * (confirm-next is 409). Chat still never advances status or writes Receipt.
+ */
 export const CONFIRM_NEXT: Record<string, string> = {
   uploaded: "inspecting",
   inspecting: "extracting",
@@ -222,6 +225,17 @@ export const CONFIRM_NEXT: Record<string, string> = {
   checking: "pending",
   pending: "previewed",
 };
+
+/**
+ * Skill-track jobs cannot advance leftover C2. HTTP maps this to 409 so
+ * confirm-next cannot look like a missing HITL token (M16).
+ */
+export class SkillTrackConfirmNextError extends Error {
+  constructor() {
+    super("cannot confirm-next from track=skill");
+    this.name = "SkillTrackConfirmNextError";
+  }
+}
 
 /**
  * Live ingest must fail closed when PADDLEOCR_ACCESS_TOKEN is missing.
@@ -825,6 +839,7 @@ export class JobPipeline {
   }
 
   private async emitStepEntered(job: JobRow): Promise<void> {
+    if (job.track === "skill") return;
     await this.stepOrchestrator?.onStepEntered(job, job.status);
   }
 
@@ -1151,13 +1166,17 @@ export class JobPipeline {
   }
 
   /**
-   * Advance job.status along the HITL machine. Does not cancel blocking findings,
-   * does not write Receipt, and never marks submitted.
+   * Advance leftover C2 job.status along CONFIRM_NEXT. Skill-track jobs throw
+   * SkillTrackConfirmNextError so HTTP confirm-next stays 409 (M16). Does not
+   * cancel blocking findings, write Receipt, or mark submitted.
    */
   async confirmNext(jobId: string): Promise<JobRow> {
     const job = await this.store.getJob(jobId);
     if (!job) {
       throw new Error(`job not found: ${jobId}`);
+    }
+    if (job.track === "skill") {
+      throw new SkillTrackConfirmNextError();
     }
     if (job.status === "submitted") {
       throw new Error("submit is not allowed");

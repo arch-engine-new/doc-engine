@@ -15,7 +15,12 @@ import type {
 import { NoOpenHitlError } from "../agent/job-step-orchestrator.js";
 import { isRetrieveChatStep } from "../agent/prompts.js";
 import { packChatTraceId } from "../agent/context.js";
-import { LedgerConflictError, UploadValidationError, type JobPipeline } from "../pipeline/job-pipeline.js";
+import {
+  LedgerConflictError,
+  SkillTrackConfirmNextError,
+  UploadValidationError,
+  type JobPipeline,
+} from "../pipeline/job-pipeline.js";
 import type { EdgeKind, RetrieveHit } from "../retrieve/ports.js";
 import { createFetchHandler } from "agent-runtime";
 import { DEMO_DICTS } from "./dicts.js";
@@ -52,6 +57,11 @@ export interface DemoHttpMultipartFields {
   metadata?: string;
   metadata_json?: string;
   title?: string;
+  /**
+   * Omit for the default table Skill upload. Pass `legacy` only for leftover
+   * fixture JPEG/PDF checks that still need DocType + DSL + confirm-next.
+   */
+  track?: string;
 }
 
 /**
@@ -98,6 +108,7 @@ function errorStatus(err: unknown): DemoHttpResponse {
   const lower = message.toLowerCase();
   if (err instanceof UploadValidationError) return json(400, { error: message });
   if (err instanceof LedgerConflictError) return json(409, { error: message });
+  if (err instanceof SkillTrackConfirmNextError) return json(409, { error: message });
   if (err instanceof UploadServiceUnavailableError) return json(503, { error: message });
   if (lower.includes("not found")) return json(404, { error: message });
   if (lower.includes("cannot confirm-next") || lower.includes("submit is not allowed")) {
@@ -742,6 +753,7 @@ export async function handleDemoRequest(
         fileName: mp.file.fileName,
         mime: mp.file.mime,
         bytes: mp.file.bytes,
+        track: fields.track === "legacy" ? "legacy" : undefined,
       });
       return json(200, result);
     }
@@ -809,11 +821,18 @@ export async function handleDemoRequest(
 
     const confirm = match(pathname, "/api/jobs/:id/confirm-next");
     if (method === "POST" && confirm) {
+      const existing = await p.getJob(confirm.id);
+      if (existing?.track === "skill") {
+        return json(409, { error: "cannot confirm-next from track=skill" });
+      }
       try {
         const orchestrator = await session.getJobStepOrchestrator();
         const job = await orchestrator.resumeConfirm(confirm.id);
         return json(200, { job });
       } catch (err) {
+        if (err instanceof SkillTrackConfirmNextError) {
+          return json(409, { error: err.message });
+        }
         if (err instanceof NoOpenHitlError) {
           return json(409, { error: "no_open_hitl" });
         }
