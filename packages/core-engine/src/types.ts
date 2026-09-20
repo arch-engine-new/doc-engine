@@ -31,6 +31,9 @@ export type {
   RuleRow,
   RuleVersionRow,
   SignatureTaskRow,
+  SkillDraftRow,
+  SkillLedgerRow,
+  SkillRecordRow,
   SpecPackRow,
   StandardDocRow,
   StandardEdgeRow,
@@ -38,3 +41,6 @@ export type {
   TemplateRow,
   VolumePreviewRow,
 } from "../../../docs/schema/generated/core-engine-rows.js";
+
+/** leftover fixture jobs stay legacy; empty-engine table Skill uploads write skill. */
+export type JobTrack = "legacy" | "skill";

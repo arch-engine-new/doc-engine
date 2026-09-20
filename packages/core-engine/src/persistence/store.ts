@@ -35,6 +35,9 @@ import type {
   RuleRow,
   RuleVersionRow,
   SignatureTaskRow,
+  SkillDraftRow,
+  SkillLedgerRow,
+  SkillRecordRow,
   SpecPackRow,
   StandardDocRow,
   StandardEdgeRow,
@@ -131,6 +134,60 @@ export type IngestPageUpdate = {
   status: string;
   error?: string | null;
 };
+
+/** Optional Job.track filter so findings lists can stay on leftover fixture jobs. */
+export type ListJobsFilter = {
+  track?: string;
+};
+
+/** Production Skill index write; uniqueness is (pack_id, canonical_name) while deleted=0. */
+export type SkillRecordWrite = {
+  skill_id?: string;
+  pack_id: string;
+  project_id: string;
+  canonical_name: string;
+  names_json: string;
+  aliases_json: string;
+  check_items_json: string;
+  fix_actions_json: string;
+  version?: number;
+};
+
+/** Chat/confirm only mutate drafts; one live draft per job. */
+export type SkillDraftWrite = {
+  draft_id?: string;
+  job_id: string;
+  pack_id: string;
+  payload_json: string;
+  summary_json: string;
+  selected_skill_id?: string | null;
+};
+
+export type SkillDraftUpdate = {
+  payload_json?: string;
+  summary_json?: string;
+  selected_skill_id?: string | null;
+};
+
+/** Internal Skill processing ledger; must not grow external adapter columns. */
+export type SkillLedgerWrite = {
+  ledger_id?: string;
+  job_id: string;
+  skill_id?: string | null;
+  original_blob_uri: string;
+  original_mime: string;
+  patched_blob_uri?: string | null;
+  patched_mime?: string | null;
+  verdict: string;
+  reason: string;
+  fix_list_json: string;
+  unprocessed_tables_json: string;
+};
+
+function isUniqueConstraintError(err: unknown): boolean {
+  const code = (err as { code?: string }).code;
+  return code === "SQLITE_CONSTRAINT_UNIQUE" || code === "SQLITE_CONSTRAINT";
+}
 
 const SYSTEM = "system";
 
@@ -1137,7 +1194,12 @@ export class CoreEngineStore {
       .all(packId) as TemplateRow[];
   }
 
-  listJobs(): JobRow[] {
+  listJobs(filter?: ListJobsFilter): JobRow[] {
+    if (filter?.track) {
+      return this.db
+        .prepare(`SELECT * FROM t_job WHERE deleted = 0 AND track = ? ORDER BY id DESC`)
+        .all(filter.track) as JobRow[];
+    }
     return this.db
       .prepare(`SELECT * FROM t_job WHERE deleted = 0 ORDER BY id DESC`)
       .all() as JobRow[];
@@ -1180,12 +1242,18 @@ export class CoreEngineStore {
       .all(traceId) as ConversationMessageRow[];
   }
 
+  /**
+   * Persist a job. Omit track to keep leftover fixture semantics (`legacy`);
+   * Skill uploads must pass track=`skill` so findings lists can exclude them.
+   */
   insertJob(input: {
     project_id: string;
     pack_id: string | null;
     status: string;
     template_id?: string | null;
     doc_type_id?: string | null;
+    track?: string;
+    skill_draft_id?: string | null;
   }): JobRow {
     const ts = nowIso();
     const job_id = newId("job");
@@ -1194,8 +1262,9 @@ export class CoreEngineStore {
       .prepare(
         `INSERT INTO t_job
           (job_id, project_id, pack_id, trace_id, status, template_id, doc_type_id, agent_run_id,
+           track, skill_draft_id,
            created_at, updated_at, creator, updater, deleted)
-         VALUES (?, ?, ?, ?, ?, ?, ?, NULL, ?, ?, ?, ?, 0)`,
+         VALUES (?, ?, ?, ?, ?, ?, ?, NULL, ?, ?, ?, ?, ?, ?, 0)`,
       )
       .run(
         job_id,
@@ -1205,6 +1274,8 @@ export class CoreEngineStore {
         input.status,
         input.template_id ?? null,
         input.doc_type_id ?? null,
+        input.track ?? "legacy",
+        input.skill_draft_id ?? null,
         ts,
         ts,
         SYSTEM,
@@ -1904,5 +1975,189 @@ export class CoreEngineStore {
       .prepare(`SELECT * FROM t_completeness_rule WHERE rule_id = ?`)
       .get(ruleId) as CompletenessRuleRow;
     return row;
+  }
+
+  /** Look up a production Skill; callers must not invent pack-global uniqueness. */
+  getSkillRecord(skillId: string): SkillRecordRow | null {
+    const row = this.db
+      .prepare(`SELECT * FROM t_skill_record WHERE skill_id = ? AND deleted = 0`)
+      .get(skillId) as SkillRecordRow | undefined;
+    return row ?? null;
+  }
+
+  /** Pack-scoped canonical name lookup so R26 isolation is a query, not a convention. */
+  getSkillRecordByPackName(packId: string, canonicalName: string): SkillRecordRow | null {
+    const row = this.db
+      .prepare(
+        `SELECT * FROM t_skill_record WHERE pack_id = ? AND canonical_name = ? AND deleted = 0`,
+      )
+      .get(packId, canonicalName) as SkillRecordRow | undefined;
+    return row ?? null;
+  }
+
+  listSkillRecords(packId: string): SkillRecordRow[] {
+    return this.db
+      .prepare(`SELECT * FROM t_skill_record WHERE pack_id = ? AND deleted = 0 ORDER BY id ASC`)
+      .all(packId) as SkillRecordRow[];
+  }
+
+  /**
+   * Insert a production Skill. Same canonical_name is legal across packs; same pack is a conflict.
+   */
+  insertSkillRecord(input: SkillRecordWrite): SkillRecordRow {
+    if (this.getSkillRecordByPackName(input.pack_id, input.canonical_name)) {
+      throw new LedgerConflictError("skill canonical_name already exists in pack");
+    }
+    const ts = nowIso();
+    const skill_id = input.skill_id ?? newId("sk");
+    try {
+      this.db
+        .prepare(
+          `INSERT INTO t_skill_record
+            (skill_id, pack_id, project_id, canonical_name, names_json, aliases_json,
+             check_items_json, fix_actions_json, version, created_at, updated_at, creator, updater, deleted)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0)`,
+        )
+        .run(
+          skill_id,
+          input.pack_id,
+          input.project_id,
+          input.canonical_name,
+          input.names_json,
+          input.aliases_json,
+          input.check_items_json,
+          input.fix_actions_json,
+          input.version ?? 1,
+          ts,
+          ts,
+          SYSTEM,
+          SYSTEM,
+        );
+    } catch (err) {
+      if (isUniqueConstraintError(err)) {
+        throw new LedgerConflictError("skill canonical_name already exists in pack");
+      }
+      throw err;
+    }
+    return this.getSkillRecord(skill_id)!;
+  }
+
+  getSkillDraft(draftId: string): SkillDraftRow | null {
+    const row = this.db
+      .prepare(`SELECT * FROM t_skill_draft WHERE draft_id = ? AND deleted = 0`)
+      .get(draftId) as SkillDraftRow | undefined;
+    return row ?? null;
+  }
+
+  getSkillDraftByJob(jobId: string): SkillDraftRow | null {
+    const row = this.db
+      .prepare(`SELECT * FROM t_skill_draft WHERE job_id = ? AND deleted = 0`)
+      .get(jobId) as SkillDraftRow | undefined;
+    return row ?? null;
+  }
+
+  /** One live draft per job so chat cannot fork a second index candidate. */
+  insertSkillDraft(input: SkillDraftWrite): SkillDraftRow {
+    if (this.getSkillDraftByJob(input.job_id)) {
+      throw new LedgerConflictError("skill draft already exists for job");
+    }
+    const ts = nowIso();
+    const draft_id = input.draft_id ?? newId("sdr");
+    try {
+      this.db
+        .prepare(
+          `INSERT INTO t_skill_draft
+            (draft_id, job_id, pack_id, payload_json, summary_json, selected_skill_id,
+             created_at, updated_at, creator, updater, deleted)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0)`,
+        )
+        .run(
+          draft_id,
+          input.job_id,
+          input.pack_id,
+          input.payload_json,
+          input.summary_json,
+          input.selected_skill_id ?? null,
+          ts,
+          ts,
+          SYSTEM,
+          SYSTEM,
+        );
+    } catch (err) {
+      if (isUniqueConstraintError(err)) {
+        throw new LedgerConflictError("skill draft already exists for job");
+      }
+      throw err;
+    }
+    return this.getSkillDraft(draft_id)!;
+  }
+
+  /** Chat may rewrite payload/summary/selection; it must not insert a second draft. */
+  updateSkillDraft(draftId: string, input: SkillDraftUpdate): SkillDraftRow {
+    const current = this.getSkillDraft(draftId);
+    if (!current) {
+      throw new Error(`skill draft not found: ${draftId}`);
+    }
+    const ts = nowIso();
+    this.db
+      .prepare(
+        `UPDATE t_skill_draft
+           SET payload_json = ?, summary_json = ?, selected_skill_id = ?, updated_at = ?, updater = ?
+         WHERE draft_id = ? AND deleted = 0`,
+      )
+      .run(
+        input.payload_json ?? current.payload_json,
+        input.summary_json ?? current.summary_json,
+        input.selected_skill_id === undefined ? current.selected_skill_id : input.selected_skill_id,
+        ts,
+        SYSTEM,
+        draftId,
+      );
+    return this.getSkillDraft(draftId)!;
+  }
+
+  getSkillLedger(ledgerId: string): SkillLedgerRow | null {
+    const row = this.db
+      .prepare(`SELECT * FROM t_skill_ledger WHERE ledger_id = ? AND deleted = 0`)
+      .get(ledgerId) as SkillLedgerRow | undefined;
+    return row ?? null;
+  }
+
+  listSkillLedgersByJob(jobId: string): SkillLedgerRow[] {
+    return this.db
+      .prepare(`SELECT * FROM t_skill_ledger WHERE job_id = ? AND deleted = 0 ORDER BY id ASC`)
+      .all(jobId) as SkillLedgerRow[];
+  }
+
+  /** Record internal processing outcome; Skill path must not write t_document_artifact. */
+  insertSkillLedger(input: SkillLedgerWrite): SkillLedgerRow {
+    const ts = nowIso();
+    const ledger_id = input.ledger_id ?? newId("sld");
+    this.db
+      .prepare(
+        `INSERT INTO t_skill_ledger
+          (ledger_id, job_id, skill_id, original_blob_uri, original_mime, patched_blob_uri, patched_mime,
+           verdict, reason, fix_list_json, unprocessed_tables_json,
+           created_at, updated_at, creator, updater, deleted)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0)`,
+      )
+      .run(
+        ledger_id,
+        input.job_id,
+        input.skill_id ?? null,
+        input.original_blob_uri,
+        input.original_mime,
+        input.patched_blob_uri ?? null,
+        input.patched_mime ?? null,
+        input.verdict,
+        input.reason,
+        input.fix_list_json,
+        input.unprocessed_tables_json,
+        ts,
+        ts,
+        SYSTEM,
+        SYSTEM,
+      );
+    return this.getSkillLedger(ledger_id)!;
   }
 }

@@ -34,6 +34,9 @@ import type {
   RuleRow,
   RuleVersionRow,
   SignatureTaskRow,
+  SkillDraftRow,
+  SkillLedgerRow,
+  SkillRecordRow,
   SpecPackRow,
   StandardDocRow,
   StandardEdgeRow,
@@ -68,6 +71,11 @@ import type {
   IngestRunWrite,
   LayoutEdgeWrite,
   LayoutUnitWrite,
+  ListJobsFilter,
+  SkillDraftUpdate,
+  SkillDraftWrite,
+  SkillLedgerWrite,
+  SkillRecordWrite,
 } from "./store.js";
 
 const SYSTEM = "system";
@@ -316,7 +324,57 @@ function mapJob(row: QueryResultRow): JobRow {
     template_id: row.template_id == null ? null : String(row.template_id),
     doc_type_id: row.doc_type_id == null ? null : String(row.doc_type_id),
     agent_run_id: row.agent_run_id == null ? null : String(row.agent_run_id),
+    track: row.track == null ? "legacy" : String(row.track),
+    skill_draft_id: row.skill_draft_id == null ? null : String(row.skill_draft_id),
   };
+}
+
+function mapSkillRecord(row: QueryResultRow): SkillRecordRow {
+  return {
+    ...mapAudit(row),
+    skill_id: String(row.skill_id),
+    pack_id: String(row.pack_id),
+    project_id: String(row.project_id),
+    canonical_name: String(row.canonical_name),
+    names_json: asJsonString(row.names_json),
+    aliases_json: asJsonString(row.aliases_json),
+    check_items_json: asJsonString(row.check_items_json),
+    fix_actions_json: asJsonString(row.fix_actions_json),
+    version: asNumber(row.version),
+  };
+}
+
+function mapSkillDraft(row: QueryResultRow): SkillDraftRow {
+  return {
+    ...mapAudit(row),
+    draft_id: String(row.draft_id),
+    job_id: String(row.job_id),
+    pack_id: String(row.pack_id),
+    payload_json: asJsonString(row.payload_json),
+    summary_json: asJsonString(row.summary_json),
+    selected_skill_id: row.selected_skill_id == null ? null : String(row.selected_skill_id),
+  };
+}
+
+function mapSkillLedger(row: QueryResultRow): SkillLedgerRow {
+  return {
+    ...mapAudit(row),
+    ledger_id: String(row.ledger_id),
+    job_id: String(row.job_id),
+    skill_id: row.skill_id == null ? null : String(row.skill_id),
+    original_blob_uri: String(row.original_blob_uri),
+    original_mime: String(row.original_mime),
+    patched_blob_uri: row.patched_blob_uri == null ? null : String(row.patched_blob_uri),
+    patched_mime: row.patched_mime == null ? null : String(row.patched_mime),
+    verdict: String(row.verdict),
+    reason: String(row.reason),
+    fix_list_json: asJsonString(row.fix_list_json),
+    unprocessed_tables_json: asJsonString(row.unprocessed_tables_json),
+  };
+}
+
+function isPgUniqueViolation(err: unknown): boolean {
+  return (err as { code?: string }).code === "23505";
 }
 
 function mapDocument(row: QueryResultRow): DocumentRow {
@@ -1614,7 +1672,14 @@ export class PostgresLedger implements LedgerStore {
     return result.rows.map(mapTemplate);
   }
 
-  async listJobs(): Promise<JobRow[]> {
+  async listJobs(filter?: ListJobsFilter): Promise<JobRow[]> {
+    if (filter?.track) {
+      const result = await this.q(
+        `SELECT * FROM t_job WHERE deleted = 0 AND track = $1 ORDER BY id DESC`,
+        [filter.track],
+      );
+      return result.rows.map(mapJob);
+    }
     const result = await this.q(`SELECT * FROM t_job WHERE deleted = 0 ORDER BY id DESC`);
     return result.rows.map(mapJob);
   }
@@ -1656,12 +1721,18 @@ export class PostgresLedger implements LedgerStore {
     return result.rows.map(mapConversationMessage);
   }
 
+  /**
+   * Persist a job. Omit track to keep leftover fixture semantics (`legacy`);
+   * Skill uploads must pass track=`skill` so findings lists can exclude them.
+   */
   async insertJob(input: {
     project_id: string;
     pack_id: string | null;
     status: string;
     template_id?: string | null;
     doc_type_id?: string | null;
+    track?: string;
+    skill_draft_id?: string | null;
   }): Promise<JobRow> {
     const ts = nowIso();
     const job_id = newId("job");
@@ -1669,8 +1740,9 @@ export class PostgresLedger implements LedgerStore {
     const result = await this.q(
       `INSERT INTO t_job
         (job_id, project_id, pack_id, trace_id, status, template_id, doc_type_id, agent_run_id,
+         track, skill_draft_id,
          created_at, updated_at, creator, updater, deleted)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, NULL, $8, $9, $10, $11, 0)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, NULL, $8, $9, $10, $11, $12, $13, 0)
        RETURNING *`,
       [
         job_id,
@@ -1680,6 +1752,8 @@ export class PostgresLedger implements LedgerStore {
         input.status,
         input.template_id ?? null,
         input.doc_type_id ?? null,
+        input.track ?? "legacy",
+        input.skill_draft_id ?? null,
         ts,
         ts,
         SYSTEM,
@@ -2493,5 +2567,199 @@ export class PostgresLedger implements LedgerStore {
     );
     const result = await this.q(`SELECT * FROM t_completeness_rule WHERE rule_id = $1`, [ruleId]);
     return mapCompletenessRule(result.rows[0]);
+  }
+
+  async getSkillRecord(skillId: string): Promise<SkillRecordRow | null> {
+    const result = await this.q(
+      `SELECT * FROM t_skill_record WHERE skill_id = $1 AND deleted = 0`,
+      [skillId],
+    );
+    const row = result.rows[0];
+    return row ? mapSkillRecord(row) : null;
+  }
+
+  async getSkillRecordByPackName(packId: string, canonicalName: string): Promise<SkillRecordRow | null> {
+    const result = await this.q(
+      `SELECT * FROM t_skill_record WHERE pack_id = $1 AND canonical_name = $2 AND deleted = 0`,
+      [packId, canonicalName],
+    );
+    const row = result.rows[0];
+    return row ? mapSkillRecord(row) : null;
+  }
+
+  async listSkillRecords(packId: string): Promise<SkillRecordRow[]> {
+    const result = await this.q(
+      `SELECT * FROM t_skill_record WHERE pack_id = $1 AND deleted = 0 ORDER BY id ASC`,
+      [packId],
+    );
+    return result.rows.map(mapSkillRecord);
+  }
+
+  /**
+   * Insert a production Skill. Same canonical_name is legal across packs; same pack is a conflict.
+   */
+  async insertSkillRecord(input: SkillRecordWrite): Promise<SkillRecordRow> {
+    if (await this.getSkillRecordByPackName(input.pack_id, input.canonical_name)) {
+      throw new LedgerConflictError("skill canonical_name already exists in pack");
+    }
+    const ts = nowIso();
+    const skill_id = input.skill_id ?? newId("sk");
+    try {
+      const result = await this.q(
+        `INSERT INTO t_skill_record
+          (skill_id, pack_id, project_id, canonical_name, names_json, aliases_json,
+           check_items_json, fix_actions_json, version, created_at, updated_at, creator, updater, deleted)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, 0)
+         RETURNING *`,
+        [
+          skill_id,
+          input.pack_id,
+          input.project_id,
+          input.canonical_name,
+          input.names_json,
+          input.aliases_json,
+          input.check_items_json,
+          input.fix_actions_json,
+          input.version ?? 1,
+          ts,
+          ts,
+          SYSTEM,
+          SYSTEM,
+        ],
+      );
+      return mapSkillRecord(result.rows[0]);
+    } catch (err) {
+      if (isPgUniqueViolation(err)) {
+        throw new LedgerConflictError("skill canonical_name already exists in pack");
+      }
+      throw err;
+    }
+  }
+
+  async getSkillDraft(draftId: string): Promise<SkillDraftRow | null> {
+    const result = await this.q(
+      `SELECT * FROM t_skill_draft WHERE draft_id = $1 AND deleted = 0`,
+      [draftId],
+    );
+    const row = result.rows[0];
+    return row ? mapSkillDraft(row) : null;
+  }
+
+  async getSkillDraftByJob(jobId: string): Promise<SkillDraftRow | null> {
+    const result = await this.q(
+      `SELECT * FROM t_skill_draft WHERE job_id = $1 AND deleted = 0`,
+      [jobId],
+    );
+    const row = result.rows[0];
+    return row ? mapSkillDraft(row) : null;
+  }
+
+  /** One live draft per job so chat cannot fork a second index candidate. */
+  async insertSkillDraft(input: SkillDraftWrite): Promise<SkillDraftRow> {
+    if (await this.getSkillDraftByJob(input.job_id)) {
+      throw new LedgerConflictError("skill draft already exists for job");
+    }
+    const ts = nowIso();
+    const draft_id = input.draft_id ?? newId("sdr");
+    try {
+      const result = await this.q(
+        `INSERT INTO t_skill_draft
+          (draft_id, job_id, pack_id, payload_json, summary_json, selected_skill_id,
+           created_at, updated_at, creator, updater, deleted)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, 0)
+         RETURNING *`,
+        [
+          draft_id,
+          input.job_id,
+          input.pack_id,
+          input.payload_json,
+          input.summary_json,
+          input.selected_skill_id ?? null,
+          ts,
+          ts,
+          SYSTEM,
+          SYSTEM,
+        ],
+      );
+      return mapSkillDraft(result.rows[0]);
+    } catch (err) {
+      if (isPgUniqueViolation(err)) {
+        throw new LedgerConflictError("skill draft already exists for job");
+      }
+      throw err;
+    }
+  }
+
+  /** Chat may rewrite payload/summary/selection; it must not insert a second draft. */
+  async updateSkillDraft(draftId: string, input: SkillDraftUpdate): Promise<SkillDraftRow> {
+    const current = await this.getSkillDraft(draftId);
+    if (!current) {
+      throw new Error(`skill draft not found: ${draftId}`);
+    }
+    const ts = nowIso();
+    const result = await this.q(
+      `UPDATE t_skill_draft
+         SET payload_json = $1, summary_json = $2, selected_skill_id = $3, updated_at = $4, updater = $5
+       WHERE draft_id = $6 AND deleted = 0
+       RETURNING *`,
+      [
+        input.payload_json ?? current.payload_json,
+        input.summary_json ?? current.summary_json,
+        input.selected_skill_id === undefined ? current.selected_skill_id : input.selected_skill_id,
+        ts,
+        SYSTEM,
+        draftId,
+      ],
+    );
+    return mapSkillDraft(result.rows[0]);
+  }
+
+  async getSkillLedger(ledgerId: string): Promise<SkillLedgerRow | null> {
+    const result = await this.q(
+      `SELECT * FROM t_skill_ledger WHERE ledger_id = $1 AND deleted = 0`,
+      [ledgerId],
+    );
+    const row = result.rows[0];
+    return row ? mapSkillLedger(row) : null;
+  }
+
+  async listSkillLedgersByJob(jobId: string): Promise<SkillLedgerRow[]> {
+    const result = await this.q(
+      `SELECT * FROM t_skill_ledger WHERE job_id = $1 AND deleted = 0 ORDER BY id ASC`,
+      [jobId],
+    );
+    return result.rows.map(mapSkillLedger);
+  }
+
+  /** Record internal processing outcome; Skill path must not write t_document_artifact. */
+  async insertSkillLedger(input: SkillLedgerWrite): Promise<SkillLedgerRow> {
+    const ts = nowIso();
+    const ledger_id = input.ledger_id ?? newId("sld");
+    const result = await this.q(
+      `INSERT INTO t_skill_ledger
+        (ledger_id, job_id, skill_id, original_blob_uri, original_mime, patched_blob_uri, patched_mime,
+         verdict, reason, fix_list_json, unprocessed_tables_json,
+         created_at, updated_at, creator, updater, deleted)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, 0)
+       RETURNING *`,
+      [
+        ledger_id,
+        input.job_id,
+        input.skill_id ?? null,
+        input.original_blob_uri,
+        input.original_mime,
+        input.patched_blob_uri ?? null,
+        input.patched_mime ?? null,
+        input.verdict,
+        input.reason,
+        input.fix_list_json,
+        input.unprocessed_tables_json,
+        ts,
+        ts,
+        SYSTEM,
+        SYSTEM,
+      ],
+    );
+    return mapSkillLedger(result.rows[0]);
   }
 }

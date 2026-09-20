@@ -46,6 +46,9 @@ const LEDGER_TABLES = [
   "t_layout_edge",
   "t_ingest_run",
   "t_ingest_page",
+  "t_skill_record",
+  "t_skill_draft",
+  "t_skill_ledger",
 ] as const;
 
 /** @deprecated Use LEDGER_TABLES; kept so SLICE-1 callers keep compiling. */
@@ -96,6 +99,87 @@ function ensureRagLayoutColumns(db: Database.Database): void {
   db.exec(`CREATE INDEX IF NOT EXISTS idx_t_clause_file_page ON t_clause(file_name, page_start)`);
 }
 
+/**
+ * sqlite-slice1.sql is frozen; Skill columns/tables live here so leftover jobs
+ * keep track=legacy while new skill rows can be inserted explicitly.
+ */
+const SKILL_LEDGER_DDL = `
+CREATE TABLE IF NOT EXISTS t_skill_record (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  skill_id VARCHAR(64) NOT NULL,
+  pack_id VARCHAR(64) NOT NULL,
+  project_id VARCHAR(64) NOT NULL,
+  canonical_name VARCHAR(128) NOT NULL,
+  names_json TEXT NOT NULL,
+  aliases_json TEXT NOT NULL,
+  check_items_json TEXT NOT NULL,
+  fix_actions_json TEXT NOT NULL,
+  version INTEGER NOT NULL DEFAULT 1,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL,
+  creator VARCHAR(64) NOT NULL DEFAULT 'system',
+  updater VARCHAR(64) NOT NULL DEFAULT 'system',
+  deleted INTEGER NOT NULL DEFAULT 0
+);
+CREATE UNIQUE INDEX IF NOT EXISTS uk_t_skill_record_skill_id ON t_skill_record(skill_id);
+CREATE UNIQUE INDEX IF NOT EXISTS uk_t_skill_record_pack_canonical
+  ON t_skill_record(pack_id, canonical_name) WHERE deleted = 0;
+
+CREATE TABLE IF NOT EXISTS t_skill_draft (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  draft_id VARCHAR(64) NOT NULL,
+  job_id VARCHAR(64) NOT NULL,
+  pack_id VARCHAR(64) NOT NULL,
+  payload_json TEXT NOT NULL,
+  summary_json TEXT NOT NULL,
+  selected_skill_id VARCHAR(64) NULL,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL,
+  creator VARCHAR(64) NOT NULL DEFAULT 'system',
+  updater VARCHAR(64) NOT NULL DEFAULT 'system',
+  deleted INTEGER NOT NULL DEFAULT 0
+);
+CREATE UNIQUE INDEX IF NOT EXISTS uk_t_skill_draft_draft_id ON t_skill_draft(draft_id);
+CREATE UNIQUE INDEX IF NOT EXISTS uk_t_skill_draft_job ON t_skill_draft(job_id) WHERE deleted = 0;
+CREATE INDEX IF NOT EXISTS idx_t_skill_draft_draft_id ON t_skill_draft(draft_id);
+
+CREATE TABLE IF NOT EXISTS t_skill_ledger (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  ledger_id VARCHAR(64) NOT NULL,
+  job_id VARCHAR(64) NOT NULL,
+  skill_id VARCHAR(64) NULL,
+  original_blob_uri VARCHAR(512) NOT NULL,
+  original_mime VARCHAR(64) NOT NULL,
+  patched_blob_uri VARCHAR(512) NULL,
+  patched_mime VARCHAR(64) NULL,
+  verdict VARCHAR(32) NOT NULL,
+  reason VARCHAR(64) NOT NULL,
+  fix_list_json TEXT NOT NULL,
+  unprocessed_tables_json TEXT NOT NULL,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL,
+  creator VARCHAR(64) NOT NULL DEFAULT 'system',
+  updater VARCHAR(64) NOT NULL DEFAULT 'system',
+  deleted INTEGER NOT NULL DEFAULT 0
+);
+CREATE UNIQUE INDEX IF NOT EXISTS uk_t_skill_ledger_ledger_id ON t_skill_ledger(ledger_id);
+CREATE INDEX IF NOT EXISTS idx_t_skill_ledger_job ON t_skill_ledger(job_id);
+`;
+
+/** Add Skill track columns and internal tables without touching leftover job rows. */
+function ensureSkillSchema(db: Database.Database): void {
+  if (tableHasColumn(db, "t_job", "job_id") && !tableHasColumn(db, "t_job", "track")) {
+    db.exec(`ALTER TABLE t_job ADD COLUMN track VARCHAR(16) NOT NULL DEFAULT 'legacy'`);
+  }
+  if (tableHasColumn(db, "t_job", "job_id") && !tableHasColumn(db, "t_job", "skill_draft_id")) {
+    db.exec(`ALTER TABLE t_job ADD COLUMN skill_draft_id VARCHAR(64) NULL`);
+  }
+  if (tableHasColumn(db, "t_job", "job_id")) {
+    db.exec(`CREATE INDEX IF NOT EXISTS idx_t_job_track ON t_job(track)`);
+  }
+  db.exec(SKILL_LEDGER_DDL);
+}
+
 export function runMigrationOnDb(db: Database.Database): void {
   const sql = readFileSync(MIGRATION_FILE, "utf-8");
   db.pragma("foreign_keys = ON");
@@ -105,6 +189,7 @@ export function runMigrationOnDb(db: Database.Database): void {
   ensureDocTypeColumns(db);
   ensureExcelGapFillColumns(db);
   ensureRagLayoutColumns(db);
+  ensureSkillSchema(db);
 }
 
 export async function runMigration(dbPath: string): Promise<void> {

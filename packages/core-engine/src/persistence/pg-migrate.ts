@@ -82,6 +82,20 @@ async function ensureRagLayoutColumns(client: pg.Client): Promise<void> {
   );
 }
 
+/** Add Skill track columns on leftover t_job rows before CREATE TABLE IF NOT EXISTS no-ops. */
+async function ensureSkillColumns(client: pg.Client): Promise<void> {
+  if (!(await tableExists(client, "t_job"))) {
+    return;
+  }
+  await client.query(
+    `ALTER TABLE t_job ADD COLUMN IF NOT EXISTS track VARCHAR(16) NOT NULL DEFAULT 'legacy'`,
+  );
+  await client.query(
+    `ALTER TABLE t_job ADD COLUMN IF NOT EXISTS skill_draft_id VARCHAR(64) NULL`,
+  );
+  await client.query(`CREATE INDEX IF NOT EXISTS idx_t_job_track ON t_job(track)`);
+}
+
 /** Apply generated IF NOT EXISTS DDL instead of a hand-written live schema. */
 export async function runPgMigration(databaseUrl: string): Promise<void> {
   const sql = readFileSync(MIGRATION_FILE, "utf-8");
@@ -93,6 +107,7 @@ export async function runPgMigration(databaseUrl: string): Promise<void> {
     await ensureDocTypeColumns(client);
     await ensureExcelGapFillColumns(client);
     await ensureRagLayoutColumns(client);
+    await ensureSkillColumns(client);
     for (const statement of statements) {
       await client.query(statement);
     }

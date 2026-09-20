@@ -32,6 +32,9 @@ import type {
   RuleRow,
   RuleVersionRow,
   SignatureTaskRow,
+  SkillDraftRow,
+  SkillLedgerRow,
+  SkillRecordRow,
   SpecPackRow,
   StandardDocRow,
   StandardEdgeRow,
@@ -50,6 +53,11 @@ import {
   type IngestRunWrite,
   type LayoutEdgeWrite,
   type LayoutUnitWrite,
+  type ListJobsFilter,
+  type SkillDraftUpdate,
+  type SkillDraftWrite,
+  type SkillLedgerWrite,
+  type SkillRecordWrite,
 } from "./store.js";
 
 export interface LedgerStore {
@@ -194,17 +202,23 @@ export interface LedgerStore {
   countJobsByPack(packId: string): Promise<number>;
   getTemplate(templateId: string): Promise<TemplateRow | null>;
   listTemplates(packId: string): Promise<TemplateRow[]>;
-  listJobs(): Promise<JobRow[]>;
+  listJobs(filter?: ListJobsFilter): Promise<JobRow[]>;
   getDocumentForJob(jobId: string): Promise<DocumentRow | null>;
   getExtraction(jobId: string): Promise<ExtractionRow | null>;
   listThreads(traceId: string): Promise<ConversationThreadRow[]>;
   listMessagesByTrace(traceId: string): Promise<ConversationMessageRow[]>;
+  /**
+   * Persist a job. Default track is leftover `legacy`; Skill uploads pass `skill`
+   * so later findings lists can hide them without rewriting historical rows.
+   */
   insertJob(input: {
     project_id: string;
     pack_id: string | null;
     status: string;
     template_id?: string | null;
     doc_type_id?: string | null;
+    track?: string;
+    skill_draft_id?: string | null;
   }): Promise<JobRow>;
   updateJobStatus(jobId: string, status: string): Promise<JobRow>;
   updateJobAgentRunId(jobId: string, agentRunId: string): Promise<JobRow>;
@@ -331,6 +345,20 @@ export interface LedgerStore {
     rules: CompletenessRuleWrite[],
   ): Promise<CompletenessRuleRow[]>;
   softDeleteCompletenessRule(ruleId: string): Promise<CompletenessRuleRow>;
+  /** Pack-scoped Skill index; uniqueness is (pack_id, canonical_name), not global name. */
+  insertSkillRecord(input: SkillRecordWrite): Promise<SkillRecordRow>;
+  getSkillRecord(skillId: string): Promise<SkillRecordRow | null>;
+  getSkillRecordByPackName(packId: string, canonicalName: string): Promise<SkillRecordRow | null>;
+  listSkillRecords(packId: string): Promise<SkillRecordRow[]>;
+  /** Chat writes drafts only; confirm-skill later copies into t_skill_record. */
+  insertSkillDraft(input: SkillDraftWrite): Promise<SkillDraftRow>;
+  getSkillDraft(draftId: string): Promise<SkillDraftRow | null>;
+  getSkillDraftByJob(jobId: string): Promise<SkillDraftRow | null>;
+  updateSkillDraft(draftId: string, input: SkillDraftUpdate): Promise<SkillDraftRow>;
+  /** Internal processing ledger; Skill path must not reuse t_document_artifact. */
+  insertSkillLedger(input: SkillLedgerWrite): Promise<SkillLedgerRow>;
+  getSkillLedger(ledgerId: string): Promise<SkillLedgerRow | null>;
+  listSkillLedgersByJob(jobId: string): Promise<SkillLedgerRow[]>;
 }
 
 export class SqliteLedger implements LedgerStore {
@@ -643,8 +671,8 @@ export class SqliteLedger implements LedgerStore {
     return Promise.resolve(this.inner.listTemplates(packId));
   }
 
-  listJobs(): Promise<JobRow[]> {
-    return Promise.resolve(this.inner.listJobs());
+  listJobs(filter?: ListJobsFilter): Promise<JobRow[]> {
+    return Promise.resolve(this.inner.listJobs(filter));
   }
 
   getDocumentForJob(jobId: string): Promise<DocumentRow | null> {
@@ -669,6 +697,8 @@ export class SqliteLedger implements LedgerStore {
     status: string;
     template_id?: string | null;
     doc_type_id?: string | null;
+    track?: string;
+    skill_draft_id?: string | null;
   }): Promise<JobRow> {
     return Promise.resolve(this.inner.insertJob(input));
   }
@@ -936,5 +966,49 @@ export class SqliteLedger implements LedgerStore {
 
   softDeleteCompletenessRule(ruleId: string): Promise<CompletenessRuleRow> {
     return Promise.resolve(this.inner.softDeleteCompletenessRule(ruleId));
+  }
+
+  async insertSkillRecord(input: SkillRecordWrite): Promise<SkillRecordRow> {
+    return this.inner.insertSkillRecord(input);
+  }
+
+  getSkillRecord(skillId: string): Promise<SkillRecordRow | null> {
+    return Promise.resolve(this.inner.getSkillRecord(skillId));
+  }
+
+  getSkillRecordByPackName(packId: string, canonicalName: string): Promise<SkillRecordRow | null> {
+    return Promise.resolve(this.inner.getSkillRecordByPackName(packId, canonicalName));
+  }
+
+  listSkillRecords(packId: string): Promise<SkillRecordRow[]> {
+    return Promise.resolve(this.inner.listSkillRecords(packId));
+  }
+
+  async insertSkillDraft(input: SkillDraftWrite): Promise<SkillDraftRow> {
+    return this.inner.insertSkillDraft(input);
+  }
+
+  getSkillDraft(draftId: string): Promise<SkillDraftRow | null> {
+    return Promise.resolve(this.inner.getSkillDraft(draftId));
+  }
+
+  getSkillDraftByJob(jobId: string): Promise<SkillDraftRow | null> {
+    return Promise.resolve(this.inner.getSkillDraftByJob(jobId));
+  }
+
+  updateSkillDraft(draftId: string, input: SkillDraftUpdate): Promise<SkillDraftRow> {
+    return Promise.resolve(this.inner.updateSkillDraft(draftId, input));
+  }
+
+  insertSkillLedger(input: SkillLedgerWrite): Promise<SkillLedgerRow> {
+    return Promise.resolve(this.inner.insertSkillLedger(input));
+  }
+
+  getSkillLedger(ledgerId: string): Promise<SkillLedgerRow | null> {
+    return Promise.resolve(this.inner.getSkillLedger(ledgerId));
+  }
+
+  listSkillLedgersByJob(jobId: string): Promise<SkillLedgerRow[]> {
+    return Promise.resolve(this.inner.listSkillLedgersByJob(jobId));
   }
 }

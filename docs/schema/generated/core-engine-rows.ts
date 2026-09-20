@@ -215,6 +215,43 @@ export interface JobRow extends AuditColumns {
   template_id: string | null;
   doc_type_id: string | null;
   agent_run_id: string | null;
+  track: string;
+  skill_draft_id: string | null;
+}
+
+export interface SkillRecordRow extends AuditColumns {
+  skill_id: string;
+  pack_id: string;
+  project_id: string;
+  canonical_name: string;
+  names_json: JsonValue;
+  aliases_json: JsonValue;
+  check_items_json: JsonValue;
+  fix_actions_json: JsonValue;
+  version: number;
+}
+
+export interface SkillDraftRow extends AuditColumns {
+  draft_id: string;
+  job_id: string;
+  pack_id: string;
+  payload_json: JsonValue;
+  summary_json: JsonValue;
+  selected_skill_id: string | null;
+}
+
+export interface SkillLedgerRow extends AuditColumns {
+  ledger_id: string;
+  job_id: string;
+  skill_id: string | null;
+  original_blob_uri: string;
+  original_mime: string;
+  patched_blob_uri: string | null;
+  patched_mime: string | null;
+  verdict: string;
+  reason: string;
+  fix_list_json: JsonValue;
+  unprocessed_tables_json: JsonValue;
 }
 
 export interface DocumentRow extends AuditColumns {
