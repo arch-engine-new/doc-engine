@@ -104,6 +104,7 @@ describe("SLICE-6 standard RAG", () => {
       query: "1.1",
       jobId: job.job_id,
     });
+    // 未自备 1.1 出边；expandOneHop 不得多出 graph 行。
     expect(hits).toHaveLength(1);
     expect(hits[0]?.retrieve_path).toBe("exact");
     expect(hits[0]?.clause_id).toBe(`${ingested.version.version_id}:1.1`);
@@ -175,6 +176,8 @@ describe("SLICE-6 standard RAG", () => {
       packId: pack.pack_id,
       query: "2.1替代了哪条",
     });
+    // graph intent 不走 expandOneHop；共享 seed 1.1 无出边。须仍单行 SUPERSEDES。
+    expect(hits).toHaveLength(1);
     expect(hits[0]?.retrieve_path).toBe("graph");
     expect(hits[0]?.clause_id).toBe(idOf("1.1"));
     expect(hits[0]?.path).toEqual([
