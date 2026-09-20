@@ -26,6 +26,16 @@ export type {
   MatchCheckVerdict,
 } from "./match-check-items.js";
 export { matchCheckItems } from "./match-check-items.js";
+export type {
+  SkillFixSkipReason,
+  SkillFixStepResult,
+  SkillRunnerArtifact,
+  SkillRunnerDeps,
+  SkillRunnerInput,
+  SkillRunnerResult,
+  SkillRunnerVerdict,
+} from "./runner.js";
+export { SkillRunner, XLSX_MIME } from "./runner.js";
 
 /** Same-pack duplicate canonical_name is a conflict; other packs may reuse the name. */
 export class SkillIndexConflictError extends Error {
