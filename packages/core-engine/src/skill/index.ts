@@ -20,6 +20,12 @@ export {
 } from "./draft.js";
 export type { SkillSummary } from "./summary.js";
 export { canConfirmSkill, renderSkillSummary } from "./summary.js";
+export type {
+  MatchCheckItemResult,
+  MatchCheckItemsResult,
+  MatchCheckVerdict,
+} from "./match-check-items.js";
+export { matchCheckItems } from "./match-check-items.js";
 
 /** Same-pack duplicate canonical_name is a conflict; other packs may reuse the name. */
 export class SkillIndexConflictError extends Error {
