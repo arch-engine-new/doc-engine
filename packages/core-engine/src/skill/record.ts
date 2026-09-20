@@ -8,8 +8,10 @@ export type SkillCheckItem = {
   keywords: string[];
 };
 
+/** Closed enum of engine-owned repair kinds; unknown values are leftovers, never a script slot (spec: no arbitrary code). */
 export type SkillFixKind = "noop" | "annotate_fail" | "patch_fields" | "patch_excel" | "copy_original";
 
+/** Default on_fail so a passing check does not mutate the artifact; always is explicit opt-in to avoid accidental repairs. */
 export type SkillFixOn = "on_fail" | "always";
 
 /** Cell mapping lives on the Skill so Excel fill never needs DocType/Template. */
