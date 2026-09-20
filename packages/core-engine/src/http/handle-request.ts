@@ -26,6 +26,7 @@ import { createFetchHandler, getDefaultLlmProvider } from "agent-runtime";
 import { DEMO_DICTS } from "./dicts.js";
 import type { DemoHttpSession } from "./session.js";
 import { UploadServiceUnavailableError } from "./session.js";
+import { resolveJobsListTrack } from "../persistence/ledger.js";
 import { runSkillJob, SkillConfirmGateError } from "../skill/load-index.js";
 
 /**
@@ -379,6 +380,12 @@ function fieldValuesFromBody(body: unknown): Record<string, string | number | bo
   return out;
 }
 
+/**
+ * WHY: Demo HTTP is what check_findings / pending_review / volume_preview call.
+ * GET /api/jobs therefore defaults to leftover `track=legacy` so Skill uploads
+ * never mix into those lists (M16/R28/D12). GET /api/jobs/:id stays unfiltered
+ * so the Skill workbench can still load a job by id.
+ */
 export async function handleDemoRequest(
   session: DemoHttpSession,
   req: DemoHttpRequest,
@@ -777,7 +784,8 @@ export async function handleDemoRequest(
       return json(200, result);
     }
     if (method === "GET" && pathname === "/api/jobs") {
-      const jobRows = await p.listJobs();
+      const track = resolveJobsListTrack(query.get("track"));
+      const jobRows = await session.ledger().listJobs({ track });
       const jobs = [];
       for (const job of jobRows) {
         const document = await p.getDocumentForJob(job.job_id);

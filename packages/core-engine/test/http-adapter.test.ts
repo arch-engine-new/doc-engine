@@ -90,7 +90,10 @@ describe("core-engine HTTP adapter", () => {
 
     const listed = await call(session, "GET", "/api/jobs");
     const jobs = (listed.body as { jobs: { job_id: string }[] }).jobs;
-    expect(jobs.some((j) => j.job_id === body.job.job_id)).toBe(true);
+    expect(jobs.some((j) => j.job_id === body.job.job_id)).toBe(false);
+
+    const one = await call(session, "GET", `/api/jobs/${body.job.job_id}`);
+    expect(one.status).toBe(200);
   });
 
   it("POST /api/jobs/upload maps UploadValidationError to 400", async () => {

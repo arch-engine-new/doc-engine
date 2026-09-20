@@ -61,6 +61,16 @@ import {
   type SkillRecordWrite,
 } from "./store.js";
 
+/**
+ * WHY: check_findings / pending_review / volume_preview share GET /api/jobs.
+ * Skill-track uploads must not land on leftover C2 pages (M16/R28/D12), so
+ * omit or unknown query values stay `legacy`. Pass `skill` only when a caller
+ * explicitly wants the Skill workbench list.
+ */
+export function resolveJobsListTrack(raw: string | null | undefined): JobTrack {
+  return raw === "skill" ? "skill" : "legacy";
+}
+
 export interface LedgerStore {
   close(): Promise<void>;
   /** Empty all core-engine t_* tables. Does not DROP DATABASE. */
@@ -203,6 +213,11 @@ export interface LedgerStore {
   countJobsByPack(packId: string): Promise<number>;
   getTemplate(templateId: string): Promise<TemplateRow | null>;
   listTemplates(packId: string): Promise<TemplateRow[]>;
+  /**
+   * WHY: HTTP findings lists pass `{ track: "legacy" }` so Skill-track rows
+   * stay out of check_findings / pending_review / volume_preview (M16).
+   * Omit the filter only for internal callers that still need both tracks.
+   */
   listJobs(filter?: ListJobsFilter): Promise<JobRow[]>;
   getDocumentForJob(jobId: string): Promise<DocumentRow | null>;
   getExtraction(jobId: string): Promise<ExtractionRow | null>;
@@ -672,6 +687,10 @@ export class SqliteLedger implements LedgerStore {
     return Promise.resolve(this.inner.listTemplates(packId));
   }
 
+  /**
+   * WHY: same as LedgerStore.listJobs — HTTP findings default to leftover
+   * `legacy`; unfiltered reads are for pipeline internals, not those pages.
+   */
   listJobs(filter?: ListJobsFilter): Promise<JobRow[]> {
     return Promise.resolve(this.inner.listJobs(filter));
   }
