@@ -11,6 +11,15 @@ export type {
   SkillFixOn,
   SkillRecord,
 } from "./record.js";
+export type { SkillDraft, SkillDraftPayload } from "./draft.js";
+export {
+  draftPayloadFromRecord,
+  emptySkillDraftPayload,
+  skillDraftFromRow,
+  upsertSkillDraft,
+} from "./draft.js";
+export type { SkillSummary } from "./summary.js";
+export { canConfirmSkill, renderSkillSummary } from "./summary.js";
 
 /** Same-pack duplicate canonical_name is a conflict; other packs may reuse the name. */
 export class SkillIndexConflictError extends Error {
