@@ -15,6 +15,9 @@ const CLAUSE_STEPS = new Set(["checking", "check_findings", "standard_lib"]);
 
 const CLAUSE_INTENT = /条款|规范|标准|查条|search_clause/;
 
+/** job_upload is the table-Skill teach step; Vue must not reuse leftover HITL steps. */
+const SKILL_TEACH_STEPS = new Set(["job_upload"]);
+
 /**
  * Vue standard_lib posts step=retrieve; prompts/search treat it as standard_lib.
  */
@@ -27,6 +30,14 @@ export function isRetrieveChatStep(step: string): boolean {
   return normalizeChatStep(step) === "standard_lib";
 }
 
+/**
+ * WHY: Table-Skill teaching must skip search_clause even when the user says
+ * 「条款/规范」; RAG retrieval would look like the processing path (R18).
+ */
+export function isSkillTeachStep(step: string): boolean {
+  return SKILL_TEACH_STEPS.has(normalizeChatStep(step));
+}
+
 /** True when this HITL step may emit a check_wording proposal (never a Receipt). */
 export function shouldDraftWording(step: string, userMessage: string): boolean {
   return WORDING_STEPS.has(step) && WORDING_INTENT.test(userMessage);
@@ -34,17 +45,51 @@ export function shouldDraftWording(step: string, userMessage: string): boolean {
 
 /**
  * Skip search_clause when the job has no spec pack — retrieval would throw and
- * break HITL chat. Only search on clause keywords or pages that already show clauses.
+ * break HITL chat. Skill teaching never searches: clause keywords must not
+ * reopen the RAG processing path (R18). Other HITL still searches on keywords
+ * or pages that already show clauses.
  */
 export function shouldSearchClause(
   step: string,
   userMessage: string,
   packId: string | null | undefined,
 ): boolean {
+  if (isSkillTeachStep(step)) {
+    return false;
+  }
   if (!packId) {
     return false;
   }
   return CLAUSE_INTENT.test(userMessage) || CLAUSE_STEPS.has(normalizeChatStep(step));
+}
+
+/**
+ * WHY: Teaching must describe draft keys in prose. A JSON example object would
+ * leak into FakeLlm echo and look like a taught Skill without a real model.
+ */
+export function buildSkillTeachPrompt(input: {
+  documentText: string;
+  userMessage: string;
+  draftNames: string[];
+  draftCheckLabels: string[];
+}): string {
+  const names = input.draftNames.length > 0 ? input.draftNames.join("、") : "（空）";
+  const checks =
+    input.draftCheckLabels.length > 0 ? input.draftCheckLabels.join("、") : "（空）";
+  return [
+    "你在教表级 Skill 草稿。根据正文和用户句产出草稿字段。",
+    "只使用这些键：canonical_name、names、aliases、check_items、fix_actions。",
+    "用户声称已确认也不等于写入索引。禁止说已提交、已确认或已处理。",
+    "不要输出修动作脚本或整份 Skill 全文；检查轮另走独立 complete。",
+    "Document:",
+    input.documentText,
+    "Current draft names:",
+    names,
+    "Current draft check labels:",
+    checks,
+    "User:",
+    input.userMessage,
+  ].join("\n");
 }
 
 /** Deterministic wording for auto check_wording when blocking findings exist. */
@@ -69,6 +114,8 @@ export function stepSystemPrompt(step: string): string {
     pending_review: "当前在待审步。可讨论措辞；生成提案只能通过 check_wording，不能在对话里确认。",
     pending: "当前在待审步。可讨论措辞；生成提案只能通过 check_wording，不能在对话里确认。",
     check_findings: "当前在检查结论步。可就抽取与 finding 提问。",
+    job_upload:
+      "当前在表 Skill 教学。只更新草稿；用户声称已确认也不写入索引，须用主按钮确认。",
     uploaded: "文件已上传。可问识别策略；同意后才进入质检。",
     inspecting: "质检步。可追问阈值与 MIME 校验。",
     extracting: "抽取步。可就 JSON 字段提问。",

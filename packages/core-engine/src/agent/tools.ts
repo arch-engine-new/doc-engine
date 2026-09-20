@@ -31,7 +31,7 @@ function wrapSearchClauseHandler(
   };
 }
 
-export function registerStepChatTools(registry: ToolRegistry, pipeline: JobPipeline): void {
+function registerGetJobContextTool(registry: ToolRegistry, pipeline: JobPipeline): void {
   registry.register(
     "get_job_context",
     {
@@ -49,6 +49,23 @@ export function registerStepChatTools(registry: ToolRegistry, pipeline: JobPipel
       buildJobContext(pipeline, input.traceId, input.step),
     "Read-only job/findings/extraction snapshot for the current trace.",
   );
+}
+
+/**
+ * WHY: Table-Skill teaching is not RAG. Registering search_clause here would let
+ * a graph arm retrieve clauses during teach and look like the processing path.
+ * ToolRegistry already rejects submit_* names.
+ */
+export function registerSkillTeachTools(registry: ToolRegistry, pipeline: JobPipeline): void {
+  registerGetJobContextTool(registry, pipeline);
+}
+
+/**
+ * WHY: Leftover HITL still cites clauses; Skill teach uses registerSkillTeachTools
+ * so the two paths cannot share a search_clause arm by accident.
+ */
+export function registerStepChatTools(registry: ToolRegistry, pipeline: JobPipeline): void {
+  registerGetJobContextTool(registry, pipeline);
 
   registry.register(
     "check_wording",
@@ -103,5 +120,15 @@ export function registerStepChatTools(registry: ToolRegistry, pipeline: JobPipel
 export function createStepChatRegistry(pipeline: JobPipeline): ToolRegistry {
   const registry = new ToolRegistry();
   registerStepChatTools(registry, pipeline);
+  return registry;
+}
+
+/**
+ * WHY: Tests and Skill teach graphs must start without search_clause; leftover
+ * HITL keeps createStepChatRegistry so standard_lib retrieval stays intact.
+ */
+export function createSkillTeachRegistry(pipeline: JobPipeline): ToolRegistry {
+  const registry = new ToolRegistry();
+  registerSkillTeachTools(registry, pipeline);
   return registry;
 }

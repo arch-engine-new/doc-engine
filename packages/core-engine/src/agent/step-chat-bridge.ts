@@ -1,13 +1,28 @@
 import {
+  getDefaultLlmProvider,
   initDefaultLlmProvider,
   loadLlmRuntimeConfig,
+  UNCONFIGURED_LLM_MESSAGE,
   type ControlPlane,
   type GraphDefinition,
   type GraphEdge,
   type GraphNode,
+  type LlmProvider,
   type ToolRegistry,
 } from "agent-runtime";
+import type { LedgerStore } from "../persistence/ledger.js";
 import type { JobPipeline } from "../pipeline/job-pipeline.js";
+import {
+  canConfirmSkill,
+  emptySkillDraftPayload,
+  matchCheckItems,
+  skillDraftFromRow,
+  upsertSkillDraft,
+  type SkillDraft,
+  type SkillDraftPayload,
+  type SkillFixKind,
+  type SkillSummary,
+} from "../skill/index.js";
 import { AgentRuntimeFactory, type AgentRuntimeFactoryOptions } from "./agent-runtime-factory.js";
 import {
   buildJobContext,
@@ -15,7 +30,13 @@ import {
   formatRetrieveHitsForPrompt,
   packChatTraceId,
 } from "./context.js";
-import { shouldDraftWording, shouldSearchClause, stepSystemPrompt } from "./prompts.js";
+import {
+  buildSkillTeachPrompt,
+  isSkillTeachStep,
+  shouldDraftWording,
+  shouldSearchClause,
+  stepSystemPrompt,
+} from "./prompts.js";
 import { resolveRepoRoot } from "./repo-root.js";
 import type { RetrieveHit } from "../retrieve/ports.js";
 
@@ -29,10 +50,36 @@ export interface StepChatInput {
   hits?: RetrieveHit[];
 }
 
+/**
+ * WHY: Confirm unlocks from engine match flags on draft JSON, never from the
+ * last assistant sentence that might claim 「已确认」 (R10/R11).
+ */
+export interface SkillTeachSummary extends SkillSummary {
+  check_match: Array<{
+    label: string;
+    matched: boolean;
+    reason: "unmatched" | null;
+  }>;
+  can_confirm: boolean;
+}
+
 export interface StepChatReply {
   reply: string;
   agentRunId: string;
   proposalId?: string;
+  skill_summary?: SkillTeachSummary;
+}
+
+/**
+ * WHY: Teaching upserts t_skill_draft only. Passing ledger in avoids opening a
+ * second store that would miss the hung upload row (R8).
+ */
+export interface TeachSkillFromChatInput {
+  pipeline: JobPipeline;
+  ledger: Pick<LedgerStore, "getSkillDraftByJob" | "insertSkillDraft" | "updateSkillDraft">;
+  llm: LlmProvider;
+  traceId: string;
+  userMessage: string;
 }
 
 export type LlmHealth = "ok" | "skip" | "fail";
@@ -213,6 +260,196 @@ function assembleReply(inputs: StepChatAssembleInputs): {
   return {
     reply: `${replyBase}\n\n已生成待审提案（proposal_id=${proposalId}）。请在待审页确认，对话不能代替确认。`,
     proposalId,
+  };
+}
+
+const TEACH_UNCONFIGURED = UNCONFIGURED_LLM_MESSAGE;
+const TEACH_PARSE_FAIL_REPLY =
+  "未能解析教学草稿。请用自然语言说明表名、检查项和修法。对话不能代替确认。";
+const TEACH_OK_REPLY =
+  "草稿已更新。请核对人话摘要后使用主按钮确认完成并处理；对话里声称已确认不会写入索引。";
+const FIX_KINDS = new Set<SkillFixKind>([
+  "noop",
+  "annotate_fail",
+  "patch_fields",
+  "patch_excel",
+  "copy_original",
+]);
+
+function pipelineLedger(pipeline: JobPipeline): LedgerStore {
+  return (pipeline as unknown as { store: LedgerStore }).store;
+}
+
+function isUnconfiguredLlmText(text: string): boolean {
+  return text.includes("尚未配置大语言模型");
+}
+
+function asStringArray(value: unknown): string[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+  return value.filter((item): item is string => typeof item === "string");
+}
+
+function extractJsonObject(text: string): Record<string, unknown> | null {
+  const start = text.indexOf("{");
+  const end = text.lastIndexOf("}");
+  if (start < 0 || end <= start) {
+    return null;
+  }
+  try {
+    const parsed: unknown = JSON.parse(text.slice(start, end + 1));
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+      return null;
+    }
+    return parsed as Record<string, unknown>;
+  } catch {
+    return null;
+  }
+}
+
+function asTeachCheckItems(value: unknown): SkillDraftPayload["check_items"] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+  const items: SkillDraftPayload["check_items"] = [];
+  for (const item of value) {
+    if (!item || typeof item !== "object") {
+      continue;
+    }
+    const rec = item as Record<string, unknown>;
+    items.push({
+      label: typeof rec.label === "string" ? rec.label : "",
+      keywords: asStringArray(rec.keywords),
+    });
+  }
+  return items;
+}
+
+function asTeachFixActions(value: unknown): SkillDraftPayload["fix_actions"] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+  const actions: SkillDraftPayload["fix_actions"] = [];
+  for (const item of value) {
+    if (!item || typeof item !== "object") {
+      continue;
+    }
+    const rec = item as Record<string, unknown>;
+    if (typeof rec.kind !== "string" || !FIX_KINDS.has(rec.kind as SkillFixKind)) {
+      continue;
+    }
+    actions.push({
+      kind: rec.kind as SkillFixKind,
+      on: rec.on === "always" ? "always" : "on_fail",
+    });
+  }
+  return actions;
+}
+
+function parseTeachDraftPayload(raw: string): SkillDraftPayload | null {
+  const obj = extractJsonObject(raw);
+  if (!obj) {
+    return null;
+  }
+  const hasDraftKey =
+    typeof obj.canonical_name === "string" ||
+    Array.isArray(obj.names) ||
+    Array.isArray(obj.check_items) ||
+    Array.isArray(obj.fix_actions);
+  if (!hasDraftKey) {
+    return null;
+  }
+  return {
+    canonical_name: typeof obj.canonical_name === "string" ? obj.canonical_name : "",
+    names: asStringArray(obj.names),
+    aliases: asStringArray(obj.aliases),
+    check_items: asTeachCheckItems(obj.check_items),
+    fix_actions: asTeachFixActions(obj.fix_actions),
+  };
+}
+
+function renderTeachSummary(draft: SkillDraft, documentText: string): SkillTeachSummary {
+  const match = matchCheckItems(documentText, draft.payload.check_items);
+  return {
+    ...draft.summary,
+    check_match: match.item_results.map((row) => ({
+      label: row.item.label,
+      matched: row.matched,
+      reason: row.reason,
+    })),
+    can_confirm: canConfirmSkill({
+      summary: draft.summary,
+      check_items: draft.payload.check_items,
+    }),
+  };
+}
+
+function emptyTeachDraft(jobId: string, packId: string): SkillDraft {
+  const payload = emptySkillDraftPayload();
+  return {
+    draft_id: "",
+    job_id: jobId,
+    pack_id: packId,
+    payload,
+    summary: {
+      names: [],
+      check_labels: [],
+      fix_plain: [],
+    },
+    selected_skill_id: null,
+  };
+}
+
+/**
+ * WHY: Teaching is not a graph run. Going through step-chat-v1 would register
+ * and call search_clause; chat must never write the pack index (R9/R10).
+ */
+export async function teachSkillFromChat(input: TeachSkillFromChatInput): Promise<StepChatReply> {
+  const job = await input.pipeline.getJobByTrace(input.traceId);
+  if (!job) {
+    throw new Error(`skill teach requires job for trace ${input.traceId}`);
+  }
+  const extraction = await input.pipeline.getExtraction(job.job_id);
+  const documentText = extraction?.ocr_text ?? "";
+  const row = await input.pipeline.getSkillDraftByJob(job.job_id);
+  const current = row
+    ? skillDraftFromRow(row)
+    : emptyTeachDraft(job.job_id, job.pack_id ?? "");
+  const raw = await input.llm.complete({
+    prompt: buildSkillTeachPrompt({
+      documentText,
+      userMessage: input.userMessage,
+      draftNames: current.summary.names,
+      draftCheckLabels: current.summary.check_labels,
+    }),
+  });
+  const agentRunId = `skill-teach:${job.job_id}`;
+  if (isUnconfiguredLlmText(raw)) {
+    return {
+      reply: TEACH_UNCONFIGURED,
+      agentRunId,
+      skill_summary: renderTeachSummary(current, documentText),
+    };
+  }
+  const parsed = parseTeachDraftPayload(raw);
+  if (!parsed) {
+    return {
+      reply: TEACH_PARSE_FAIL_REPLY,
+      agentRunId,
+      skill_summary: renderTeachSummary(current, documentText),
+    };
+  }
+  const next = await upsertSkillDraft(input.ledger, {
+    job_id: job.job_id,
+    pack_id: current.pack_id || job.pack_id || "",
+    payload: parsed,
+    selected_skill_id: current.selected_skill_id,
+  });
+  return {
+    reply: TEACH_OK_REPLY,
+    agentRunId,
+    skill_summary: renderTeachSummary(next, documentText),
   };
 }
 
@@ -400,6 +637,15 @@ export class StepChatBridge {
 
   async reply(input: StepChatInput): Promise<StepChatReply> {
     const payload = resolveStepChatInput(input);
+    if (isSkillTeachStep(payload.step)) {
+      return teachSkillFromChat({
+        pipeline: this.pipeline,
+        ledger: pipelineLedger(this.pipeline),
+        llm: getDefaultLlmProvider(),
+        traceId: payload.traceId,
+        userMessage: payload.userMessage,
+      });
+    }
     const started = await this.plane.startRun({
       graphId: "step-chat-v1",
       input: payload,

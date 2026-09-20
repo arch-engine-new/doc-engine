@@ -13,7 +13,7 @@ import type {
   FieldFillRuleWrite,
 } from "../persistence/store.js";
 import { NoOpenHitlError } from "../agent/job-step-orchestrator.js";
-import { isRetrieveChatStep } from "../agent/prompts.js";
+import { isRetrieveChatStep, isSkillTeachStep } from "../agent/prompts.js";
 import { packChatTraceId } from "../agent/context.js";
 import {
   LedgerConflictError,
@@ -830,6 +830,9 @@ export async function handleDemoRequest(
         agent_run_id: agent.agentRunId,
         proposal_id: agent.proposalId ?? null,
         assistant_message: assistantStored.message,
+        ...(isSkillTeachStep(step) && agent.skill_summary
+          ? { skill_summary: agent.skill_summary }
+          : {}),
       });
     }
 
