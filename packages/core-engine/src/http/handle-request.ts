@@ -722,6 +722,8 @@ export async function handleDemoRequest(
     if (method === "POST" && ingestTick) {
       return json(200, await p.tickStandardIngest(ingestTick.id));
     }
+    // WHY: standard_lib retrieval stays (D4/M11). Skill upload/teach/confirm
+    // must not call searchStandard; this route is the library page, not processing.
     if (method === "POST" && pathname === "/api/standards/search") {
       const hits = await p.searchStandard({
         packId: requireStr(req.body, "packId", "pack_id"),

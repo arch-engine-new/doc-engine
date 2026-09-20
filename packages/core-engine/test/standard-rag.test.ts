@@ -1,6 +1,9 @@
 /**
  * SLICE-6 standard RAG: A11–A14, A9 retrieve, A15/A16 chat.
  * Fixture is leave-request style. No 公路/水利/房建 presets.
+ * A11–A19 stay library retrieval tests (do not delete). Skill job processing
+ * must not call searchStandard / attachStandardFitFinding / search_clause —
+ * that boundary is skill-rag-boundary.test.ts, not these ingest/search cases.
  */
 
 import { describe, it, expect, beforeEach, afterEach } from "vitest";

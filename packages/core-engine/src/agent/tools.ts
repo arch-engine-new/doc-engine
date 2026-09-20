@@ -18,11 +18,17 @@ const retrieveHitsSchema = {
 /**
  * Missing pack / unbound version / no ingest must not fail HITL chat.
  * Empty RetrieveHit[] is a valid no-hit result (never invent clause_id).
+ * Skill jobs must not retrieve even if leftover HITL reuses this handler (M11/D4).
  */
 function wrapSearchClauseHandler(
+  pipeline: JobPipeline,
   handler: (input: SearchStandardInput) => Promise<RetrieveHit[]>,
 ): (input: SearchStandardInput) => Promise<RetrieveHit[]> {
   return async (input: SearchStandardInput): Promise<RetrieveHit[]> => {
+    if (input.jobId) {
+      const job = await pipeline.getJob(input.jobId);
+      if (job?.track === "skill") return [];
+    }
     try {
       return await handler(input);
     } catch {
@@ -54,7 +60,8 @@ function registerGetJobContextTool(registry: ToolRegistry, pipeline: JobPipeline
 /**
  * WHY: Table-Skill teaching is not RAG. Registering search_clause here would let
  * a graph arm retrieve clauses during teach and look like the processing path.
- * ToolRegistry already rejects submit_* names.
+ * ToolRegistry already rejects submit_* names. Product Skill jobs also no-op
+ * leftover search_clause via wrapSearchClauseHandler (track=skill).
  */
 export function registerSkillTeachTools(registry: ToolRegistry, pipeline: JobPipeline): void {
   registerGetJobContextTool(registry, pipeline);
@@ -112,7 +119,7 @@ export function registerStepChatTools(registry: ToolRegistry, pipeline: JobPipel
       },
       output: retrieveHitsSchema,
     },
-    wrapSearchClauseHandler(createSearchClauseToolHandler(pipeline.library)),
+    wrapSearchClauseHandler(pipeline, createSearchClauseToolHandler(pipeline.library)),
     "Read-only StandardLibrary.searchStandard; never attach Finding / never submit.",
   );
 }
