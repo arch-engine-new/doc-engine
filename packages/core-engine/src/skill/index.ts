@@ -15,6 +15,8 @@ export type { SkillDraft, SkillDraftPayload } from "./draft.js";
 export {
   draftPayloadFromRecord,
   emptySkillDraftPayload,
+  parseSkillDraftPayload,
+  parseSkillFixActions,
   skillDraftFromRow,
   upsertSkillDraft,
 } from "./draft.js";

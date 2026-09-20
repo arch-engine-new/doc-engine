@@ -16,11 +16,11 @@ import {
   canConfirmSkill,
   emptySkillDraftPayload,
   matchCheckItems,
+  parseSkillDraftPayload,
   skillDraftFromRow,
   upsertSkillDraft,
   type SkillDraft,
   type SkillDraftPayload,
-  type SkillFixKind,
   type SkillSummary,
 } from "../skill/index.js";
 import { AgentRuntimeFactory, type AgentRuntimeFactoryOptions } from "./agent-runtime-factory.js";
@@ -268,13 +268,6 @@ const TEACH_PARSE_FAIL_REPLY =
   "未能解析教学草稿。请用自然语言说明表名、检查项和修法。对话不能代替确认。";
 const TEACH_OK_REPLY =
   "草稿已更新。请核对人话摘要后使用主按钮确认完成并处理；对话里声称已确认不会写入索引。";
-const FIX_KINDS = new Set<SkillFixKind>([
-  "noop",
-  "annotate_fail",
-  "patch_fields",
-  "patch_excel",
-  "copy_original",
-]);
 
 function pipelineLedger(pipeline: JobPipeline): LedgerStore {
   return (pipeline as unknown as { store: LedgerStore }).store;
@@ -282,13 +275,6 @@ function pipelineLedger(pipeline: JobPipeline): LedgerStore {
 
 function isUnconfiguredLlmText(text: string): boolean {
   return text.includes("尚未配置大语言模型");
-}
-
-function asStringArray(value: unknown): string[] {
-  if (!Array.isArray(value)) {
-    return [];
-  }
-  return value.filter((item): item is string => typeof item === "string");
 }
 
 function extractJsonObject(text: string): Record<string, unknown> | null {
@@ -308,45 +294,6 @@ function extractJsonObject(text: string): Record<string, unknown> | null {
   }
 }
 
-function asTeachCheckItems(value: unknown): SkillDraftPayload["check_items"] {
-  if (!Array.isArray(value)) {
-    return [];
-  }
-  const items: SkillDraftPayload["check_items"] = [];
-  for (const item of value) {
-    if (!item || typeof item !== "object") {
-      continue;
-    }
-    const rec = item as Record<string, unknown>;
-    items.push({
-      label: typeof rec.label === "string" ? rec.label : "",
-      keywords: asStringArray(rec.keywords),
-    });
-  }
-  return items;
-}
-
-function asTeachFixActions(value: unknown): SkillDraftPayload["fix_actions"] {
-  if (!Array.isArray(value)) {
-    return [];
-  }
-  const actions: SkillDraftPayload["fix_actions"] = [];
-  for (const item of value) {
-    if (!item || typeof item !== "object") {
-      continue;
-    }
-    const rec = item as Record<string, unknown>;
-    if (typeof rec.kind !== "string" || !FIX_KINDS.has(rec.kind as SkillFixKind)) {
-      continue;
-    }
-    actions.push({
-      kind: rec.kind as SkillFixKind,
-      on: rec.on === "always" ? "always" : "on_fail",
-    });
-  }
-  return actions;
-}
-
 function parseTeachDraftPayload(raw: string): SkillDraftPayload | null {
   const obj = extractJsonObject(raw);
   if (!obj) {
@@ -360,13 +307,7 @@ function parseTeachDraftPayload(raw: string): SkillDraftPayload | null {
   if (!hasDraftKey) {
     return null;
   }
-  return {
-    canonical_name: typeof obj.canonical_name === "string" ? obj.canonical_name : "",
-    names: asStringArray(obj.names),
-    aliases: asStringArray(obj.aliases),
-    check_items: asTeachCheckItems(obj.check_items),
-    fix_actions: asTeachFixActions(obj.fix_actions),
-  };
+  return parseSkillDraftPayload(obj);
 }
 
 function renderTeachSummary(draft: SkillDraft, documentText: string): SkillTeachSummary {

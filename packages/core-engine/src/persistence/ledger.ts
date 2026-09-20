@@ -58,6 +58,7 @@ import {
   type SkillDraftUpdate,
   type SkillDraftWrite,
   type SkillLedgerWrite,
+  type SkillRecordUpdate,
   type SkillRecordWrite,
 } from "./store.js";
 
@@ -366,6 +367,11 @@ export interface LedgerStore {
   getSkillRecord(skillId: string): Promise<SkillRecordRow | null>;
   getSkillRecordByPackName(packId: string, canonicalName: string): Promise<SkillRecordRow | null>;
   listSkillRecords(packId: string): Promise<SkillRecordRow[]>;
+  /**
+   * WHY: confirm overlays this pack's live JSON (same skill_id, version++).
+   * Insert-conflict reuse without update would ignore the latest teach (R13).
+   */
+  updateSkillRecord(skillId: string, input: SkillRecordUpdate): Promise<SkillRecordRow>;
   /** Chat writes drafts only; confirm-skill later copies into t_skill_record. */
   insertSkillDraft(input: SkillDraftWrite): Promise<SkillDraftRow>;
   getSkillDraft(draftId: string): Promise<SkillDraftRow | null>;
@@ -990,6 +996,14 @@ export class SqliteLedger implements LedgerStore {
 
   async insertSkillRecord(input: SkillRecordWrite): Promise<SkillRecordRow> {
     return this.inner.insertSkillRecord(input);
+  }
+
+  /**
+   * WHY: confirm overlays this pack's live JSON (same skill_id, version++).
+   * Insert-conflict reuse without update would ignore the latest teach (R13).
+   */
+  updateSkillRecord(skillId: string, input: SkillRecordUpdate): Promise<SkillRecordRow> {
+    return Promise.resolve(this.inner.updateSkillRecord(skillId, input));
   }
 
   getSkillRecord(skillId: string): Promise<SkillRecordRow | null> {

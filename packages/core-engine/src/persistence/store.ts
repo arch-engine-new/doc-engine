@@ -154,6 +154,18 @@ export type SkillRecordWrite = {
   version?: number;
 };
 
+/**
+ * WHY: confirm-skill must overwrite this pack's live check_items/fix_actions
+ * and bump version. Reusing the row on unique conflict without an update would
+ * freeze the first teach forever (R13).
+ */
+export type SkillRecordUpdate = {
+  names_json?: string;
+  aliases_json?: string;
+  check_items_json?: string;
+  fix_actions_json?: string;
+};
+
 /** Chat/confirm only mutate drafts; one live draft per job. */
 export type SkillDraftWrite = {
   draft_id?: string;
@@ -2042,6 +2054,36 @@ export class CoreEngineStore {
       throw err;
     }
     return this.getSkillRecord(skill_id)!;
+  }
+
+  /**
+   * WHY: confirm-skill overlays this pack's live JSON (same skill_id, version++).
+   * Insert-conflict reuse without UPDATE would ignore the latest teach (R13).
+   */
+  updateSkillRecord(skillId: string, input: SkillRecordUpdate): SkillRecordRow {
+    const current = this.getSkillRecord(skillId);
+    if (!current) {
+      throw new Error(`skill record not found: ${skillId}`);
+    }
+    const ts = nowIso();
+    this.db
+      .prepare(
+        `UPDATE t_skill_record
+           SET names_json = ?, aliases_json = ?, check_items_json = ?, fix_actions_json = ?,
+               version = ?, updated_at = ?, updater = ?
+         WHERE skill_id = ? AND deleted = 0`,
+      )
+      .run(
+        input.names_json ?? current.names_json,
+        input.aliases_json ?? current.aliases_json,
+        input.check_items_json ?? current.check_items_json,
+        input.fix_actions_json ?? current.fix_actions_json,
+        current.version + 1,
+        ts,
+        SYSTEM,
+        skillId,
+      );
+    return this.getSkillRecord(skillId)!;
   }
 
   getSkillDraft(draftId: string): SkillDraftRow | null {

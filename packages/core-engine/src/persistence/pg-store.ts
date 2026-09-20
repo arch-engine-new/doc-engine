@@ -76,6 +76,7 @@ import type {
   SkillDraftUpdate,
   SkillDraftWrite,
   SkillLedgerWrite,
+  SkillRecordUpdate,
   SkillRecordWrite,
 } from "./store.js";
 
@@ -2635,6 +2636,36 @@ export class PostgresLedger implements LedgerStore {
       }
       throw err;
     }
+  }
+
+  /**
+   * WHY: confirm overlays this pack's live JSON (same skill_id, version++).
+   * Insert-conflict reuse without update would ignore the latest teach (R13).
+   */
+  async updateSkillRecord(skillId: string, input: SkillRecordUpdate): Promise<SkillRecordRow> {
+    const current = await this.getSkillRecord(skillId);
+    if (!current) {
+      throw new Error(`skill record not found: ${skillId}`);
+    }
+    const ts = nowIso();
+    const result = await this.q(
+      `UPDATE t_skill_record
+         SET names_json = $1, aliases_json = $2, check_items_json = $3, fix_actions_json = $4,
+             version = $5, updated_at = $6, updater = $7
+       WHERE skill_id = $8 AND deleted = 0
+       RETURNING *`,
+      [
+        input.names_json ?? current.names_json,
+        input.aliases_json ?? current.aliases_json,
+        input.check_items_json ?? current.check_items_json,
+        input.fix_actions_json ?? current.fix_actions_json,
+        current.version + 1,
+        ts,
+        SYSTEM,
+        skillId,
+      ],
+    );
+    return mapSkillRecord(result.rows[0]);
   }
 
   async getSkillDraft(draftId: string): Promise<SkillDraftRow | null> {

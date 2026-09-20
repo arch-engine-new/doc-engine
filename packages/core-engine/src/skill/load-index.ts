@@ -201,8 +201,13 @@ function assertConfirmGate(
   if (!canConfirmSkill({ summary: draft.summary, check_items: draft.payload.check_items })) {
     throw new SkillConfirmGateError("cannot confirm-skill without summary or check_items");
   }
-  if (candidates.length > 1 && !selectedSkillId) {
-    throw new SkillConfirmGateError("skill candidates require selection");
+  if (candidates.length > 1) {
+    if (!selectedSkillId) {
+      throw new SkillConfirmGateError("skill candidates require selection");
+    }
+    if (!candidates.some((row) => row.skill_id === selectedSkillId)) {
+      throw new SkillConfirmGateError("selected_skill_id is not a candidate");
+    }
   }
 }
 
@@ -254,7 +259,12 @@ async function persistSkillJob(
   input: RunSkillJobInput,
   evaluated: EvaluatedSkillJob,
 ): Promise<{ job: JobRow; skill: SkillRecord; ledger: SkillLedgerRow }> {
-  const skill = await commitSkillDraftToIndex(input.ledger, ctx.job, ctx.draft);
+  const selectedSkillId = input.selectedSkillId ?? ctx.draft.selected_skill_id ?? null;
+  const boundSkillId = boundSkillIdFromCandidates(ctx.candidates, selectedSkillId);
+  if (boundSkillId) {
+    await input.ledger.updateSkillDraft(ctx.draft.draft_id, { selected_skill_id: boundSkillId });
+  }
+  const skill = await commitSkillDraftToIndex(input.ledger, ctx.job, ctx.draft, boundSkillId);
   let patchedUri: string | null = null;
   let patchedMime: string | null = null;
   if (!evaluated.skipRepair && evaluated.preview.would_patch) {
@@ -285,24 +295,37 @@ async function persistSkillJob(
 }
 
 /**
- * WHY: Same (pack, canonical_name) must reuse the live row so a second upload
- * cannot mint a duplicate Skill; overwrite is later, R14 still requires confirm.
+ * WHY: Same (pack, canonical_name) keeps one skill_id so a second upload cannot
+ * mint a duplicate; confirm overlays check_items/fix_actions and bumps version
+ * so GET index shows the latest teach (R13). Multi-candidate selected_skill_id
+ * binds that existing row instead of inserting a third name (M6).
  */
 async function commitSkillDraftToIndex(
   ledger: LedgerStore,
   job: JobRow,
   draft: SkillDraft,
+  boundSkillId: string | null,
 ): Promise<SkillRecord> {
   const canonical =
     draft.payload.canonical_name.trim() || draft.payload.names.find((name) => name.trim()) || "";
-  const write = {
-    pack_id: draft.pack_id,
-    project_id: job.project_id,
-    canonical_name: canonical,
+  const overlay = {
     names_json: JSON.stringify(draft.payload.names),
     aliases_json: JSON.stringify(draft.payload.aliases),
     check_items_json: JSON.stringify(draft.payload.check_items),
     fix_actions_json: JSON.stringify(draft.payload.fix_actions),
+  };
+  if (boundSkillId) {
+    const existing = await ledger.getSkillRecord(boundSkillId);
+    if (!existing || existing.pack_id !== draft.pack_id) {
+      throw new SkillConfirmGateError("selected_skill_id is not in this pack");
+    }
+    return skillRecordFromRow(await ledger.updateSkillRecord(existing.skill_id, overlay));
+  }
+  const write = {
+    pack_id: draft.pack_id,
+    project_id: job.project_id,
+    canonical_name: canonical,
+    ...overlay,
   };
   try {
     return skillRecordFromRow(await ledger.insertSkillRecord(write));
@@ -314,8 +337,22 @@ async function commitSkillDraftToIndex(
     if (!existing) {
       throw err;
     }
-    return skillRecordFromRow(existing);
+    return skillRecordFromRow(await ledger.updateSkillRecord(existing.skill_id, overlay));
   }
+}
+
+/**
+ * WHY: selected_skill_id is a bind to an existing candidate, not a non-empty
+ * token. A miss must not mint a new canonical_name beside the two matches (M6).
+ */
+function boundSkillIdFromCandidates(
+  candidates: SkillRecord[],
+  selectedSkillId: string | null,
+): string | null {
+  if (!selectedSkillId || candidates.length === 0) {
+    return null;
+  }
+  return candidates.some((row) => row.skill_id === selectedSkillId) ? selectedSkillId : null;
 }
 
 type CheckOutcome = { verdict: SkillRunnerVerdict; parse_fail: boolean };

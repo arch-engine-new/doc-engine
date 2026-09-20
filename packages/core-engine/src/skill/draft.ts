@@ -80,7 +80,12 @@ function asCheckItems(value: unknown): SkillCheckItem[] {
   return items;
 }
 
-function asFixActions(value: unknown): SkillFixAction[] {
+/**
+ * WHY: Chat and ledger JSON must share one mapper so patch_excel.mappings
+ * taught over /api/chat still reach SkillRunner; a second mapper that dropped
+ * payload would make xlsx repair look unimplemented (R24).
+ */
+export function parseSkillFixActions(value: unknown): SkillFixAction[] {
   if (!Array.isArray(value)) {
     return [];
   }
@@ -123,14 +128,19 @@ function asFixActions(value: unknown): SkillFixAction[] {
   return actions;
 }
 
-function parseSkillDraftPayload(raw: unknown): SkillDraftPayload {
+/**
+ * WHY: Teach chat must not invent a slimmer parser than the draft row.
+ * Losing fix_actions.payload.mappings here is how xlsx confirm would skip
+ * the Skill JSON mappings and fall back to DocType (R24/D11).
+ */
+export function parseSkillDraftPayload(raw: unknown): SkillDraftPayload {
   const obj = asObject(raw);
   return {
     canonical_name: typeof obj.canonical_name === "string" ? obj.canonical_name : "",
     names: asStringArray(obj.names),
     aliases: asStringArray(obj.aliases),
     check_items: asCheckItems(obj.check_items),
-    fix_actions: asFixActions(obj.fix_actions),
+    fix_actions: parseSkillFixActions(obj.fix_actions),
   };
 }
 
