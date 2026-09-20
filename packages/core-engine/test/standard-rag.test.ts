@@ -36,6 +36,8 @@ describe("SLICE-6 standard RAG", () => {
       prequery: new FakePrequery({
         [Q_PARAPHRASE_A]: { rewritten: CANON, intent: "semantic" },
         [Q_PARAPHRASE_B]: { rewritten: CANON, intent: "semantic" },
+        事假: { rewritten: CANON, intent: "semantic" },
+        不存在: { rewritten: "不存在", intent: "semantic" },
         "1.1": { rewritten: "1.1", intent: "exact", clauseNo: "1.1" },
         "2.1替代了哪条": {
           rewritten: "2.1 SUPERSEDES 1.1",
@@ -278,6 +280,135 @@ describe("SLICE-6 standard RAG", () => {
     expect((await pipeline.getRuleVersion(draft.version.version_id))?.status).toBe("draft");
     expect(await pipeline.listReceipts(job.job_id)).toHaveLength(0);
     expect((await pipeline.getJob(job.job_id))?.status).toBe("checking");
+  });
+
+  /**
+   * MemoryVectorStore returns every clause in the pack (topK=8). T10/T13 need
+   * a single vector origin so the CITES neighbor is graph, not an already-seen
+   * vector row. Do not put 1.1→1.2 on the shared seedPack (A11 length===1).
+   */
+  function topClauseRerank() {
+    const inner = new IndependentReranker();
+    return {
+      async rerank(
+        query: string,
+        candidates: Array<{ clause_id: string; text: string; vector?: number[] }>,
+      ): Promise<string[]> {
+        const ordered = await inner.rerank(query, candidates);
+        return ordered.slice(0, 1);
+      },
+    };
+  }
+
+  async function reopenWithTopClauseRerank(): Promise<void> {
+    await pipeline.close();
+    pipeline = JobPipeline.openStandardLibrary({
+      vector: new MemoryVectorStore(),
+      graph: new MemoryGraphStore(),
+      prequery: new FakePrequery({
+        [Q_PARAPHRASE_A]: { rewritten: CANON, intent: "semantic" },
+        [Q_PARAPHRASE_B]: { rewritten: CANON, intent: "semantic" },
+        事假: { rewritten: CANON, intent: "semantic" },
+        不存在: { rewritten: "不存在", intent: "semantic" },
+        "1.1": { rewritten: "1.1", intent: "exact", clauseNo: "1.1" },
+        "2.1替代了哪条": {
+          rewritten: "2.1 SUPERSEDES 1.1",
+          intent: "graph",
+          clauseNo: "2.1",
+          toClauseNo: "1.1",
+        },
+        发明条款第999条: {
+          rewritten: "第999条",
+          intent: "exact",
+          clauseNo: "第999条",
+        },
+      }),
+      rerank: topClauseRerank(),
+      embed: new HashEmbeddings(),
+    });
+  }
+
+  it("A19-hit 事假 semantic: 1.1 vector plus 1.2 graph CITES one hop", async () => {
+    await reopenWithTopClauseRerank();
+    const { pack, ingested, idOf } = await seedPack();
+    await pipeline.addStandardEdge({
+      from: idOf("1.1"),
+      to: idOf("1.2"),
+      kind: "CITES",
+    });
+    const hits = await pipeline.searchStandard({ packId: pack.pack_id, query: "事假" });
+    const hit11 = hits.find((hit) => hit.clause_id === idOf("1.1"));
+    const hit12 = hits.find((hit) => hit.clause_id === idOf("1.2"));
+    expect(hit11?.retrieve_path).toBe("vector");
+    expect(hit12?.retrieve_path).toBe("graph");
+    expect(hit12?.path).toEqual([{ from: idOf("1.1"), to: idOf("1.2"), kind: "CITES" }]);
+    expect(hit12?.path).toHaveLength(1);
+    expect(hit12?.heading).toBe(
+      ingested.clauses.find((clause) => clause.clause_id === idOf("1.2"))?.heading,
+    );
+    expect(hit12?.body).toContain("医疗机构证明");
+  });
+
+  it("A19-empty 不存在 semantic with zero clause hits adds no graph row", async () => {
+    const project = await pipeline.createProject();
+    const pack = await pipeline.createSpecPack({
+      projectId: project.project_id,
+      name: "空包",
+      version: "1",
+    });
+    const hits = await pipeline.searchStandard({ packId: pack.pack_id, query: "不存在" });
+    expect(hits).toHaveLength(0);
+    expect(hits.some((hit) => hit.retrieve_path === "graph")).toBe(false);
+  });
+
+  it("A19-dedupe keeps 1.2 as the original vector row when it was already retrieved", async () => {
+    const { pack, idOf } = await seedPack();
+    await pipeline.addStandardEdge({
+      from: idOf("1.1"),
+      to: idOf("1.2"),
+      kind: "CITES",
+    });
+    const hits = await pipeline.searchStandard({ packId: pack.pack_id, query: "事假" });
+    const rows12 = hits.filter((hit) => hit.clause_id === idOf("1.2"));
+    expect(rows12).toHaveLength(1);
+    expect(rows12[0]?.retrieve_path).toBe("vector");
+    expect(hits.find((hit) => hit.clause_id === idOf("1.1"))?.retrieve_path).toBe("vector");
+  });
+
+  it("A19-one-hop does not walk 1.2→2.1 when only 1.1 was a retrieve origin", async () => {
+    const { pack, idOf } = await seedPack();
+    await pipeline.addStandardEdge({
+      from: idOf("1.1"),
+      to: idOf("1.2"),
+      kind: "CITES",
+    });
+    await pipeline.addStandardEdge({
+      from: idOf("1.2"),
+      to: idOf("2.1"),
+      kind: "CITES",
+    });
+    const hits = await pipeline.searchStandard({ packId: pack.pack_id, query: "1.1" });
+    expect(hits[0]?.retrieve_path).toBe("exact");
+    expect(hits[0]?.clause_id).toBe(idOf("1.1"));
+    expect(hits.some((hit) => hit.clause_id === idOf("1.2") && hit.retrieve_path === "graph")).toBe(
+      true,
+    );
+    expect(hits.some((hit) => hit.clause_id === idOf("2.1"))).toBe(false);
+  });
+
+  it("A19-exact 1.1 with case-local CITES keeps exact first and appends graph neighbor", async () => {
+    const { pack, idOf } = await seedPack();
+    await pipeline.addStandardEdge({
+      from: idOf("1.1"),
+      to: idOf("1.2"),
+      kind: "CITES",
+    });
+    const hits = await pipeline.searchStandard({ packId: pack.pack_id, query: "1.1" });
+    expect(hits[0]?.retrieve_path).toBe("exact");
+    expect(hits[0]?.clause_id).toBe(idOf("1.1"));
+    const hit12 = hits.find((hit) => hit.clause_id === idOf("1.2"));
+    expect(hit12?.retrieve_path).toBe("graph");
+    expect(hit12?.path).toEqual([{ from: idOf("1.1"), to: idOf("1.2"), kind: "CITES" }]);
   });
 });
 

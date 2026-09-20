@@ -363,6 +363,7 @@ export class StandardLibrary {
         pre.intent === "exact"
           ? await this.searchExact(versionIds, pre.clauseNo ?? pre.rewritten)
           : await this.searchSemantic(versionIds, pre.rewritten);
+      hits = await this.expandOneHop(hits, versionIds);
     }
 
     if (input.jobId) {
@@ -512,6 +513,67 @@ export class StandardLibrary {
       page_end: hit.page_end,
       heading: unit?.heading ?? null,
     };
+  }
+
+  /**
+   * Out-edge one hop only: never recurse on appended graph rows (that would
+   * dump two-hop neighbors into the table), never walk inbound edges.
+   * Zero clause hits short-circuit so empty/table-only results do not scan
+   * the graph.
+   */
+  private async expandOneHop(
+    hits: RetrieveHit[],
+    versionIds: string[],
+  ): Promise<RetrieveHit[]> {
+    const seen = new Set<string>();
+    for (const hit of hits) {
+      if (hit.clause_id) seen.add(hit.clause_id);
+    }
+    if (seen.size === 0) return hits;
+
+    const origins = hits.filter(
+      (hit) =>
+        typeof hit.clause_id === "string" &&
+        hit.clause_id.length > 0 &&
+        (hit.retrieve_path === "vector" || hit.retrieve_path === "exact"),
+    );
+    const extra: RetrieveHit[] = [];
+    for (const origin of origins) {
+      extra.push(...(await this.expandOriginNeighbors(origin.clause_id!, seen, versionIds)));
+    }
+    return [...hits, ...extra];
+  }
+
+  /** queryPath is already one outgoing hop; calling it on edge.to would be a second hop. */
+  private async expandOriginNeighbors(
+    originId: string,
+    seen: Set<string>,
+    versionIds: string[],
+  ): Promise<RetrieveHit[]> {
+    const edges: GraphEdge[] = [
+      ...(await this.ports.graph.queryPath(originId, "CITES")),
+      ...(await this.ports.graph.queryPath(originId, "SUPERSEDES")),
+    ];
+    const extra: RetrieveHit[] = [];
+    for (const edge of edges) {
+      const neighbor = await this.neighborHitIfNew(edge, seen, versionIds);
+      if (neighbor) extra.push(neighbor);
+    }
+    return extra;
+  }
+
+  private async neighborHitIfNew(
+    edge: GraphEdge,
+    seen: Set<string>,
+    versionIds: string[],
+  ): Promise<RetrieveHit | null> {
+    if (seen.has(edge.to)) return null;
+    const clause = await this.store.getClause(edge.to);
+    if (!clause || !versionIds.includes(clause.version_id)) return null;
+    seen.add(edge.to);
+    const hit = this.toHit(clause, "graph");
+    hit.path = [edge];
+    return hit;
   }
 
   private async searchExact(versionIds: string[], clauseNo: string): Promise<RetrieveHit[]> {
