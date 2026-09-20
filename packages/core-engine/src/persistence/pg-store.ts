@@ -25,6 +25,7 @@ import type {
   IngestPageRow,
   IngestRunRow,
   JobRow,
+  JobTrack,
   LayoutEdgeRow,
   LayoutUnitRow,
   ProjectRow,
@@ -1731,7 +1732,7 @@ export class PostgresLedger implements LedgerStore {
     status: string;
     template_id?: string | null;
     doc_type_id?: string | null;
-    track?: string;
+    track?: JobTrack;
     skill_draft_id?: string | null;
   }): Promise<JobRow> {
     const ts = nowIso();

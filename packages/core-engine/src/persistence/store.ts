@@ -26,6 +26,7 @@ import type {
   IngestPageRow,
   IngestRunRow,
   JobRow,
+  JobTrack,
   LayoutEdgeRow,
   LayoutUnitRow,
   ProjectRow,
@@ -137,7 +138,7 @@ export type IngestPageUpdate = {
 
 /** Optional Job.track filter so findings lists can stay on leftover fixture jobs. */
 export type ListJobsFilter = {
-  track?: string;
+  track?: JobTrack;
 };
 
 /** Production Skill index write; uniqueness is (pack_id, canonical_name) while deleted=0. */
@@ -163,6 +164,7 @@ export type SkillDraftWrite = {
   selected_skill_id?: string | null;
 };
 
+/** Chat only patches draft fields; inserting a second draft for the same job would violate uk_t_skill_draft_job. */
 export type SkillDraftUpdate = {
   payload_json?: string;
   summary_json?: string;
@@ -1252,7 +1254,7 @@ export class CoreEngineStore {
     status: string;
     template_id?: string | null;
     doc_type_id?: string | null;
-    track?: string;
+    track?: JobTrack;
     skill_draft_id?: string | null;
   }): JobRow {
     const ts = nowIso();
