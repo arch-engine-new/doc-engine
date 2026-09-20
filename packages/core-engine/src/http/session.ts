@@ -8,6 +8,7 @@ import { QdrantClient } from "@qdrant/js-client-rest";
 import neo4j from "neo4j-driver";
 import pg from "pg";
 import { resetAdapterWrites } from "../adapter/mock.js";
+import type { BlobStore } from "../blob/port.js";
 import { MemoryBlobStore } from "../blob/memory.js";
 import {
   blobObjectUri,
@@ -168,6 +169,14 @@ export class DemoHttpSession {
   /** Ledger store shared with JobPipeline (sibling DocumentPipeline). */
   ledger(): LedgerStore {
     return (this.pipeline as unknown as { store: LedgerStore }).store;
+  }
+
+  /**
+   * WHY: confirm-skill / dry-run must re-read the original upload bytes from the
+   * same BlobStore; a second MemoryBlobStore would make patched MIME unverifiable (R24).
+   */
+  blobStore(): BlobStore {
+    return this.resolveUploadDeps().blob;
   }
 
   getDocumentPipeline(): DocumentPipeline {

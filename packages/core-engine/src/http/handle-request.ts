@@ -22,10 +22,11 @@ import {
   type JobPipeline,
 } from "../pipeline/job-pipeline.js";
 import type { EdgeKind, RetrieveHit } from "../retrieve/ports.js";
-import { createFetchHandler } from "agent-runtime";
+import { createFetchHandler, getDefaultLlmProvider } from "agent-runtime";
 import { DEMO_DICTS } from "./dicts.js";
 import type { DemoHttpSession } from "./session.js";
 import { UploadServiceUnavailableError } from "./session.js";
+import { runSkillJob, SkillConfirmGateError } from "../skill/load-index.js";
 
 /**
  * Parsed multipart file for POST /api/jobs/upload — bytes stay binary so JPEG/PDF
@@ -109,6 +110,7 @@ function errorStatus(err: unknown): DemoHttpResponse {
   if (err instanceof UploadValidationError) return json(400, { error: message });
   if (err instanceof LedgerConflictError) return json(409, { error: message });
   if (err instanceof SkillTrackConfirmNextError) return json(409, { error: message });
+  if (err instanceof SkillConfirmGateError) return json(409, { error: message });
   if (err instanceof UploadServiceUnavailableError) return json(503, { error: message });
   if (lower.includes("not found")) return json(404, { error: message });
   if (lower.includes("cannot confirm-next") || lower.includes("submit is not allowed")) {
@@ -576,6 +578,11 @@ export async function handleDemoRequest(
         orderRaw === undefined || orderRaw === null || orderRaw === "" ? null : String(orderRaw);
       return json(200, { pack: await p.setGroupKeys(groupKeys.id, keys, orderKey) });
     }
+    const packSkills = match(pathname, "/api/packs/:id/skills");
+    if (method === "GET" && packSkills) {
+      return json(200, { skills: await p.listSkillRecords(packSkills.id) });
+    }
+
     const packOne = match(pathname, "/api/packs/:id");
     if (packOne) {
       if (method === "GET") {
@@ -776,6 +783,13 @@ export async function handleDemoRequest(
       }
       return json(200, { jobs });
     }
+    const jobOne = match(pathname, "/api/jobs/:id");
+    if (method === "GET" && jobOne) {
+      const job = await p.getJob(jobOne.id);
+      if (!job) return json(404, { error: `job not found: ${jobOne.id}` });
+      const document = await p.getDocumentForJob(job.job_id);
+      return json(200, { job: { ...job, file_name: document?.file_name ?? null } });
+    }
 
     if (method === "POST" && pathname === "/api/chat") {
       const step = requireStr(req.body, "step");
@@ -816,6 +830,38 @@ export async function handleDemoRequest(
         agent_run_id: agent.agentRunId,
         proposal_id: agent.proposalId ?? null,
         assistant_message: assistantStored.message,
+      });
+    }
+
+    const skillDryRun = match(pathname, "/api/jobs/:id/skill-dry-run");
+    if (method === "POST" && skillDryRun) {
+      const result = await runSkillJob({
+        persist: false,
+        jobId: skillDryRun.id,
+        ledger: session.ledger(),
+        blob: session.blobStore(),
+        llm: getDefaultLlmProvider(),
+        selectedSkillId: str(req.body, "selected_skill_id", "selectedSkillId") ?? null,
+        fieldValues: fieldValuesFromBody(req.body),
+      });
+      return json(200, result.preview);
+    }
+    const confirmSkill = match(pathname, "/api/jobs/:id/confirm-skill");
+    if (method === "POST" && confirmSkill) {
+      const result = await runSkillJob({
+        persist: true,
+        jobId: confirmSkill.id,
+        ledger: session.ledger(),
+        blob: session.blobStore(),
+        llm: getDefaultLlmProvider(),
+        selectedSkillId: str(req.body, "selected_skill_id", "selectedSkillId") ?? null,
+        fieldValues: fieldValuesFromBody(req.body),
+      });
+      return json(200, {
+        job: result.job,
+        skill: result.skill,
+        ledger: result.ledger,
+        ...result.preview,
       });
     }
 
