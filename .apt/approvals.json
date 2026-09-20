@@ -90,5 +90,19 @@
     "at": "2026-09-19T14:30:00.000Z",
     "by": "apt-auto-brainstorm",
     "risk": "low"
+  },
+  {
+    "spec": "docs/superpowers/specs/2026-09-19-pdf-text-scan-dual-path-design.md",
+    "approval": "auto_approved",
+    "at": "2026-09-19T16:00:00.000Z",
+    "by": "apt-auto-brainstorm",
+    "risk": "low"
+  },
+  {
+    "spec": "docs/superpowers/specs/2026-09-20-standard-lib-expand-one-hop-design.md",
+    "approval": "auto_approved",
+    "at": "2026-09-20T01:20:00.000Z",
+    "by": "apt-auto-brainstorm",
+    "risk": "low"
   }
 ]

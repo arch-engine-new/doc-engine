@@ -1,243 +1,105 @@
 {
-  "goalSha": "88b8c67b1d8284a0beed9f43d4691e0f5ed0078059a582862b3223fc5d7cba08",
+  "goalSha": "d865533140694b99a8fc5623816964c03f715660f181ab552f0b7200546de515",
   "source": {
     "path": ".apt/batch/queue.md",
-    "sha": "28cfe164beb73d62465ab3fb7b58f7726678fb08f4eac42434947f0c201c3630"
+    "sha": "f9888a68f44f86c8c1fa499444ae4bae79a1094586eb66b0818e729a312e233a"
   },
-  "createdAt": "2026-09-19T10:35:00.000Z",
+  "createdAt": "2026-09-20T07:55:00.000Z",
   "programMode": true,
   "cursor": 1,
+  "verify": {
+    "result": "PASS",
+    "path": ".apt/verify/latest.md"
+  },
+  "accept": {
+    "required": false
+  },
   "slices": [
     {
-      "id": "F-3",
-      "description": "接线 the live prequery 为 ZhipuPrequery for 配置人员",
+      "id": "F-9",
+      "description": "扩展 the 标准库检索命中 沿 CITES/SUPERSEDES 一跳 for 配置人员",
       "status": "done",
       "verifyResult": "PASS",
-      "finishedAt": "2026-09-19T11:05:00.000Z",
-      "steps": [
-        {
-          "id": "PB-1",
-          "action": "feature",
-          "done-when": "liveRetrievePorts().prequery 为 ZhipuPrequery；缺 LLM 配置显式失败不静默 Fake；片内复现测试存在且红→绿",
-          "status": "done",
-          "attempts": 1,
-          "notes": "commit cf22716; TDD RED->GREEN; vitest 27 passed"
-        },
-        {
-          "id": "PB-2",
-          "action": "verify",
-          "done-when": ".apt/verify/latest.md 对照本片 plan/§0.2 Overall PASS",
-          "status": "done",
-          "attempts": 1,
-          "notes": ".apt/verify/latest.md Overall PASS vs F-3 plan"
-        }
-      ]
-    },
-    {
-      "id": "F-4",
-      "description": "替换 the live 独立 rerank 为 HTTP 服务 for 配置人员",
-      "status": "running",
+      "finishedAt": "2026-09-20T01:55:00.000Z",
       "steps": [
         {
           "id": "PB-1",
           "action": "auto_brainstorm",
-          "done-when": "docs/superpowers/specs/ 下落盘 F-4 spec（独立 rerank HTTP、禁止 chat-as-rerank）；风险分级完成",
+          "done-when": "docs/superpowers/specs/ 下落盘 F-9 spec（语义/精确命中后 CITES/SUPERSEDES 一跳、禁止全图盲扫与多跳）；风险分级完成",
           "status": "done",
           "attempts": 1,
-          "notes": "spec=docs/superpowers/specs/2026-09-19-live-http-rerank-design.md risk=low auto_approved commit e744880"
+          "notes": "spec docs/superpowers/specs/2026-09-20-standard-lib-expand-one-hop-design.md risk=low auto_approved"
         },
         {
           "id": "PB-2",
           "action": "plan_from_spec",
-          "done-when": "docs/apt/plans/ 下落盘 F-4 方案，含测试案例规划；Tasks 可执行",
+          "done-when": "docs/apt/plans/ 下落盘 F-9 方案，含 standard_lib test-cases 规划；Tasks 可执行",
           "status": "done",
           "attempts": 1,
-          "notes": "plan=docs/apt/plans/2026-09-19-live-http-rerank-plan.md Status=approved commit 70cb096; Task2 GREEN cb785c5"
+          "notes": "plan docs/apt/plans/2026-09-20-standard-lib-expand-one-hop-plan.md Status=approved（夜间全自动）"
         },
         {
           "id": "PB-3",
           "action": "implement_plan",
-          "done-when": "live rerank 调用独立 HTTP 服务；失败显式；测试可继续 IndependentReranker",
-          "status": "running",
+          "done-when": "语义/精确条款命中后 expandOneHop；0 命中不扩图；路径列区分 vector/graph/exact；同一 clause_id 不重复；单次一跳",
+          "status": "done",
           "attempts": 1,
-          "notes": "resume Task 3 liveRetrievePorts HttpReranker; HEAD cb785c5"
+          "notes": "Task1 59f206d Task2 87e3550 review PASS"
         },
         {
           "id": "PB-4",
           "action": "verify",
           "done-when": ".apt/verify/latest.md 对照本片 plan Overall PASS",
-          "status": "pending"
+          "status": "done",
+          "attempts": 1,
+          "notes": ".apt/verify/latest.md Overall PASS"
         },
         {
           "id": "PB-5",
           "action": "finish_feature",
           "done-when": "契约已登记；audit/refresh 完成；logic-sync 不因本片漂移 FAIL",
-          "status": "pending"
-        }
-      ]
-    },
-    {
-      "id": "F-5",
-      "description": "禁止 the live JobPipeline 静默 FakeOcr for 审查员",
-      "status": "pending",
-      "steps": [
-        {
-          "id": "PB-1",
-          "action": "feature",
-          "done-when": "openLiveFromEnv 无 Paddle 时失败且源码不再 ?? new FakeOcr()；片内复现测试存在且红→绿",
-          "status": "pending"
-        },
-        {
-          "id": "PB-2",
-          "action": "verify",
-          "done-when": ".apt/verify/latest.md 对照本片 §0.2 Overall PASS",
-          "status": "pending"
-        }
-      ]
-    },
-    {
-      "id": "F-6",
-      "description": "接线 the live 对象存储 为 MinIO for 运维",
-      "status": "pending",
-      "steps": [
-        {
-          "id": "PB-1",
-          "action": "auto_brainstorm",
-          "done-when": "docs/superpowers/specs/ 下落盘 F-6 spec（live MinIO、health 失败 BLOCKED）；风险分级完成",
-          "status": "pending"
-        },
-        {
-          "id": "PB-2",
-          "action": "plan_from_spec",
-          "done-when": "docs/apt/plans/ 下落盘 F-6 方案，含测试案例规划；Tasks 可执行",
-          "status": "pending"
-        },
-        {
-          "id": "PB-3",
-          "action": "implement_plan",
-          "done-when": "live 上传走 minioFromEnv；health 对 MinIO 失败即 BLOCKED 不 skip；测试 MemoryBlobStore 不变",
-          "status": "pending"
-        },
-        {
-          "id": "PB-4",
-          "action": "verify",
-          "done-when": ".apt/verify/latest.md 对照本片 plan Overall PASS",
-          "status": "pending"
-        },
-        {
-          "id": "PB-5",
-          "action": "finish_feature",
-          "done-when": "契约已登记；audit/refresh 完成；logic-sync 不因本片漂移 FAIL",
-          "status": "pending"
-        }
-      ]
-    },
-    {
-      "id": "F-7",
-      "description": "补上 the 标准库 tickAll 处理全部页 for 配置人员",
-      "status": "pending",
-      "steps": [
-        {
-          "id": "PB-1",
-          "action": "feature",
-          "done-when": "PdfTickPanel 有「处理全部页」且前端串行循环已有 tick 至无 pending；单次 tick ≤1 页；片内复现测试存在且红→绿",
-          "status": "pending"
-        },
-        {
-          "id": "PB-2",
-          "action": "verify",
-          "done-when": ".apt/verify/latest.md 对照本片 §0.2 Overall PASS",
-          "status": "pending"
-        },
-        {
-          "id": "PB-3",
-          "action": "accept",
-          "done-when": "$apt-accept --page=standard_lib Overall PASS（accept-inline）",
-          "status": "pending"
-        }
-      ]
-    },
-    {
-      "id": "F-8",
-      "description": "打通 the 规范 PDF 文字层与扫描页双路径 for 配置人员",
-      "status": "pending",
-      "steps": [
-        {
-          "id": "PB-1",
-          "action": "auto_brainstorm",
-          "done-when": "docs/superpowers/specs/ 下落盘 F-8 spec（按页文字层/栅格+OCR 分流、混排夹具、live 禁止 FakeOcr）；风险分级完成",
-          "status": "pending"
-        },
-        {
-          "id": "PB-2",
-          "action": "plan_from_spec",
-          "done-when": "docs/apt/plans/ 下落盘 F-8 方案，含纯文字/纯扫描/混排各≥1页测试案例；Tasks 可执行",
-          "status": "pending"
-        },
-        {
-          "id": "PB-3",
-          "action": "implement_plan",
-          "done-when": "tick 按页 hasUsablePdfTextLayer→Unicode 否则栅格 PNG+recognizeLayout；混排两路都入库；失败 ocr_error/index_error；live 禁止 FakeOcr；单次 tick ≤1 页",
-          "status": "pending"
-        },
-        {
-          "id": "PB-4",
-          "action": "verify",
-          "done-when": ".apt/verify/latest.md 对照本片 plan Overall PASS",
-          "status": "pending"
-        },
-        {
-          "id": "PB-5",
-          "action": "finish_feature",
-          "done-when": "契约已登记；audit/refresh 完成；logic-sync 不因本片漂移 FAIL",
-          "status": "pending"
-        },
-        {
-          "id": "PB-6",
-          "action": "accept",
-          "done-when": "$apt-accept --page=standard_lib Overall PASS（accept-inline；夹具覆盖文字层/扫描/混排）",
-          "status": "pending"
+          "status": "done",
+          "attempts": 1,
+          "notes": "无新契约；切片 audit 四类空；refresh_asset 收尾写盘失败（arch-index）；logic-sync exit 0"
         }
       ]
     }
   ],
   "steps": [
     {
-      "id": "F-3:PB-1",
-      "action": "feature",
-      "done-when": "liveRetrievePorts().prequery 为 ZhipuPrequery；缺 LLM 配置显式失败不静默 Fake；片内复现测试存在且红→绿",
-      "status": "done",
-      "attempts": 1,
-      "notes": "commit cf22716; TDD RED->GREEN; vitest 27 passed"
-    },
-    {
-      "id": "F-3:PB-2",
-      "action": "verify",
-      "done-when": ".apt/verify/latest.md 对照本片 plan/§0.2 Overall PASS",
-      "status": "done",
-      "attempts": 1,
-      "notes": ".apt/verify/latest.md Overall PASS vs F-3 plan"
-    },
-    {
-      "id": "F-4:PB-1",
+      "id": "F-9:PB-1",
       "action": "auto_brainstorm",
-      "done-when": "docs/superpowers/specs/ 下落盘 F-4 spec（独立 rerank HTTP、禁止 chat-as-rerank）；风险分级完成",
       "status": "done",
       "attempts": 1,
-      "notes": "spec=docs/superpowers/specs/2026-09-19-live-http-rerank-design.md risk=low auto_approved commit e744880"
+      "notes": "docs/superpowers/specs/2026-09-20-standard-lib-expand-one-hop-design.md risk=low auto_approved"
     },
     {
-      "id": "F-4:PB-2",
+      "id": "F-9:PB-2",
       "action": "plan_from_spec",
-      "done-when": "docs/apt/plans/ 下落盘 F-4 方案，含测试案例规划；Tasks 可执行",
       "status": "done",
       "attempts": 1,
-      "notes": "plan=docs/apt/plans/2026-09-19-live-http-rerank-plan.md Status=approved commit 70cb096"
+      "notes": "docs/apt/plans/2026-09-20-standard-lib-expand-one-hop-plan.md"
+    },
+    {
+      "id": "F-9:PB-3",
+      "action": "implement_plan",
+      "status": "done",
+      "attempts": 1,
+      "notes": "59f206d expandOneHop; 87e3550 test-cases note"
+    },
+    {
+      "id": "F-9:PB-4",
+      "action": "verify",
+      "status": "done",
+      "attempts": 1,
+      "notes": ".apt/verify/latest.md Overall PASS"
+    },
+    {
+      "id": "F-9:PB-5",
+      "action": "finish_feature",
+      "status": "done",
+      "attempts": 1,
+      "notes": "无新契约；logic-sync PASS；refresh 收尾 arch-index 写盘失败不阻断行为验收"
     }
-  ],
-  "verify": {
-    "result": "PASS",
-    "at": "2026-09-19T11:05:00.000Z",
-    "plan": "docs/apt/plans/2026-09-19-f3-zhipu-prequery-plan.md"
-  }
+  ]
 }

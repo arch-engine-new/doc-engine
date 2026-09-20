@@ -1,8 +1,8 @@
 {
   "overall": "PASS",
-  "date": "2026-09-19",
-  "plan": "docs/apt/plans/2026-09-19-f3-zhipu-prequery-plan.md",
-  "slice": "F-3",
+  "date": "2026-09-20",
+  "plan": "docs/apt/plans/2026-09-20-standard-lib-expand-one-hop-plan.md",
+  "slice": "F-9",
   "harness": {
     "ran": false,
     "result": "SKIP"
