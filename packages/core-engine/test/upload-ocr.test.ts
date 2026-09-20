@@ -61,6 +61,9 @@ class SpyOcr implements OcrPort {
     this.lastInput = input;
     return this.inner.recognize(input);
   }
+  async recognizeLayout(input: OcrRecognizeInput): Promise<OcrRecognizeResult> {
+    return this.inner.recognizeLayout(input);
+  }
 }
 
 describe("openUploadJob", () => {
@@ -87,6 +90,7 @@ describe("openUploadJob", () => {
       fileName: "form.jpg",
       mime: "image/jpeg",
       bytes: JPEG_BYTES,
+      track: "legacy" as const,
       ...overrides,
     };
   }
@@ -151,6 +155,7 @@ describe("openUploadJob", () => {
       fileName: "form.png",
       mime: "image/png",
       bytes: JPEG_BYTES,
+      track: "legacy" as const,
     };
 
     const result = await pipeline.openUploadJob(input, { blob, ocr });
@@ -161,6 +166,9 @@ describe("openUploadJob", () => {
   it("marks job failed with ocr_error audit when OCR fails after insert", async () => {
     const failingOcr: OcrPort = {
       recognize: async () => {
+        throw new Error("OCR vendor down");
+      },
+      recognizeLayout: async () => {
         throw new Error("OCR vendor down");
       },
     };

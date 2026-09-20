@@ -4,11 +4,13 @@
  */
 
 import Database from "better-sqlite3";
+import ExcelJS from "exceljs";
 import type { BlobStore } from "../blob/port.js";
 import { blobObjectUri, uploadObjectKey } from "../blob/minio.js";
 import { extractByTemplate } from "../extract/field-box.js";
 import { resolveEffectiveBoxes, type EffectiveFieldBox } from "../extract/effective-boxes.js";
 import { extractOcrByTemplate, parseOcrFields } from "../extract/ocr-fields.js";
+import { newId } from "../ids.js";
 import { FakeOcr } from "../ocr/fake.js";
 import { PaddleOcr } from "../ocr/paddleocr.js";
 import type { OcrPort } from "../ocr/port.js";
@@ -21,6 +23,7 @@ import { runPgMigration } from "../persistence/pg-migrate.js";
 import { PostgresLedger } from "../persistence/pg-store.js";
 import { CoreEngineStore, type FieldBoxWrite } from "../persistence/store.js";
 import { evaluate, RuleInterpreter } from "../rules/interpreter.js";
+import { emptySkillDraftPayload, renderSkillSummary, XLSX_MIME } from "../skill/index.js";
 import {
   RulePublisher,
   type AddFixtureInput,
@@ -40,11 +43,15 @@ import type {
   FieldDefRow,
   FindingRow,
   JobRow,
+  JobTrack,
   ProjectRow,
   ProposalRow,
   ReceiptRow,
   RuleFixtureRow,
   RuleVersionRow,
+  SkillDraftRow,
+  SkillLedgerRow,
+  SkillRecordRow,
   SpecPackRow,
   StandardVersionRow,
   TemplateRow,
@@ -143,6 +150,12 @@ export const MAX_UPLOAD_BYTES = 4 * 1024 * 1024;
 const ALLOWED_IMAGE_MIMES = new Set(["image/jpeg", "image/png"]);
 const PDF_MIME = "application/pdf";
 const DEFAULT_BLOB_BUCKET = "docengine";
+/** Same aliases as SkillRunner: spreadsheet bytes must stay xlsx so patch_excel can rewrite the original. */
+const XLSX_MIME_ALIASES = new Set([
+  XLSX_MIME.toLowerCase(),
+  "application/vnd.ms-excel",
+  "application/x-xlsx",
+]);
 
 /**
  * Thrown for >4MB or disallowed MIME before any Job row is inserted.
@@ -181,6 +194,11 @@ export interface OpenUploadJobInput {
   bytes: Uint8Array;
   /** Optional retrieve query; defaults to joined 编号/日期 fields after extract. */
   standardFitQuery?: string;
+  /**
+   * Omit for the table Skill path so uploads skip DocType and RAG.
+   * Pass `legacy` only for fixture JPEG/PDF checks that still need recognize + DSL.
+   */
+  track?: JobTrack;
 }
 
 export interface OpenUploadJobDeps {
@@ -484,6 +502,8 @@ export class JobPipeline {
       pack_id: PACK_ID,
       status: "inspecting",
       template_id: input.template_id ?? null,
+      // Fixture buttons stay leftover DSL jobs; Skill default must not steal this path.
+      track: "legacy",
     });
 
     const document = await this.store.insertDocument({
@@ -552,15 +572,28 @@ export class JobPipeline {
   }
 
   /**
-   * Real upload path: validate → MinIO/memory blob → OCR or PDF text → extract → DSL.
-   * Validation errors throw UploadValidationError before insertJob; blob/OCR failures
-   * mark the Job failed and audit upload_error/ocr_error so operators can retry manually.
+   * Default is the table Skill path: no DocType, layout/xlsx text, no RAG.
+   * Pass track=`legacy` for leftover fixture JPEG/PDF checks (recognize + DSL).
    */
   async openUploadJob(
     input: OpenUploadJobInput,
     deps: OpenUploadJobDeps,
   ): Promise<OpenUploadJobResult> {
-    validateUploadInput(input);
+    if ((input.track ?? "skill") !== "legacy") {
+      return this.openSkillUploadJob(input, deps);
+    }
+    return this.openLegacyUploadJob(input, deps);
+  }
+
+  /**
+   * Leftover C2 machine: flatten OCR + DSL findings. Skill uploads must not
+   * reuse this or scanned tables lose pipes and RAG would attach as if it were a check.
+   */
+  private async openLegacyUploadJob(
+    input: OpenUploadJobInput,
+    deps: OpenUploadJobDeps,
+  ): Promise<OpenUploadJobResult> {
+    validateUploadInput({ ...input, track: "legacy" });
 
     const project = await this.resolveProjectForUpload(input.projectId);
     const packId = input.packId ?? PACK_ID;
@@ -578,6 +611,7 @@ export class JobPipeline {
       status: "uploaded",
       template_id: templateId,
       doc_type_id: docTypeId,
+      track: "legacy",
     });
 
     let document: DocumentRow;
@@ -667,6 +701,127 @@ export class JobPipeline {
     await this.emitStepEntered(job);
     const refreshed = await this.store.getJob(job.job_id);
     return { project, job: refreshed ?? job, document, extraction, findings };
+  }
+
+  /**
+   * Skill uploads hang an empty draft before chat. Pre-assign skill_draft_id so
+   * GET job can return it without a persistence updater (M12). Unreadable files
+   * skip the draft so a bad scan cannot look like a teachable Skill (M8).
+   */
+  private async openSkillUploadJob(
+    input: OpenUploadJobInput,
+    deps: OpenUploadJobDeps,
+  ): Promise<OpenUploadJobResult> {
+    validateUploadInput({ ...input, track: "skill" });
+    const project = await this.resolveProjectForUpload(input.projectId);
+    const packId = input.packId ?? PACK_ID;
+    const extracted = await readSkillUploadText(input, deps.ocr);
+    const draftId = extracted.ok ? newId("sdr") : null;
+    const job = await this.store.insertJob({
+      project_id: project.project_id,
+      pack_id: packId,
+      status: "uploaded",
+      template_id: null,
+      doc_type_id: null,
+      track: "skill",
+      skill_draft_id: draftId,
+    });
+    const document = await this.persistSkillOriginal(job, input, deps.blob);
+    if (!extracted.ok) {
+      return this.finishUnreadableSkillJob(project, job, document, input.mime);
+    }
+    return this.finishReadableSkillJob({
+      project,
+      job,
+      document,
+      packId,
+      draftId: draftId!,
+      extracted,
+    });
+  }
+
+  private async persistSkillOriginal(
+    job: JobRow,
+    input: OpenUploadJobInput,
+    blob: BlobStore,
+  ): Promise<DocumentRow> {
+    try {
+      const { fileUri } = await this.persistUploadBlob(job.job_id, input, blob);
+      return this.store.insertDocument({
+        job_id: job.job_id,
+        file_name: input.fileName,
+        file_uri: fileUri,
+        mime: input.mime,
+      });
+    } catch (err) {
+      return this.failUploadJob(job, "upload_error", err);
+    }
+  }
+
+  private async finishUnreadableSkillJob(
+    project: ProjectRow,
+    job: JobRow,
+    document: DocumentRow,
+    mime: string,
+  ): Promise<OpenUploadJobResult> {
+    const failed = await this.store.updateJobStatus(job.job_id, "failed");
+    const extraction = await this.store.insertExtraction({
+      job_id: job.job_id,
+      ocr_text: "",
+      fields: {},
+    });
+    await this.store.insertSkillLedger({
+      job_id: job.job_id,
+      skill_id: null,
+      original_blob_uri: document.file_uri,
+      original_mime: mime,
+      verdict: "fail",
+      reason: "unreadable",
+      fix_list_json: "[]",
+      unprocessed_tables_json: "[]",
+    });
+    return { project, job: failed, document, extraction, findings: [] };
+  }
+
+  private async finishReadableSkillJob(input: {
+    project: ProjectRow;
+    job: JobRow;
+    document: DocumentRow;
+    packId: string;
+    draftId: string;
+    extracted: { text: string; vendor: string };
+  }): Promise<OpenUploadJobResult> {
+    const payload = emptySkillDraftPayload();
+    await this.store.insertSkillDraft({
+      draft_id: input.draftId,
+      job_id: input.job.job_id,
+      pack_id: input.packId,
+      payload_json: JSON.stringify(payload),
+      summary_json: JSON.stringify(renderSkillSummary(payload)),
+    });
+    const extraction = await this.store.insertExtraction({
+      job_id: input.job.job_id,
+      ocr_text: input.extracted.text,
+      fields: {},
+    });
+    await this.store.appendAudit({
+      trace_id: input.job.trace_id,
+      event_type: "extraction",
+      ref_id: extraction.extraction_id,
+      payload: {
+        extraction_id: extraction.extraction_id,
+        job_id: input.job.job_id,
+        ocr_vendor: input.extracted.vendor,
+      },
+    });
+    const refreshed = await this.store.getJob(input.job.job_id);
+    return {
+      project: input.project,
+      job: refreshed ?? input.job,
+      document: input.document,
+      extraction,
+      findings: [],
+    };
   }
 
   private async emitStepEntered(job: JobRow): Promise<void> {
@@ -959,6 +1114,30 @@ export class JobPipeline {
     return this.store.getDocumentForJob(jobId);
   }
 
+  /**
+   * Upload tests and later confirm-skill read the hung draft by job, not by
+   * scanning chat, because only this row is what GET job.skill_draft_id points at.
+   */
+  async getSkillDraftByJob(jobId: string): Promise<SkillDraftRow | null> {
+    return this.store.getSkillDraftByJob(jobId);
+  }
+
+  /**
+   * M8 asserts original-only ledger rows. HTTP must not open SqliteLedger itself
+   * to prove unreadable uploads never grew a Skill index.
+   */
+  async listSkillLedgersByJob(jobId: string): Promise<SkillLedgerRow[]> {
+    return this.store.listSkillLedgersByJob(jobId);
+  }
+
+  /**
+   * Pack-scoped index listing so Skill upload can prove it did not insert a
+   * production Skill before confirm (M5/M8).
+   */
+  async listSkillRecords(packId: string): Promise<SkillRecordRow[]> {
+    return this.store.listSkillRecords(packId);
+  }
+
   async listThreads(traceId: string): Promise<ConversationThreadRow[]> {
     return this.store.listThreads(traceId);
   }
@@ -998,15 +1177,36 @@ function normalizeMime(mime: string): string {
   return mime.toLowerCase().trim();
 }
 
-/** Gate uploads before insertJob; HTTP maps UploadValidationError to 400. */
-export function validateUploadInput(input: Pick<OpenUploadJobInput, "mime" | "bytes">): void {
+/**
+ * Skill track allows xlsx so later patch_excel can rewrite the original bytes.
+ * Legacy stays jpeg/png/pdf: fixture OCR/DSL must not ingest Office XML as a scan.
+ */
+export function validateUploadInput(
+  input: Pick<OpenUploadJobInput, "mime" | "bytes" | "track">,
+): void {
   if (input.bytes.length > MAX_UPLOAD_BYTES) {
     throw new UploadValidationError(`upload exceeds ${MAX_UPLOAD_BYTES} bytes`);
   }
   const mime = normalizeMime(input.mime);
-  if (!ALLOWED_IMAGE_MIMES.has(mime) && mime !== PDF_MIME) {
+  const track = input.track ?? "skill";
+  if (track === "legacy") {
+    if (!isImageOrPdfMime(mime)) {
+      throw new UploadValidationError(`unsupported mime: ${input.mime}`);
+    }
+    return;
+  }
+  if (!isImageOrPdfMime(mime) && !isXlsxMime(mime)) {
     throw new UploadValidationError(`unsupported mime: ${input.mime}`);
   }
+}
+
+function isXlsxMime(mime: string): boolean {
+  return XLSX_MIME_ALIASES.has(normalizeMime(mime));
+}
+
+function isImageOrPdfMime(mime: string): boolean {
+  const normalized = normalizeMime(mime);
+  return ALLOWED_IMAGE_MIMES.has(normalized) || normalized === PDF_MIME;
 }
 
 function standardFitQueryFromFields(fields: Record<string, unknown>): string {
@@ -1042,4 +1242,76 @@ async function recognizeUploadText(
     fileName: input.fileName,
   });
   return { text: result.text, vendor: result.vendor };
+}
+
+function toExcelLoadBytes(bytes: Uint8Array): ArrayBuffer {
+  const copy = Uint8Array.from(bytes);
+  return copy.buffer.slice(0, copy.byteLength);
+}
+
+async function extractXlsxCellText(bytes: Uint8Array): Promise<string> {
+  const workbook = new ExcelJS.Workbook();
+  await workbook.xlsx.load(toExcelLoadBytes(bytes));
+  const lines: string[] = [];
+  for (const sheet of workbook.worksheets) {
+    sheet.eachRow((row) => {
+      row.eachCell((cell) => {
+        const text = String(cell.text ?? cell.value ?? "").trim();
+        if (text.length > 0) lines.push(text);
+      });
+    });
+  }
+  return lines.join("\n");
+}
+
+type SkillReadResult =
+  | { ok: true; text: string; vendor: string }
+  | { ok: false };
+
+/**
+ * Skill path never calls ocr.recognize: flattening would drop table pipes (D3).
+ * xlsx is cell text only; PDF uses Unicode then recognizeLayout; both empty → unreadable.
+ */
+async function readSkillUploadText(
+  input: Pick<OpenUploadJobInput, "bytes" | "mime" | "fileName">,
+  ocr: OcrPort,
+): Promise<SkillReadResult> {
+  const mime = normalizeMime(input.mime);
+  if (isXlsxMime(mime)) {
+    return readSkillXlsxText(input.bytes);
+  }
+  if (mime === PDF_MIME) {
+    const decoded = await extractPdfUnicodeText(input.bytes);
+    if (hasUsablePdfTextLayer(decoded)) {
+      return { ok: true, text: decoded, vendor: "pdf-text" };
+    }
+  }
+  return readSkillLayoutText(input, ocr);
+}
+
+async function readSkillXlsxText(bytes: Uint8Array): Promise<SkillReadResult> {
+  try {
+    const text = await extractXlsxCellText(bytes);
+    if (text.trim().length === 0) return { ok: false };
+    return { ok: true, text, vendor: "xlsx-cells" };
+  } catch {
+    return { ok: false };
+  }
+}
+
+async function readSkillLayoutText(
+  input: Pick<OpenUploadJobInput, "bytes" | "mime" | "fileName">,
+  ocr: OcrPort,
+): Promise<SkillReadResult> {
+  try {
+    const result = await ocr.recognizeLayout({
+      bytes: input.bytes,
+      mime: input.mime,
+      fileName: input.fileName,
+    });
+    if (!result.text || result.text.trim().length === 0) return { ok: false };
+    return { ok: true, text: result.text, vendor: result.vendor };
+  } catch {
+    return { ok: false };
+  }
 }
