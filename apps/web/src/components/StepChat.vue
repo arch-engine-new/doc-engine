@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, watch } from "vue";
 import { errorMessage, http } from "../services/http";
+import type { SkillSummaryView } from "../services/types";
 
 interface ChatLine {
   role: "user" | "assistant";
@@ -28,6 +29,10 @@ const props = withDefaults(defineProps<StepChatProps>(), {
   messages: () => [],
   hits: () => [],
 });
+
+const emit = defineEmits<{
+  skillSummary: [summary: SkillSummaryView];
+}>();
 
 const body = ref("");
 const log = ref<ChatLine[]>([]);
@@ -59,6 +64,7 @@ const stepNote = computed(() => {
     standard_lib: "可就命中条款/引用链提问。对话不写条款号、不替代硬规则。",
     volume_preview: "可讨论分组。对话不能 submit。",
     audit: "只读回放本步对话。审计页不发送会改变结论的语句。",
+    job_upload: "表 Skill 教学。对话只改草稿；引擎三块摘要出来后才能点确认完成并处理。",
   };
   return notes[props.step] ?? "可以就本页结果提问。HITL 不写库、不跳过硬规则、不 submit。";
 });
@@ -110,12 +116,15 @@ async function send() {
         body: text,
         hits: props.hits,
       }),
-    })) as { assistant_reply?: string };
+    })) as { assistant_reply?: string; skill_summary?: SkillSummaryView };
     log.value.push({ role: "user", body: text });
     log.value.push({
       role: "assistant",
       body: res.assistant_reply?.trim() || HITL_FALLBACK,
     });
+    if (res.skill_summary) {
+      emit("skillSummary", res.skill_summary);
+    }
     body.value = "";
   } catch (err) {
     error.value = errorMessage(err);

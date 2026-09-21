@@ -9,6 +9,7 @@ import type {
   JobView,
   ReceiptView,
   SignatureTaskView,
+  SkillDryRunView,
   TemplateView,
 } from "./types";
 
@@ -165,7 +166,10 @@ export async function fetchDocumentGaps(
   return http<{ missing: DocumentGapView[] }>(`/api/projects/${projectId}/document-gaps`);
 }
 
-/** Multipart upload for POST /api/jobs/upload — no JSON Content-Type (browser sets boundary). */
+/**
+ * Multipart upload for POST /api/jobs/upload — no JSON Content-Type (browser sets boundary).
+ * WHY: Skill-track workbench omits docTypeId so an empty DocType still uploads (M12).
+ */
 export async function uploadJob(
   file: File,
   fields?: { packId?: string; templateId?: string; projectId?: string; docTypeId?: string },
@@ -182,6 +186,46 @@ export async function uploadJob(
   const data: unknown = text ? JSON.parse(text) : null;
   if (!res.ok) throw new HttpError(res.status, data);
   return data as { job: JobView };
+}
+
+/**
+ * WHY: GET /api/jobs defaults to leftover legacy so findings pages stay C2-only;
+ * the job_upload workbench must request `?track=skill` separately and merge (M16).
+ * Never pass `track=all` — the engine treats unknown values as legacy.
+ */
+export async function listJobs(opts?: { track?: "legacy" | "skill" }): Promise<{ jobs: JobView[] }> {
+  const path = opts?.track === "skill" ? "/api/jobs?track=skill" : "/api/jobs";
+  return http<{ jobs: JobView[] }>(path);
+}
+
+/**
+ * WHY: Confirm is the only writer into this pack's Skill index; chat and dry-run
+ * must not look like this POST (R12). selected_skill_id binds multi-candidate hits.
+ */
+export async function confirmSkill(
+  jobId: string,
+  body?: { selected_skill_id?: string },
+): Promise<{ job: JobView }> {
+  const selected = body?.selected_skill_id;
+  return http<{ job: JobView }>(`/api/jobs/${jobId}/confirm-skill`, {
+    method: "POST",
+    body: JSON.stringify(selected ? { selected_skill_id: selected } : {}),
+  });
+}
+
+/**
+ * WHY: Operators need a match/check/fix preview that cannot mint ledger rows
+ * or patched blobs (M13).
+ */
+export async function skillDryRun(
+  jobId: string,
+  body?: { selected_skill_id?: string },
+): Promise<SkillDryRunView> {
+  const selected = body?.selected_skill_id;
+  return http<SkillDryRunView>(`/api/jobs/${jobId}/skill-dry-run`, {
+    method: "POST",
+    body: JSON.stringify(selected ? { selected_skill_id: selected } : {}),
+  });
 }
 
 /**

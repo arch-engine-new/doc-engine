@@ -8,6 +8,34 @@ export interface JobView {
   status: string;
   template_id: string | null;
   file_name: string | null;
+  /** leftover C2 vs empty-engine table Skill; findings lists default to legacy. */
+  track?: string;
+  /** Hung teach draft; missing after list refresh is why confirm stays disabled (M3). */
+  skill_draft_id?: string | null;
+}
+
+/**
+ * Engine-rendered three blocks from chat `skill_summary`.
+ * WHY: Confirm unlocks from these arrays, never from the last assistant sentence (M4).
+ */
+export interface SkillSummaryView {
+  names: string[];
+  check_labels: string[];
+  fix_plain: string[];
+  can_confirm?: boolean;
+}
+
+/** Index hits shown in the Skill candidate `<select>`; confirm sends skill_id. */
+export interface SkillCandidateView {
+  skill_id: string;
+  canonical_name: string;
+}
+
+/** POST /api/jobs/:id/skill-dry-run body (preview only; not a write receipt). */
+export interface SkillDryRunView {
+  candidates?: SkillCandidateView[];
+  skill_id?: string | null;
+  would_patch?: boolean;
 }
 
 export interface ExtractionView {

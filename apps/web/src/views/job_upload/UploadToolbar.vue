@@ -1,92 +1,95 @@
 <script setup lang="ts">
-import type { DocTypeView, TemplateView } from "../../services/types";
+import { ref } from "vue";
+import type { SkillCandidateView, SkillSummaryView } from "../../services/types";
+import { joinSummaryLine } from "./skillConfirm";
+
+const EMPTY_SUMMARY = "摘要未出";
 
 defineProps<{
-  docTypes: DocTypeView[];
-  templatesForDocType: TemplateView[];
-  selectedDocTypeId: string;
-  selectedTemplateId: string;
-  hasMultipleTemplates: boolean;
-  resolvedTemplateId: string | null;
-  canUpload: boolean;
-  busy: boolean;
-  nextStatus: string;
-  statusDict: Array<{ value: string; label: string }>;
-  statusFilter: string;
-  dictLabel: (items: Array<{ value: string; label: string }>, value: string) => string;
-  templateLabel: (templateId: string | null) => string;
+  canUploadSkill: boolean;
+  canDryRun: boolean;
+  canConfirm: boolean;
+  fileTag: string;
+  summary: SkillSummaryView | null;
+  candidates: SkillCandidateView[];
+  selectedSkillId: string;
 }>();
 
 const emit = defineEmits<{
-  "update:selectedDocTypeId": [value: string];
-  "update:selectedTemplateId": [value: string];
-  "update:statusFilter": [value: string];
-  docTypeChange: [];
-  openFilePicker: [];
-  runFixture: [kind: "ok" | "reversed"];
-  resetDemo: [];
-  confirmNext: [];
+  uploadFile: [file: File];
+  dryRun: [];
+  confirmSkill: [];
+  "update:selectedSkillId": [value: string];
 }>();
+
+const skillFile = ref<HTMLInputElement | null>(null);
+
+function openSkillPicker(): void {
+  skillFile.value?.click();
+}
+
+function onFileChange(ev: Event): void {
+  const input = ev.target as HTMLInputElement;
+  const file = input.files?.[0];
+  input.value = "";
+  if (!file) return;
+  emit("uploadFile", file);
+}
 </script>
 
 <template>
-  <div class="row-actions">
-    <label class="filter-label">
-      文档类型
-      <select
-        :value="selectedDocTypeId"
-        @change="
-          emit('update:selectedDocTypeId', ($event.target as HTMLSelectElement).value);
-          emit('docTypeChange');
-        "
-      >
-        <option value="">请选择</option>
-        <option v-for="dt in docTypes" :key="dt.doc_type_id" :value="dt.doc_type_id">
-          {{ dt.name }}
-        </option>
-      </select>
-    </label>
-    <label v-if="hasMultipleTemplates" class="filter-label">
-      模板
-      <select
-        :value="selectedTemplateId"
-        @change="emit('update:selectedTemplateId', ($event.target as HTMLSelectElement).value)"
-      >
-        <option v-for="tpl in templatesForDocType" :key="tpl.template_id" :value="tpl.template_id">
-          {{ tpl.name }}
-        </option>
-      </select>
-    </label>
-    <slot name="file-input" />
-    <button class="btn" :disabled="!canUpload" type="button" @click="emit('openFilePicker')">上传资料</button>
-    <button class="btn ghost" :disabled="busy" type="button" @click="emit('runFixture', 'ok')">运行合规夹具</button>
-    <button class="btn ghost" :disabled="busy" type="button" @click="emit('runFixture', 'reversed')">运行颠倒夹具</button>
-    <button class="btn ghost" :disabled="busy" type="button" @click="emit('resetDemo')">重置演示</button>
-    <button class="btn" :disabled="busy || !nextStatus" type="button" @click="emit('confirmNext')">
-      同意下一步
-      <template v-if="nextStatus">→ {{ dictLabel(statusDict, nextStatus) }}</template>
-    </button>
-    <label class="filter-label">
-      状态
-      <select
-        :value="statusFilter"
-        @change="emit('update:statusFilter', ($event.target as HTMLSelectElement).value)"
-      >
-        <option value="">全部</option>
-        <option v-for="item in statusDict" :key="item.value" :value="item.value">
-          {{ item.label }}
-        </option>
-      </select>
-    </label>
-  </div>
-  <p v-if="selectedDocTypeId" class="sub template-hint">
-    <template v-if="resolvedTemplateId">将使用模板：{{ templateLabel(resolvedTemplateId) }}</template>
-    <template v-else>该文档类型尚无模板，上传将仅绑定 doc_type_id。</template>
-  </p>
+  <section class="card">
+    <h2 class="card-title">表 Skill（默认）</h2>
+    <p class="row-actions">
+      <button class="btn" :disabled="!canUploadSkill" type="button" @click="openSkillPicker">
+        上传资料
+      </button>
+      <input
+        ref="skillFile"
+        type="file"
+        accept=".pdf,.png,.jpg,.jpeg,.xlsx,application/pdf,image/*,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        hidden
+        :disabled="!canUploadSkill"
+        @change="onFileChange"
+      />
+      <span class="tag">{{ fileTag }}</span>
+    </p>
+    <p class="row-actions">
+      <label class="filter-label">
+        索引候选
+        <select
+          :value="selectedSkillId"
+          @change="emit('update:selectedSkillId', ($event.target as HTMLSelectElement).value)"
+        >
+          <option value="">未点选（多条时确认会 409）</option>
+          <option v-for="row in candidates" :key="row.skill_id" :value="row.skill_id">
+            {{ row.canonical_name }}
+          </option>
+        </select>
+      </label>
+    </p>
+    <aside class="skill-summary">
+      <p class="muted">引擎摘要（来自草稿 JSON，不是最后一句聊天）</p>
+      <p><strong>表名 / 别名</strong> — {{ joinSummaryLine(summary?.names, EMPTY_SUMMARY) }}</p>
+      <p><strong>检查项</strong> — {{ joinSummaryLine(summary?.check_labels, EMPTY_SUMMARY) }}</p>
+      <p><strong>会怎么修</strong> — {{ joinSummaryLine(summary?.fix_plain, EMPTY_SUMMARY) }}</p>
+    </aside>
+    <p class="row-actions">
+      <button class="btn ghost" type="button" :disabled="!canDryRun" @click="emit('dryRun')">试跑</button>
+      <button class="btn" type="button" :disabled="!canConfirm" @click="emit('confirmSkill')">
+        确认完成并处理
+      </button>
+    </p>
+    <p class="muted">试跑不写索引、不写台账。对话不能代替确认。rule_editor 的 DSL 闸门仍有效。</p>
+  </section>
 </template>
 
 <style scoped>
-.template-hint {
-  margin-top: -4px;
+.skill-summary {
+  margin-top: 12px;
+  padding: 12px 14px;
+  background: var(--apt-surface);
+  border: 1px solid var(--apt-border);
+  border-radius: var(--apt-radius-md);
 }
 </style>
